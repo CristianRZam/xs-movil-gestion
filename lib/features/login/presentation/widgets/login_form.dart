@@ -31,11 +31,7 @@ class _LoginFormState extends State<LoginForm> {
       listenWhen: (previous, current) => previous.status != current.status,
       listener: (context, state) {
         if (state.status == LoginStatus.success) {
-          Navigator.pushNamed(
-            context,
-            '/home',
-            arguments: {'token': state.auth!.token},
-          );
+          Navigator.pushNamed(context, '/home',);
         } else if (state.status == LoginStatus.failure) {
           ErrorHandler.showFailure(
             context,

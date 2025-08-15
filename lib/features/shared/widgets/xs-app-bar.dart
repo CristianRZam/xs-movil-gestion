@@ -5,8 +5,14 @@ import 'package:flutter/material.dart';
 class XsAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final VoidCallback? onMenuPressed;
+  final bool backIcon;
 
-  const XsAppBar({super.key, required this.title, this.onMenuPressed});
+  const XsAppBar({
+    super.key,
+    required this.title,
+    this.onMenuPressed,
+    this.backIcon = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -42,20 +48,21 @@ class XsAppBar extends StatelessWidget implements PreferredSizeWidget {
             children: [
               Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => Navigator.maybePop(context),
-                    child: Icon(
-                      Icons.arrow_back_ios_new,
-                      color: AppColors.white,
-                      size: 30,
+                  if (backIcon) // Solo se dibuja si es true
+                    GestureDetector(
+                      onTap: () => Navigator.maybePop(context),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: AppColors.white,
+                        size: 30,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
+                  if (backIcon) const SizedBox(width: 8),
                   XsText(
                     text: title,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.left,
                     color: AppColors.white,
                     useDarkModeColor: true,
                   ),
@@ -63,7 +70,8 @@ class XsAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.menu, color: Colors.white),
-                onPressed: onMenuPressed ?? () => Scaffold.of(context).openEndDrawer(),
+                onPressed: onMenuPressed ??
+                        () => Scaffold.of(context).openEndDrawer(),
               ),
             ],
           ),
@@ -72,7 +80,6 @@ class XsAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 40); // Ajusta altura
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 40);
 }

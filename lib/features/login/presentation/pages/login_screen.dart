@@ -1,5 +1,4 @@
-import 'package:app_movil_sistema/features/login/data/datasources/login_remote_datasource.dart';
-import 'package:app_movil_sistema/features/login/data/repositories/auth_repository_impl.dart';
+import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/login/domain/usecases/login_usecase.dart';
 import 'package:app_movil_sistema/features/login/presentation/bloc/login_bloc.dart';
 import 'package:app_movil_sistema/features/login/presentation/bloc/login_state.dart';
@@ -10,7 +9,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:app_movil_sistema/core/theme/theme_cubit.dart';
 import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-text.dart';
-import 'package:app_movil_sistema/core/network/api_client.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -18,13 +16,7 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => LoginBloc(
-        LoginUseCase(
-          AuthRepositoryImpl(
-            LoginRemoteDataSourceImpl(ApiClient()),
-          ),
-        ),
-      ),
+      create: (_) => LoginBloc(getIt<LoginUseCase>()),
       child: BlocBuilder<LoginBloc, LoginState>(
         builder: (context, state) {
           return LoadingOverlay(

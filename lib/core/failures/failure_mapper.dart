@@ -27,6 +27,10 @@ class FailureMapper {
           }
         }
 
+        if (statusCode == 401) {
+          return AuthFailure(message, code: businessCode ?? statusCode);
+        }
+
         return ServerFailure(
           message,
           code: businessCode ?? statusCode,

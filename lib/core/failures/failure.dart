@@ -5,7 +5,7 @@ abstract class Failure {
 }
 
 class ServerFailure extends Failure {
-  ServerFailure(String message, {int? code}) : super(message, code: code);
+  ServerFailure(super.message, {super.code});
 }
 
 class TimeoutFailure extends Failure {
@@ -18,4 +18,8 @@ class NetworkFailure extends Failure {
 
 class UnexpectedFailure extends Failure {
   UnexpectedFailure({int? code}) : super('Error inesperado', code: code);
+}
+
+class AuthFailure extends Failure {
+  AuthFailure(super.message, {super.code});
 }

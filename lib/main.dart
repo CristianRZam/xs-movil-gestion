@@ -1,3 +1,5 @@
+import 'package:app_movil_sistema/core/service_locator.dart';
+import 'package:app_movil_sistema/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -7,11 +9,8 @@ import 'routes/routes.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  setupLocator();
   await dotenv.load(fileName: ".env");
-// Verificar que se cargó correctamente
-  print('BASE_URL: ${dotenv.env['BASE_URL']}');
-  print('API_KEY: ${dotenv.env['API_KEY']}');
   runApp(
     BlocProvider(
       create: (_) => ThemeCubit(),
@@ -33,8 +32,8 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeMode,
-          initialRoute: AppRoutes.login,
           routes: AppRoutes.routes,
+          home: const SplashScreen(),
         );
       },
     );

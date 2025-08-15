@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../models/auth_response_model.dart';
 
@@ -18,6 +20,9 @@ class LoginRemoteDataSourceImpl implements LoginRemoteDataSource {
         'email': email,
         'password': password,
       },
+      options: Options(
+        extra: {'requiresAuth': false},
+      ),
     );
     return AuthResponseModel.fromJson(response.data);
   }

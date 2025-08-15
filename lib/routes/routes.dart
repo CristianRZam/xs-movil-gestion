@@ -3,7 +3,7 @@ import 'package:app_movil_sistema/features/login/presentation/pages/login_screen
 import 'package:flutter/material.dart';
 
 class AppRoutes {
-  static const login = '/';
+  static const login = '/login';
   static const home = '/home';
 
   static final routes = <String, WidgetBuilder>{
