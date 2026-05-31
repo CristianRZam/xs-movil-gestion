@@ -30,7 +30,7 @@ class XsDrawer extends StatelessWidget {
                   useDarkModeColor: true,
                 ),
                 GestureDetector(
-                  onTap: () => Navigator.maybePop(context),
+                  onTap: () => Navigator.of(context).pop(),
                   child: const Icon(Icons.close, color: Colors.white, size: 28),
                 ),
               ],

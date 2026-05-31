@@ -27,6 +27,8 @@ class _LoginFormState extends State<LoginForm> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark =
+        Theme.of(context).brightness == Brightness.dark;
     return BlocListener<LoginBloc, LoginState>(
       listenWhen: (previous, current) => previous.status != current.status,
       listener: (context, state) {
@@ -50,7 +52,7 @@ class _LoginFormState extends State<LoginForm> {
                 return XsTextField(
                   labelText: "Correo electrónico",
                   prefixIcon: const Icon(Icons.email_outlined),
-                  borderColor: AppColors.primary,
+                  borderColor: AppColors.grey,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) => composeValidators([
                     InputValidators.requiredField('Ingrese su correo'),
@@ -70,7 +72,7 @@ class _LoginFormState extends State<LoginForm> {
                   labelText: "Contraseña",
                   isPassword: true,
                   prefixIcon: const Icon(Icons.lock_outline),
-                  borderColor: AppColors.primary,
+                  borderColor: AppColors.grey,
                   validator: (value) => composeValidators([
                     InputValidators.requiredField('Ingrese su contraseña'),
                   ], value),
@@ -97,7 +99,9 @@ class _LoginFormState extends State<LoginForm> {
               onPressed: () {},
               child: Text(
                 '¿Olvidaste tu contraseña?',
-                style: TextStyle(color: AppColors.dark),
+                style: TextStyle(color: isDark
+                    ? AppColors.textDark
+                    : AppColors.secondary,),
               ),
             ),
           ],

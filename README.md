@@ -1,16 +1,35 @@
-# app_movil_sistema
+# maxima
 
 A new Flutter project.
 
+## Generate and update splash screen
+```
+dart run flutter_native_splash:create
+```
+
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+Run
+```
+flutter clean
+flutter pub get
+dart run flutter_gen:flutter_gen_command
+dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
+```
 
-A few resources to get you started if this is your first Flutter project:
+## Generate Archive Play Store
+```
+flutter build appbundle --release
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Important: Signing Keys
+```
+This project uses a **release keystore** to sign the Android app. These files are **not included in the repository** for security reasons.
+
+To build a release APK or App Bundle, you need to:
+
+1. Place your `upload-keystore.jks` file in `android/app/` (do **not** commit this file).
+2. Create a `key.properties` file in `android/` with the following content:
+```
