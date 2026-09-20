@@ -5,7 +5,7 @@ part 'auth_response_model.g.dart';
 
 @JsonSerializable()
 class AuthResponseModel extends AuthResponse {
-  const AuthResponseModel({required String token}) : super(token: token);
+  const AuthResponseModel({required super.token});
 
   factory AuthResponseModel.fromJson(Map<String, dynamic> json) =>
       _$AuthResponseModelFromJson(json);

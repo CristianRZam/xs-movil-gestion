@@ -1,29 +1,34 @@
-import 'package:app_movil_sistema/core/failures/failure.dart';
-import 'package:app_movil_sistema/core/failures/failure_mapper.dart';
-import 'package:app_movil_sistema/features/login/data/datasources/login_remote_datasource.dart';
-import 'package:app_movil_sistema/features/login/domain/entities/auth_response.dart';
-import 'package:app_movil_sistema/features/login/domain/repositories/auth_respository.dart';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
-import 'package:app_movil_sistema/core/storage/token_storage.dart';
 
-class AuthRepositoryImpl implements AuthRepository {
+import '../../../../core/failures/failure.dart';
+import '../../../../core/failures/failure_mapper.dart';
+import '../../../../core/storage/token_storage.dart';
+
+import '../../domain/entities/auth_response.dart';
+
+import '../../domain/repositories/auth_respository.dart';
+import '../datasources/login_remote_datasource.dart';
+
+class AuthRepositoryImpl
+    implements AuthRepository {
   final LoginRemoteDataSource remoteDataSource;
   final TokenStorage tokenStorage;
 
-  AuthRepositoryImpl(this.remoteDataSource, this.tokenStorage);
+  AuthRepositoryImpl(this.remoteDataSource, this.tokenStorage,);
 
   @override
-  Future<Either<Failure, AuthResponse>> login(String email, String password) async {
+  Future<Either<Failure, AuthResponse>> login(String email,String password,) async {
     try {
-      final model = await remoteDataSource.login(email, password);
-      await tokenStorage.saveToken(model.token);
-      return Right(model);
-    } on DioException catch (dioError) {
-      final failure = FailureMapper.fromDioException(dioError);
-      return Left(failure);
+      final auth = await remoteDataSource.login(email,password,);
+
+      await tokenStorage.saveToken(auth.token,);
+
+      return Right(auth);
+    } on DioException catch (e) {
+      return Left(FailureMapper.fromDioException(e),);
     } catch (_) {
-      return Left(UnexpectedFailure());
+      return Left(UnexpectedFailure(),);
     }
   }
 }

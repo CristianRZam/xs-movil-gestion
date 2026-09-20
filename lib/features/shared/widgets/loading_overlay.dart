@@ -44,7 +44,7 @@ class LoadingOverlay extends StatelessWidget {
                         ),
                         child: ClipOval(
                           child: Image.asset(
-                              'assets/images/logo.png',
+                              'assets/images/icono_sin_fondo.webp',
                               fit: BoxFit.contain,
                             ),
                         ),

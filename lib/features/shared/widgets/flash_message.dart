@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-enum FlashMessageType { error, success, warning, info }
+enum FlashMessageType {
+  error,
+  success,
+  warning,
+  info,
+}
 
-enum FlashMessagePosition { top, center, bottom }
+enum FlashMessagePosition {
+  top,
+  center,
+  bottom,
+}
 
 class FlashMessage {
   static OverlayEntry? _currentOverlay;
@@ -12,28 +20,27 @@ class FlashMessage {
   static void show(
       BuildContext context, {
         FlashMessageType type = FlashMessageType.error,
-        String title = "Error",
-        String message = "Algo salió mal.",
+        String title = '',
+        String message = '',
         FlashMessagePosition position = FlashMessagePosition.bottom,
       }) {
     final overlay = Overlay.of(context);
+
     if (overlay == null) return;
 
-    if (_currentOverlay != null && _currentOverlay!.mounted) {
-      return;
+    if (_currentOverlay?.mounted ?? false) {
+      _currentOverlay?.remove();
+      _currentOverlay = null;
     }
 
     final config = _getConfig(type);
-    final Color snackBarColor = config["color"]!;
-    final FaIconData icon = config["icon"]!;
 
-    final screenWidth = MediaQuery.of(context).size.width;
-    const horizontalMargin = 16.0;
-    final contentWidth = screenWidth - 2 * horizontalMargin;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     late OverlayEntry overlayEntry;
 
-    void closeMessage() {
+    void close() {
       if (overlayEntry.mounted) {
         overlayEntry.remove();
         _currentOverlay = null;
@@ -43,166 +50,280 @@ class FlashMessage {
     double? top;
     double? bottom;
 
-    if (position == FlashMessagePosition.top) {
-      top = 40;
-    } else if (position == FlashMessagePosition.center) {
-      top = MediaQuery.of(context).size.height / 2 - 80;
-    } else {
-      bottom = 40;
+    switch (position) {
+      case FlashMessagePosition.top:
+        top = 60;
+        break;
+
+      case FlashMessagePosition.center:
+        top = MediaQuery.of(context).size.height * .40;
+        break;
+
+      case FlashMessagePosition.bottom:
+        bottom = 40;
+        break;
     }
 
     overlayEntry = OverlayEntry(
-      builder: (context) => GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: closeMessage,
-        child: Stack(
-          children: [
-            Positioned(
-              top: top,
-              bottom: bottom,
-              left: horizontalMargin,
-              right: horizontalMargin,
-              child: GestureDetector(
-                onTap: () {},
-                child: Material(
-                  color: Colors.transparent,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
-                        width: contentWidth,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 30,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              snackBarColor.withValues(alpha: 0.9),
-                              snackBarColor,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: snackBarColor.withValues(alpha: 0.4),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              title,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.white,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black26,
-                                    blurRadius: 3,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              message,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: AppColors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: GestureDetector(
-                          onTap: closeMessage,
-                          child: const Icon(
-                            Icons.close,
-                            color: AppColors.white,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: -22,
-                        left: 12,
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: snackBarColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white,
-                              width: 3,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: snackBarColor.withValues(alpha: 0.6),
-                                blurRadius: 6,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: FaIcon(
-                            icon,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+      builder: (_) => _FlashMessageWidget(
+        title: title,
+        message: message,
+        icon: config.icon,
+        accentColor: config.color,
+        isDark: isDark,
+        top: top,
+        bottom: bottom,
+        onClose: close,
       ),
     );
 
     overlay.insert(overlayEntry);
     _currentOverlay = overlayEntry;
 
-    Future.delayed(const Duration(seconds: 3), closeMessage);
+    Future.delayed(
+      const Duration(seconds: 4),
+      close,
+    );
   }
 
-  static Map<String, dynamic> _getConfig(FlashMessageType type) {
+  static _FlashConfig _getConfig(
+      FlashMessageType type,
+      ) {
     switch (type) {
       case FlashMessageType.success:
-        return {
-          "color": Colors.green,
-          "icon": FontAwesomeIcons.circleCheck,
-        };
+        return _FlashConfig(
+          color: const Color(0xFF22C55E),
+          icon: FontAwesomeIcons.circleCheck,
+        );
 
       case FlashMessageType.warning:
-        return {
-          "color": Colors.orange,
-          "icon": FontAwesomeIcons.triangleExclamation,
-        };
+        return _FlashConfig(
+          color: const Color(0xFFF59E0B),
+          icon: FontAwesomeIcons.triangleExclamation,
+        );
 
       case FlashMessageType.info:
-        return {
-          "color": Colors.blue,
-          "icon": FontAwesomeIcons.circleInfo,
-        };
+        return _FlashConfig(
+          color: const Color(0xFF3B82F6),
+          icon: FontAwesomeIcons.circleInfo,
+        );
 
       case FlashMessageType.error:
-        return {
-          "color": const Color(0xFFD64545),
-          "icon": FontAwesomeIcons.circleExclamation,
-        };
+        return _FlashConfig(
+          color: const Color(0xFFEF4444),
+          icon: FontAwesomeIcons.circleExclamation,
+        );
     }
+  }
+}
+
+class _FlashConfig {
+  final Color color;
+  final FaIconData  icon;
+
+  const _FlashConfig({
+    required this.color,
+    required this.icon,
+  });
+}
+
+class _FlashMessageWidget extends StatefulWidget {
+  final String title;
+  final String message;
+  final FaIconData icon;
+  final Color accentColor;
+  final bool isDark;
+  final VoidCallback onClose;
+
+  final double? top;
+  final double? bottom;
+
+  const _FlashMessageWidget({
+    super.key,
+    required this.title,
+    required this.message,
+    required this.icon,
+    required this.accentColor,
+    required this.isDark,
+    required this.onClose,
+    this.top,
+    this.bottom,
+  });
+
+  @override
+  State<_FlashMessageWidget> createState() =>
+      _FlashMessageWidgetState();
+}
+class _FlashMessageWidgetState
+    extends State<_FlashMessageWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  late Animation<Offset> _slide;
+
+  late Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(
+        milliseconds: 300,
+      ),
+    );
+
+    _slide = Tween(
+      begin: const Offset(
+        0,
+        0.15,
+      ),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+
+    _fade = Tween(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOut,
+      ),
+    );
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final backgroundColor = widget.isDark
+        ? const Color(0xFF1C1C1E)
+        : Colors.white;
+
+    final textColor =
+    widget.isDark ? Colors.white : Colors.black87;
+
+    return Positioned(
+      top: widget.top,
+      bottom: widget.bottom,
+      left: 16,
+      right: 16,
+      child: Material(
+        color: Colors.transparent,
+        child: FadeTransition(
+          opacity: _fade,
+          child: SlideTransition(
+            position: _slide,
+            child: Container(
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: widget.accentColor.withOpacity(.25),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(.08),
+                    blurRadius: 20,
+                    offset: const Offset(
+                      0,
+                      10,
+                    ),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: widget.accentColor
+                            .withOpacity(.12),
+                        borderRadius:
+                        BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: FaIcon(
+                          widget.icon,
+                          size: 18,
+                          color: widget.accentColor,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 14),
+
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                        mainAxisSize:
+                        MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.title,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight:
+                              FontWeight.w700,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.message,
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.4,
+                              color: textColor
+                                  .withOpacity(.75),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    InkWell(
+                      borderRadius:
+                      BorderRadius.circular(100),
+                      onTap: widget.onClose,
+                      child: Padding(
+                        padding:
+                        const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.close,
+                          size: 18,
+                          color: textColor
+                              .withOpacity(.55),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

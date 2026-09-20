@@ -50,47 +50,110 @@ class XsDrawer extends StatelessWidget {
               child: ListView(
                 children: [
                   XsText(
-                    text: '➤ MÁS OPCIONES',
+                    text: '➤ MENÚ PRINCIPAL',
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,
                     useDarkModeColor: true,
                   ),
-                  const SizedBox(height: 10),
-                  ...List.generate(7, (i) {
-                    final titulos = [
-                      "01 / Ser una emprendedora",
-                      "02 / De la idea al negocio",
-                      "03 / Finanzas para tu negocio",
-                      "04 / Logística y abastecimiento",
-                      "05 / Marketing",
-                      "06 / Ventas",
-                      "07 / Plan de negocio",
-                    ];
-                    return Column(
-                      children: [
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                          leading: Icon(Icons.arrow_right, size: 28, color: isDarkMode ? AppColors.white : AppColors.primary),
-                          title: Text(
-                            titulos[i],
-                            style: TextStyle(fontSize: 14, color: isDarkMode ? AppColors.white : AppColors.dark),
-                          ),
-                          onTap: () => Navigator.pushNamed(context, AppRoutes.home),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: DashedLine(
-                            dashWidth: 6,
-                            dashSpace: 5,
-                            height: 1,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    );
-                  }),
+
+                  const SizedBox(height: 15),
+
+                  _DrawerItem(
+                    icon: Icons.home_rounded,
+                    title: 'Inicio',
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      Navigator.pushReplacementNamed(
+                        context,
+                        AppRoutes.home,
+                      );
+                    },
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: DashedLine(
+                      dashWidth: 6,
+                      dashSpace: 5,
+                      height: 1,
+                      color: Colors.grey,
+                    ),
+                  ),
+
+                  _DrawerItem(
+                    icon: Icons.inventory_2_rounded,
+                    title: '01 / Productos',
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      Navigator.pushReplacementNamed(
+                        context,
+                        AppRoutes.product,
+                      );
+                    },
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: DashedLine(
+                      dashWidth: 6,
+                      dashSpace: 5,
+                      height: 1,
+                      color: Colors.grey,
+                    ),
+                  ),
+
+                  _DrawerItem(
+                    icon: Icons.shopping_cart_rounded,
+                    title: '02 / Ventas',
+                    isDarkMode: isDarkMode,
+                    onTap: () {},
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: DashedLine(
+                      dashWidth: 6,
+                      dashSpace: 5,
+                      height: 1,
+                      color: Colors.grey,
+                    ),
+                  ),
+
+                  _DrawerItem(
+                    icon: Icons.point_of_sale_rounded,
+                    title: '03 / Caja',
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      Navigator.pushReplacementNamed(
+                        context,
+                        AppRoutes.cashSession,
+                      );
+                    },
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: DashedLine(
+                      dashWidth: 6,
+                      dashSpace: 5,
+                      height: 1,
+                      color: Colors.grey,
+                    ),
+                  ),
+
+                  _DrawerItem(
+                    icon: Icons.bar_chart_rounded,
+                    title: '04 / Reportes',
+                    isDarkMode: isDarkMode,
+                    onTap: () {},
+                  ),
                 ],
               ),
             ),
@@ -109,6 +172,44 @@ class XsDrawer extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DrawerItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final bool isDarkMode;
+  final VoidCallback onTap;
+
+  const _DrawerItem({
+    required this.icon,
+    required this.title,
+    required this.isDarkMode,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        icon,
+        color: isDarkMode
+            ? AppColors.white
+            : AppColors.primary,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 15,
+          color: isDarkMode
+              ? AppColors.white
+              : AppColors.dark,
+        ),
+      ),
+      onTap: onTap,
     );
   }
 }
