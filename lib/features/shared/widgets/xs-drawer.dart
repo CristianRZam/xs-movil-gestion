@@ -109,9 +109,22 @@ class XsDrawer extends StatelessWidget {
 
                   _DrawerItem(
                     icon: Icons.shopping_cart_rounded,
-                    title: '02 / Ventas',
+                    title: '02 / Órdenes',
                     isDarkMode: isDarkMode,
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacementNamed(context, AppRoutes.orders);
+                    },
+                  ),
+
+                  _DrawerItem(
+                    icon: Icons.receipt_long_rounded,
+                    title: '03 / Ventas',
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacementNamed(context, AppRoutes.sales);
+                    },
                   ),
 
                   const Padding(
@@ -126,7 +139,7 @@ class XsDrawer extends StatelessWidget {
 
                   _DrawerItem(
                     icon: Icons.point_of_sale_rounded,
-                    title: '03 / Caja',
+                    title: '04 / Caja',
                     isDarkMode: isDarkMode,
                     onTap: () {
                       Navigator.pop(context);

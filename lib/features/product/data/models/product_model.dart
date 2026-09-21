@@ -23,6 +23,7 @@ class ProductModel extends Product {
     super.promoPrice,
     required super.baseCost,
     required super.totalStock,
+    required super.reservedStock,
     required super.active,
     required super.deleted,
   });
@@ -51,6 +52,7 @@ class ProductModel extends Product {
       promoPrice: entity.promoPrice,
       baseCost: entity.baseCost,
       totalStock: entity.totalStock,
+      reservedStock: entity.reservedStock,
       active: entity.active,
       deleted: entity.deleted,
     );
@@ -73,6 +75,7 @@ class ProductModel extends Product {
       promoPrice: promoPrice,
       baseCost: baseCost,
       totalStock: totalStock,
+      reservedStock: reservedStock,
       active: active,
       deleted: deleted,
     );

@@ -1,4 +1,7 @@
 import 'package:app_movil_sistema/core/storage/token_storage.dart';
+import 'package:app_movil_sistema/core/service_locator.dart';
+import 'package:app_movil_sistema/features/sale/domain/entities/cash_session_sales_summary.dart';
+import 'package:app_movil_sistema/features/sale/domain/usecases/sale_usecases.dart';
 import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/core/validators/input_validators.dart';
 import 'package:app_movil_sistema/features/cash_session/domain/entities/cash_session.dart';
@@ -6,7 +9,7 @@ import 'package:app_movil_sistema/features/cash_session/domain/entities/cash_ses
 import 'package:app_movil_sistema/features/cash_session/presentation/bloc/cash_session_bloc.dart';
 import 'package:app_movil_sistema/features/cash_session/presentation/bloc/cash_session_event.dart';
 import 'package:app_movil_sistema/features/cash_session/presentation/bloc/cash_session_state.dart';
-import 'package:app_movil_sistema/features/cash_session/presentation/widgets/%20cash_session_card.dart';
+import 'package:app_movil_sistema/features/cash_session/presentation/widgets/cash_session_card.dart';
 import 'package:app_movil_sistema/features/cash_session/presentation/widgets/cash_session_history_dialog.dart';
 import 'package:app_movil_sistema/features/cash_session/presentation/widgets/cash_session_summary_card.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
@@ -157,6 +160,16 @@ class CashSessionView extends StatelessWidget {
 
                 endDrawer: const XsDrawer(),
 
+                floatingActionButton: isOpen
+                    ? FloatingActionButton.small(
+                        tooltip: 'Actualizar montos de caja',
+                        onPressed: () => context
+                            .read<CashSessionBloc>()
+                            .add(const LoadCurrentCashSession()),
+                        child: const Icon(Icons.refresh_rounded),
+                      )
+                    : null,
+
                 body: SafeArea(
 
                   child: SingleChildScrollView(
@@ -236,6 +249,14 @@ class CashSessionView extends StatelessWidget {
                           ),
 
                           const SizedBox(height: 22),
+
+                          OutlinedButton.icon(
+                            onPressed: () => _openCashSalesHistory(context, session.id),
+                            icon: const Icon(Icons.receipt_long_outlined),
+                            label: const Text('Ver ventas de esta caja'),
+                          ),
+
+                          const SizedBox(height: 12),
 
                           SizedBox(
                             width: double.infinity,
@@ -570,6 +591,84 @@ void openOpenCashSessionDialog(
 }
 
 
+Future<void> _openCashSalesHistory(BuildContext context, int sessionId) async {
+  final result = await getIt<GetCashSessionSalesSummaryUseCase>()(sessionId);
+  if (!context.mounted) return;
+
+  result.fold(
+    (failure) => ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(failure.message)),
+    ),
+    (summary) => showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _CashSalesHistory(summary: summary),
+    ),
+  );
+}
+
+class _CashSalesHistory extends StatefulWidget {
+  final CashSessionSalesSummary summary;
+  const _CashSalesHistory({required this.summary});
+
+  @override
+  State<_CashSalesHistory> createState() => _CashSalesHistoryState();
+}
+
+class _CashSalesHistoryState extends State<_CashSalesHistory> {
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+        child: DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: .72,
+          maxChildSize: .92,
+          builder: (_, controller) => ListView(
+            controller: controller,
+            padding: const EdgeInsets.all(20),
+            children: [
+              const Text('Ventas de la caja', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Text('Total vendido: S/ ${widget.summary.totalSold.toStringAsFixed(2)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Divider(height: 28),
+              const Text('Resumen por método de pago', style: TextStyle(fontWeight: FontWeight.bold)),
+              ...widget.summary.paymentMethods.map((item) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(_cashPaymentLabel(item.paymentMethod)),
+                trailing: Text('S/ ${item.total.toStringAsFixed(2)}'),
+              )),
+              const Divider(height: 28),
+              const Text('Ventas registradas', style: TextStyle(fontWeight: FontWeight.bold)),
+              if (widget.summary.sales.isEmpty)
+                const Padding(padding: EdgeInsets.only(top: 16), child: Text('No hay ventas registradas en esta caja.')),
+              ...widget.summary.sales.map((sale) => ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: Text(sale.saleNumber),
+                subtitle: Text('${sale.createdByName ?? 'Usuario no disponible'} · ${sale.payments.map((p) => _cashPaymentLabel(p.paymentMethod)).join(' + ')}'),
+                trailing: Text('S/ ${sale.total.toStringAsFixed(2)}'),
+                children: sale.items.map((item) => ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.only(left: 16, right: 8),
+                  leading: const Icon(Icons.inventory_2_outlined),
+                  title: Text(item.productName ?? 'Producto #${item.productId}'),
+                  subtitle: Text('${item.quantity.toInt()} × S/ ${item.unitPrice.toStringAsFixed(2)}'),
+                  trailing: Text('S/ ${item.subtotal.toStringAsFixed(2)}'),
+                )).toList(),
+              )),
+            ],
+          ),
+        ),
+      );
+}
+
+String _cashPaymentLabel(String method) => switch (method) {
+  'CASH' => 'Efectivo',
+  'YAPE' => 'Yape',
+  'CARD' => 'Tarjeta',
+  'TRANSFER' => 'Transferencia',
+  _ => method,
+};
+
 void openCloseCashSessionDialog(
     BuildContext parentContext,
     CashSession session,
@@ -585,8 +684,7 @@ void openCloseCashSessionDialog(
         .toStringAsFixed(2),
   );
 
-  final differenceController =
-  TextEditingController();
+  var calculatedDifference = 0.0;
 
   final commentController =
   TextEditingController();
@@ -625,8 +723,7 @@ void openCloseCashSessionDialog(
             final difference =
                 closing - expected;
 
-            differenceController.text =
-                difference.toStringAsFixed(2);
+            calculatedDifference = difference;
 
             setState(() {});
           }
@@ -703,22 +800,17 @@ void openCloseCashSessionDialog(
                     expectedAmountController,
 
                     labelText:
-                    "Monto esperado",
+                    "Monto esperado (automático)",
 
                     decimal: true,
+
+                    readOnly: true,
 
                     prefixIcon:
                     const Icon(
                       Icons.calculate_outlined,
                     ),
 
-                    validator:
-                        (value) =>
-                        composeValidators([
-                          InputValidators.requiredField(
-                            "Ingrese el monto esperado",
-                          ),
-                        ], value),
                   ),
 
                   const SizedBox(height: 14),
@@ -752,20 +844,22 @@ void openCloseCashSessionDialog(
 
                   const SizedBox(height: 14),
 
-                  XsNumberField(
-                    controller:
-                    differenceController,
+                  const SizedBox(height: 14),
 
-                    labelText:
-                    "Diferencia",
-
-                    decimal: true,
-
-                    prefixIcon:
-                    const Icon(
-                      Icons.compare_arrows_rounded,
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: calculatedDifference == 0
+                          ? Colors.blue.withValues(alpha: .10)
+                          : (calculatedDifference > 0 ? Colors.green : Colors.red)
+                              .withValues(alpha: .10),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-
+                    child: Text(
+                      'Diferencia calculada: S/ ${calculatedDifference.toStringAsFixed(2)}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
 
                   const SizedBox(height: 14),

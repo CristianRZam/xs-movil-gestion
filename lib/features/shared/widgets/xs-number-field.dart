@@ -14,6 +14,7 @@ class XsNumberField extends StatelessWidget {
   final bool decimal;
   final String? Function(String?)? validator;
   final void Function(String)? onChanged;
+  final bool readOnly;
 
 
   const XsNumberField({
@@ -37,6 +38,7 @@ class XsNumberField extends StatelessWidget {
     this.validator,
 
     this.onChanged,
+    this.readOnly = false,
 
   });
 
@@ -76,6 +78,7 @@ class XsNumberField extends StatelessWidget {
       child: TextFormField(
 
         controller: controller,
+        readOnly: readOnly,
 
 
         keyboardType: decimal

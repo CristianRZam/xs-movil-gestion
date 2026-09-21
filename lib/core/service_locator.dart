@@ -34,6 +34,16 @@ import 'package:app_movil_sistema/features/product/data/datasources/product_remo
 import 'package:app_movil_sistema/features/product/data/repositories/product_repository_impl.dart';
 import 'package:app_movil_sistema/features/product/domain/repositories/product_repository.dart';
 import 'package:app_movil_sistema/features/product/domain/usecases/get_product_view_usecase.dart';
+import 'package:app_movil_sistema/features/order/data/datasources/impl/order_remote_datasource_impl.dart';
+import 'package:app_movil_sistema/features/order/data/datasources/order_remote_datasource.dart';
+import 'package:app_movil_sistema/features/order/data/repositories/order_repository_impl.dart';
+import 'package:app_movil_sistema/features/sale/data/datasources/sale_remote_datasource.dart';
+import 'package:app_movil_sistema/features/sale/data/datasources/impl/sale_remote_datasource_impl.dart';
+import 'package:app_movil_sistema/features/sale/data/repositories/sale_repository_impl.dart';
+import 'package:app_movil_sistema/features/sale/domain/repositories/sale_repository.dart';
+import 'package:app_movil_sistema/features/sale/domain/usecases/sale_usecases.dart';
+import 'package:app_movil_sistema/features/order/domain/repositories/order_repository.dart';
+import 'package:app_movil_sistema/features/order/domain/usecases/order_usecases.dart';
 
 final getIt = GetIt.instance;
 
@@ -205,4 +215,30 @@ void setupLocator() {
       getIt<CashSessionRepository>(),
     ),
   );
+
+  // ============================
+  // ORDERS
+  // ============================
+  getIt.registerLazySingleton<OrderRemoteDataSource>(
+        () => OrderRemoteDataSourceImpl(getIt<ApiClient>()),
+  );
+
+  getIt.registerLazySingleton<OrderRepository>(
+        () => OrderRepositoryImpl(getIt<OrderRemoteDataSource>()),
+  );
+
+  getIt.registerFactory<GetOrdersUseCase>(() => GetOrdersUseCase(getIt<OrderRepository>()));
+  getIt.registerFactory<CreateOrderUseCase>(() => CreateOrderUseCase(getIt<OrderRepository>()));
+  getIt.registerFactory<UpdateOrderUseCase>(() => UpdateOrderUseCase(getIt<OrderRepository>()));
+  getIt.registerFactory<UpdateOrderStatusUseCase>(() => UpdateOrderStatusUseCase(getIt<OrderRepository>()));
+  getIt.registerFactory<DeleteOrderUseCase>(() => DeleteOrderUseCase(getIt<OrderRepository>()));
+
+  // ============================
+  // SALES
+  // ============================
+  getIt.registerLazySingleton<SaleRemoteDataSource>(() => SaleRemoteDataSourceImpl(getIt<ApiClient>()));
+  getIt.registerLazySingleton<SaleRepository>(() => SaleRepositoryImpl(getIt<SaleRemoteDataSource>()));
+  getIt.registerFactory<GetSalesUseCase>(() => GetSalesUseCase(getIt<SaleRepository>()));
+  getIt.registerFactory<CreateSaleUseCase>(() => CreateSaleUseCase(getIt<SaleRepository>()));
+  getIt.registerFactory<GetCashSessionSalesSummaryUseCase>(() => GetCashSessionSalesSummaryUseCase(getIt<SaleRepository>()));
 }

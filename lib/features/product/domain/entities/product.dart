@@ -16,6 +16,7 @@ class Product {
   final double? promoPrice;
   final double baseCost;
   final int totalStock;
+  final int reservedStock;
   final bool active;
   final bool deleted;
 
@@ -35,8 +36,13 @@ class Product {
     this.promoPrice,
     required this.baseCost,
     required this.totalStock,
+    required this.reservedStock,
     required this.active,
     required this.deleted,
   });
+
+  int get availableStock => totalStock - reservedStock > 0
+      ? totalStock - reservedStock
+      : 0;
 
 }

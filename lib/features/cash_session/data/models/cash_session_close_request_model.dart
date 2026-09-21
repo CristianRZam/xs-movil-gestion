@@ -31,7 +31,6 @@ class CashSessionCloseRequestModel {
   Map<String, dynamic> toQueryParameters() {
     return {
       'closingAmount': closingAmount,
-      'expectedAmount': expectedAmount,
       if (difference != null)
         'difference': difference,
       if (closingComment != null &&
