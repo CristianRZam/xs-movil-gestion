@@ -1,8 +1,10 @@
+import 'package:app_movil_sistema/core/authorization/access_widgets.dart';
+import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/home/presentation/pages/home_screen.dart';
 import 'package:app_movil_sistema/features/login/presentation/pages/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:app_movil_sistema/core/storage/token_storage.dart';
-import 'package:jwt_decoder/jwt_decoder.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,7 +14,7 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  final tokenStorage = TokenStorage();
+  final tokenStorage = getIt<TokenStorage>();
 
   @override
   void initState() {
@@ -24,10 +26,16 @@ class _SplashScreenState extends State<SplashScreen> {
     final token = await tokenStorage.getToken();
 
     if (token != null && token.isNotEmpty) {
-      final bool isExpired = JwtDecoder.isExpired(token);
+      getIt<AccessControl>().updateToken(token);
+      final bool isExpired = !getIt<AccessControl>().isAuthenticated;
 
       if (!isExpired) {
-        _goTo(const HomeScreen());
+        _goTo(
+          AccessGuard(
+            capability: AppCapability.operate,
+            builder: (_) => const HomeScreen(),
+          ),
+        );
         return;
       } else {
         await tokenStorage.deleteToken();
@@ -39,6 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _goTo(Widget page) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => page),
@@ -48,8 +57,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

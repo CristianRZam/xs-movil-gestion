@@ -6,7 +6,6 @@ import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 
 class SaleView extends StatelessWidget {
   final Order? order;
@@ -208,6 +207,8 @@ class _SaleFormState extends State<_SaleForm> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
           widget.order == null
               ? 'Nueva venta directa'
@@ -222,9 +223,13 @@ class _SaleFormState extends State<_SaleForm> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _PaymentSummary(total: _total, paid: _paid),
+                  const SizedBox(height: 20),
                   Row(
                     children: [
-                      const Text('Productos', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Icon(Icons.shopping_bag_outlined),
+                      const SizedBox(width: 8),
+                      const Text('Productos', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                       const Spacer(),
                       if (widget.order == null)
                         TextButton.icon(
@@ -240,8 +245,12 @@ class _SaleFormState extends State<_SaleForm> {
                       child: Text('Agregue al menos un producto.'),
                     ),
                   ..._items.asMap().entries.map(_itemTile),
+                  const SizedBox(height: 12),
                   const Divider(),
-                  const Text('Pagos', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  const Row(children: [Icon(Icons.account_balance_wallet_outlined), SizedBox(width: 8), Text('Formas de pago', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700))]),
+                  const SizedBox(height: 4),
+                  Text('Puedes combinar varios medios para completar el cobro.', style: Theme.of(context).textTheme.bodySmall),
                   ..._payments.asMap().entries.map(
                     (entry) => _PaymentRow(
                       draft: entry.value,
@@ -253,22 +262,12 @@ class _SaleFormState extends State<_SaleForm> {
                       }),
                     ),
                   ),
-                  TextButton.icon(
+                  OutlinedButton.icon(
                     onPressed: () => setState(() => _payments.add(_PaymentDraft())),
                     icon: const Icon(Icons.add_card),
                     label: const Text('Agregar método de pago'),
                   ),
-                  const Divider(),
-                  Text(
-                    'Total: S/ ${_total.toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    'Pagado: S/ ${_paid.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      color: (_paid - _total).abs() < .01 ? Colors.green : Colors.orange,
-                    ),
-                  ),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
@@ -276,23 +275,25 @@ class _SaleFormState extends State<_SaleForm> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-          FilledButton(onPressed: _save, child: const Text('Cobrar')),
+          FilledButton.icon(onPressed: _save, icon: const Icon(Icons.lock_open_rounded), label: const Text('Confirmar cobro')),
         ],
       );
 
   Widget _itemTile(MapEntry<int, SaleItem> entry) {
     final item = entry.value;
     final product = _product(item.productId);
-    return ListTile(
-      title: Text(product?.name ?? 'Producto #${item.productId}'),
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(top: 6),
+      child: ListTile(
+      title: Text(product?.name ?? 'Producto #${item.productId}', style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text('${item.quantity.toInt()} × S/ ${item.unitPrice.toStringAsFixed(2)}'),
-      trailing: widget.order == null
-          ? IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => setState(() => _items.removeAt(entry.key)),
-            )
-          : null,
-    );
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [Text('S/ ${item.subtotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w700)), if (widget.order == null)
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => setState(() => _items.removeAt(entry.key)),
+          )]),
+    ));
   }
 
   Product? _product(int id) {
@@ -351,7 +352,8 @@ class _SaleFormState extends State<_SaleForm> {
       return;
     }
     final sale = Sale(
-      saleNumber: 'V-${DateFormat('yyyyMMddHHmmssSSS').format(DateTime.now())}',
+      // El backend asigna el número según la fecha y hora del servidor.
+      saleNumber: '',
       orderId: widget.order?.id,
       items: _items,
       payments: _payments
@@ -381,6 +383,45 @@ class _PaymentDraft {
   }
 }
 
+class _PaymentSummary extends StatelessWidget {
+  final double total;
+  final double paid;
+  const _PaymentSummary({required this.total, required this.paid});
+
+  @override
+  Widget build(BuildContext context) {
+    final complete = (paid - total).abs() < .01;
+    final pending = total - paid;
+    final color = complete ? Colors.green : Theme.of(context).colorScheme.primary;
+    final progress = total <= 0 ? 0.0 : (paid / total).clamp(0.0, 1.0).toDouble();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [color, color.withValues(alpha: .72)]),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('TOTAL A COBRAR', style: TextStyle(color: Colors.white.withValues(alpha: .8), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          const SizedBox(height: 3),
+          Text('S/ ${total.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: progress, minHeight: 7, color: Colors.white, backgroundColor: Colors.white24)),
+          const SizedBox(height: 8),
+          Row(children: [
+            Icon(complete ? Icons.verified_rounded : Icons.pending_outlined, color: Colors.white, size: 18),
+            const SizedBox(width: 6),
+            Expanded(child: Text(complete ? 'Pago completo' : 'Falta S/ ${pending > 0 ? pending.toStringAsFixed(2) : '0.00'}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
+            Text('Ingresado: S/ ${paid.toStringAsFixed(2)}', style: TextStyle(color: Colors.white.withValues(alpha: .9), fontSize: 11)),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
 class _PaymentRow extends StatelessWidget {
   final _PaymentDraft draft;
   final bool removable;
@@ -395,40 +436,71 @@ class _PaymentRow extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          Expanded(
-            child: DropdownButtonFormField<String>(
-              value: draft.method,
-              items: const [
-                DropdownMenuItem(value: 'CASH', child: Text('Efectivo')),
-                DropdownMenuItem(value: 'YAPE', child: Text('Yape')),
-                DropdownMenuItem(value: 'CARD', child: Text('Tarjeta')),
-                DropdownMenuItem(value: 'TRANSFER', child: Text('Transferencia')),
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final selector = DropdownButtonFormField<String>(
+            value: draft.method,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Método'),
+            items: const [
+              DropdownMenuItem(value: 'CASH', child: Text('Efectivo')),
+              DropdownMenuItem(value: 'YAPE', child: Text('Yape')),
+              DropdownMenuItem(value: 'CARD', child: Text('Tarjeta')),
+              DropdownMenuItem(value: 'TRANSFER', child: Text('Transferencia')),
+            ],
+            onChanged: (value) {
+              draft.method = value!;
+              onChanged();
+            },
+          );
+          final amount = TextFormField(
+            controller: draft.amount,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Monto'),
+            validator: (value) => (double.tryParse(value ?? '') ?? 0) <= 0
+                ? 'Monto inválido'
+                : null,
+            onChanged: (_) => onChanged(),
+          );
+          final remove = removable
+              ? IconButton(
+                  icon: const Icon(Icons.remove_circle_outline),
+                  onPressed: onRemove,
+                )
+              : null;
+
+          if (constraints.maxWidth < 380) {
+            return Card(
+              elevation: 0,
+              margin: const EdgeInsets.only(top: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                children: [
+                  selector,
+                  const SizedBox(height: 8),
+                  Row(children: [Expanded(child: amount), if (remove != null) remove]),
+                ],
+                ),
+              ),
+            );
+          }
+
+          return Card(
+            elevation: 0,
+            margin: const EdgeInsets.only(top: 12),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+              children: [
+                Expanded(child: selector),
+                const SizedBox(width: 8),
+                Expanded(child: amount),
+                if (remove != null) remove,
               ],
-              onChanged: (value) {
-                draft.method = value!;
-                onChanged();
-              },
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextFormField(
-              controller: draft.amount,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Monto'),
-              validator: (value) => (double.tryParse(value ?? '') ?? 0) <= 0
-                  ? 'Monto inválido'
-                  : null,
-              onChanged: (_) => onChanged(),
-            ),
-          ),
-          if (removable)
-            IconButton(
-              icon: const Icon(Icons.remove_circle_outline),
-              onPressed: onRemove,
-            ),
-        ],
+          );
+        },
       );
 }

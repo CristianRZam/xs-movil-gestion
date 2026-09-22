@@ -34,7 +34,7 @@ class CashSessionView extends StatelessWidget {
         Theme.of(context).brightness ==
             Brightness.dark;
 
-    final tokenStorage = TokenStorage();
+    final tokenStorage = getIt<TokenStorage>();
 
     return FutureBuilder<String?>(
       future: tokenStorage.getToken(),

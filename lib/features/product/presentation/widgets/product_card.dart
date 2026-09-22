@@ -1,3 +1,5 @@
+import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:flutter/material.dart';
 import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
@@ -213,9 +215,10 @@ class ProductCard extends StatelessWidget {
                 }
 
               },
-              itemBuilder: (_) => const [
+              itemBuilder: (_) => [
 
-                PopupMenuItem(
+                if (getIt<AccessControl>().allows(AppCapability.manageInventory))
+                const PopupMenuItem(
                   value: 'entry',
                   child: ListTile(
                     leading: Icon(Icons.add_box_outlined),
@@ -226,7 +229,8 @@ class ProductCard extends StatelessWidget {
                   ),
                 ),
 
-                PopupMenuItem(
+                if (getIt<AccessControl>().allows(AppCapability.manageInventory))
+                const PopupMenuItem(
                   value: 'waste',
                   child: ListTile(
                     leading: Icon(
@@ -237,7 +241,8 @@ class ProductCard extends StatelessWidget {
                   ),
                 ),
 
-                PopupMenuItem(
+                if (getIt<AccessControl>().allows(AppCapability.manageInventory))
+                const PopupMenuItem(
                   value: 'adjustment',
                   child: ListTile(
                     leading: Icon(
@@ -262,7 +267,8 @@ class ProductCard extends StatelessWidget {
                   ),
                 ),
 
-                PopupMenuItem(
+                if (getIt<AccessControl>().allows(AppCapability.manageProducts))
+                const PopupMenuItem(
                   value: 'edit',
                   child: ListTile(
                     leading:
@@ -273,7 +279,8 @@ class ProductCard extends StatelessWidget {
                   ),
                 ),
 
-                PopupMenuItem(
+                if (getIt<AccessControl>().allows(AppCapability.manageProducts))
+                const PopupMenuItem(
                   enabled: false,
                   height: 1,
                   padding: EdgeInsets.zero,
@@ -283,7 +290,8 @@ class ProductCard extends StatelessWidget {
                   ),
                 ),
 
-                PopupMenuItem(
+                if (getIt<AccessControl>().allows(AppCapability.manageProducts))
+                const PopupMenuItem(
                   value: 'delete',
                   child: ListTile(
                     leading: Icon(

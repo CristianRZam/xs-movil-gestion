@@ -1,0 +1,2 @@
+import 'package:app_movil_sistema/core/failures/failure.dart'; import 'package:app_movil_sistema/features/inventory_count/domain/entities/inventory_count.dart'; import 'package:dartz/dartz.dart';
+abstract class InventoryCountRepository { Future<Either<Failure,InventoryCount?>> current(); Future<Either<Failure,InventoryCount>> open(); Future<Either<Failure,List<InventoryCountItem>>> detail(int id); Future<Either<Failure,InventoryCount>> close(int id,List<InventoryCountEntry> items); }

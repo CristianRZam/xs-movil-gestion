@@ -1,3 +1,5 @@
+import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/core/storage/token_storage.dart';
 import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/core/validators/input_validators.dart';
@@ -35,7 +37,7 @@ class ProductView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final tokenStorage = TokenStorage();
+    final tokenStorage = getIt<TokenStorage>();
 
     final TextEditingController searchController = TextEditingController();
     String searchValue = "";
@@ -171,7 +173,7 @@ class ProductView extends StatelessWidget {
 
                 endDrawer: const XsDrawer(),
 
-                floatingActionButton: FloatingActionButton.extended(
+                floatingActionButton: !getIt<AccessControl>().allows(AppCapability.manageProducts) ? null : FloatingActionButton.extended(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   icon: const Icon(Icons.add),

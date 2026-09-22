@@ -1,3 +1,5 @@
+import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/service_locator.dart';
 import 'dart:async';
 
 import 'package:app_movil_sistema/core/theme/app_colors.dart';
@@ -12,7 +14,6 @@ import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:app_movil_sistema/routes/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 
 class OrderView extends StatefulWidget {
   const OrderView({super.key});
@@ -239,6 +240,7 @@ void _showOrderDetail(BuildContext context, Order order, List<Product> products)
             }
           }, icon: const Icon(Icons.edit), label: const Text('Editar orden')),
           const SizedBox(height: 10),
+          if (getIt<AccessControl>().allows(AppCapability.deleteOrders))
           OutlinedButton.icon(onPressed: () => _confirmDelete(context, order), icon: const Icon(Icons.delete_outline), label: const Text('Eliminar orden')),
         ],
         if (_nextStatus(order.status) != null) ...[
@@ -264,7 +266,7 @@ void _showOrderDetail(BuildContext context, Order order, List<Product> products)
         ],
         if (order.status != 'COMPLETED' && order.status != 'CANCELLED') ...[
           const SizedBox(height: 10),
-          TextButton(onPressed: () => context.read<OrderBloc>().add(ChangeOrderStatus(order.id!, 'CANCELLED')), child: const Text('Cancelar orden')),
+          TextButton(onPressed: () => _confirmCancel(context, order), child: const Text('Cancelar orden')),
         ],
       ]),
     ),
@@ -276,6 +278,16 @@ void _confirmDelete(BuildContext context, Order order) => showDialog<void>(
   builder: (dialogContext) => AlertDialog(
     title: const Text('Eliminar orden'), content: Text('¿Eliminar ${order.orderNumber}? Esta acción solo es válida para órdenes pendientes.'),
     actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')), FilledButton(onPressed: () { Navigator.pop(dialogContext); context.read<OrderBloc>().add(DeleteOrder(order.id!)); }, child: const Text('Eliminar'))],
+  ),
+);
+
+void _confirmCancel(BuildContext context, Order order) => showDialog<void>(
+  context: context,
+  builder: (dialogContext) => AlertDialog(
+    icon: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+    title: const Text('¿Cancelar orden?'),
+    content: Text('Se liberará el stock reservado de ${order.orderNumber}. Esta acción no se puede deshacer.'),
+    actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Volver')), FilledButton(onPressed: () { Navigator.pop(dialogContext); context.read<OrderBloc>().add(ChangeOrderStatus(order.id!, 'CANCELLED')); }, style: FilledButton.styleFrom(backgroundColor: Colors.red), child: const Text('Sí, cancelar'))],
   ),
 );
 
@@ -324,13 +336,23 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
   late String type;
   late List<OrderItem> items;
   final key = GlobalKey<FormState>();
-  @override void initState() { super.initState(); final o = widget.order; numberController = TextEditingController(text: o?.orderNumber ?? 'ORD-${DateFormat('yyyyMMddHHmmss').format(DateTime.now())}'); tableController = TextEditingController(text: o?.tableNumber); notesController = TextEditingController(text: o?.notes); type = o?.orderType ?? 'DINE_IN'; items = [...?o?.items]; }
+  @override void initState() { super.initState(); final o = widget.order; numberController = TextEditingController(text: o?.orderNumber ?? ''); tableController = TextEditingController(text: o?.tableNumber); notesController = TextEditingController(text: o?.notes); type = o?.orderType ?? 'DINE_IN'; items = [...?o?.items]; }
   @override void dispose() { numberController.dispose(); tableController.dispose(); notesController.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: Text(widget.order == null ? 'Nueva orden' : 'Editar orden'),
     content: SizedBox(width: 480, child: Form(key: key, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      TextFormField(controller: numberController, decoration: const InputDecoration(labelText: 'Número de orden'), validator: (v) => v == null || v.trim().isEmpty ? 'Ingrese el número de orden' : null),
+      if (widget.order == null)
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text('El número de orden se generará al guardar.'),
+        )
+      else
+        TextFormField(
+          controller: numberController,
+          readOnly: true,
+          decoration: const InputDecoration(labelText: 'Número de orden'),
+        ),
       const SizedBox(height: 12), DropdownButtonFormField<String>(value: type, decoration: const InputDecoration(labelText: 'Tipo'), items: const [DropdownMenuItem(value: 'DINE_IN', child: Text('En local')), DropdownMenuItem(value: 'TAKEAWAY', child: Text('Para llevar')), DropdownMenuItem(value: 'DELIVERY', child: Text('Entrega'))], onChanged: (v) => setState(() => type = v!)),
       const SizedBox(height: 12), TextFormField(controller: tableController, decoration: const InputDecoration(labelText: 'Mesa o referencia')),
       const SizedBox(height: 12), TextFormField(controller: notesController, maxLines: 2, decoration: const InputDecoration(labelText: 'Notas')),

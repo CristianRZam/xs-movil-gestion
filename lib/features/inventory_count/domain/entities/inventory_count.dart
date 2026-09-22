@@ -1,0 +1,3 @@
+class InventoryCount { final int id; final String status; const InventoryCount({required this.id,required this.status}); }
+class InventoryCountItem { final int productId; final String productName; final String productCode; final int openingStock; final int? physicalStock; const InventoryCountItem({required this.productId,required this.productName,required this.productCode,required this.openingStock,this.physicalStock}); }
+class InventoryCountEntry { final int productId; final int physicalStock; final bool applyAdjustment; final String? reason; const InventoryCountEntry({required this.productId,required this.physicalStock,required this.applyAdjustment,this.reason}); }

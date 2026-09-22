@@ -1,3 +1,5 @@
+import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/session/session_coordinator.dart';
 import 'package:app_movil_sistema/features/cash_session/data/datasources/cash_session_remote_datasource.dart';
 import 'package:app_movil_sistema/features/cash_session/data/datasources/impl/cash_session_remote_datasource_impl.dart';
 import 'package:app_movil_sistema/features/cash_session/data/repositories/cash_session_repository_impl.dart';
@@ -44,10 +46,16 @@ import 'package:app_movil_sistema/features/sale/domain/repositories/sale_reposit
 import 'package:app_movil_sistema/features/sale/domain/usecases/sale_usecases.dart';
 import 'package:app_movil_sistema/features/order/domain/repositories/order_repository.dart';
 import 'package:app_movil_sistema/features/order/domain/usecases/order_usecases.dart';
+import 'package:app_movil_sistema/features/dashboard/data/datasources/dashboard_remote_datasource.dart';
+import 'package:app_movil_sistema/features/dashboard/data/datasources/impl/dashboard_remote_datasource_impl.dart';
+import 'package:app_movil_sistema/features/dashboard/data/repositories/dashboard_repository_impl.dart';
+import 'package:app_movil_sistema/features/dashboard/domain/repositories/dashboard_repository.dart';
+import 'package:app_movil_sistema/features/dashboard/domain/usecases/get_dashboard_summary_usecase.dart';
 
 final getIt = GetIt.instance;
 
 void setupLocator() {
+  getIt.registerLazySingleton<AccessControl>(() => AccessControl());
   // ============================
   // Servicios base
   // ============================
@@ -57,7 +65,14 @@ void setupLocator() {
   );
 
   getIt.registerLazySingleton<TokenStorage>(
-        () => TokenStorage(),
+        () => TokenStorage(getIt<AccessControl>()),
+  );
+
+  getIt.registerLazySingleton<SessionCoordinator>(
+        () => SessionCoordinator(
+      getIt<AccessControl>(),
+      getIt<TokenStorage>(),
+    ),
   );
 
   // ============================
@@ -241,4 +256,11 @@ void setupLocator() {
   getIt.registerFactory<GetSalesUseCase>(() => GetSalesUseCase(getIt<SaleRepository>()));
   getIt.registerFactory<CreateSaleUseCase>(() => CreateSaleUseCase(getIt<SaleRepository>()));
   getIt.registerFactory<GetCashSessionSalesSummaryUseCase>(() => GetCashSessionSalesSummaryUseCase(getIt<SaleRepository>()));
+
+  // ============================
+  // DASHBOARD
+  // ============================
+  getIt.registerLazySingleton<DashboardRemoteDataSource>(() => DashboardRemoteDataSourceImpl(getIt<ApiClient>()));
+  getIt.registerLazySingleton<DashboardRepository>(() => DashboardRepositoryImpl(getIt<DashboardRemoteDataSource>()));
+  getIt.registerFactory<GetDashboardSummaryUseCase>(() => GetDashboardSummaryUseCase(getIt<DashboardRepository>()));
 }

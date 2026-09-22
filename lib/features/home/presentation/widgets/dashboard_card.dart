@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app_movil_sistema/features/dashboard/domain/entities/dashboard_summary.dart';
 
 class DashboardCard extends StatelessWidget {
   final IconData icon;
@@ -84,38 +85,25 @@ class DashboardCard extends StatelessWidget {
 }
 
 class DashboardGrid extends StatelessWidget {
-  const DashboardGrid({super.key});
+  final DashboardSummary summary;
+  const DashboardGrid({super.key, required this.summary});
 
   @override
   Widget build(BuildContext context) {
     final cards = [
       DashboardCard(
-        icon: Icons.shopping_cart,
-        title: "Ventas",
-        value: "\$12,500",
-        subtitle: "Hoy",
+        icon: Icons.payments_rounded,
+        title: 'Venta de hoy',
+        value: 'S/ ${summary.todaySales.toStringAsFixed(2)}',
+        subtitle: 'Cobros completados',
         color: const Color(0xFF208e60),
       ),
       DashboardCard(
-        icon: Icons.people,
-        title: "Clientes",
-        value: "230",
-        subtitle: "Registrados",
+        icon: Icons.receipt_long_rounded,
+        title: 'Órdenes de hoy',
+        value: '${summary.todayOrders}',
+        subtitle: 'Órdenes creadas',
         color: const Color(0xFF2E86AB),
-      ),
-      DashboardCard(
-        icon: Icons.inventory,
-        title: "Inventario",
-        value: "58",
-        subtitle: "Productos bajos",
-        color: const Color(0xFFF39C12),
-      ),
-      DashboardCard(
-        icon: Icons.attach_money,
-        title: "Ingresos",
-        value: "\$85,000",
-        subtitle: "Este mes",
-        color: const Color(0xFF8E44AD),
       ),
     ];
 
@@ -127,10 +115,10 @@ class DashboardGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: cards.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: isSmallScreen ? 2 : 4,
+        crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: isSmallScreen ? 1.0 : 1.1,
+        childAspectRatio: isSmallScreen ? .98 : 1.55,
       ),
       itemBuilder: (context, index) => cards[index],
     );

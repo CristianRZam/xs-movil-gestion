@@ -1,0 +1,5 @@
+import 'package:app_movil_sistema/core/failures/failure.dart'; import 'package:app_movil_sistema/features/inventory_count/domain/entities/inventory_count.dart'; import 'package:app_movil_sistema/features/inventory_count/domain/repositories/inventory_count_repository.dart'; import 'package:dartz/dartz.dart';
+class GetCurrentInventoryCountUseCase { final InventoryCountRepository r; GetCurrentInventoryCountUseCase(this.r); Future<Either<Failure,InventoryCount?>> call()=>r.current(); }
+class OpenInventoryCountUseCase { final InventoryCountRepository r; OpenInventoryCountUseCase(this.r); Future<Either<Failure,InventoryCount>> call()=>r.open(); }
+class GetInventoryCountDetailUseCase { final InventoryCountRepository r; GetInventoryCountDetailUseCase(this.r); Future<Either<Failure,List<InventoryCountItem>>> call(int id)=>r.detail(id); }
+class CloseInventoryCountUseCase { final InventoryCountRepository r; CloseInventoryCountUseCase(this.r); Future<Either<Failure,InventoryCount>> call(int id,List<InventoryCountEntry> items)=>r.close(id,items); }

@@ -1,3 +1,5 @@
+import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-dash-line.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-text.dart';
 import 'package:flutter/material.dart';
@@ -161,11 +163,31 @@ class XsDrawer extends StatelessWidget {
                     ),
                   ),
 
+                  if (getIt<AccessControl>().allows(AppCapability.reports))
                   _DrawerItem(
                     icon: Icons.bar_chart_rounded,
                     title: '04 / Reportes',
                     isDarkMode: isDarkMode,
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacementNamed(context, AppRoutes.reports);
+                    },
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: DashedLine(dashWidth: 6, dashSpace: 5, height: 1, color: Colors.grey),
+                  ),
+
+                  if (getIt<AccessControl>().allows(AppCapability.inventoryCount))
+                  _DrawerItem(
+                    icon: Icons.inventory_rounded,
+                    title: '05 / Conteo diario',
+                    isDarkMode: isDarkMode,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacementNamed(context, AppRoutes.inventoryCount);
+                    },
                   ),
                 ],
               ),
@@ -204,25 +226,28 @@ class _DrawerItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        icon,
-        color: isDarkMode
-            ? AppColors.white
-            : AppColors.primary,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 15,
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        dense: true,
+        contentPadding: EdgeInsets.zero,
+        leading: Icon(
+          icon,
           color: isDarkMode
               ? AppColors.white
-              : AppColors.dark,
+              : AppColors.primary,
         ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 15,
+            color: isDarkMode
+                ? AppColors.white
+                : AppColors.dark,
+          ),
+        ),
+        onTap: onTap,
       ),
-      onTap: onTap,
     );
   }
 }

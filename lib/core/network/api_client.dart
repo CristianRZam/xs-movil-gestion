@@ -1,11 +1,13 @@
+import 'package:app_movil_sistema/core/authorization/api_access_policy.dart';
+import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/core/config/env_config.dart';
+import 'package:app_movil_sistema/core/session/session_coordinator.dart';
 import 'package:app_movil_sistema/core/storage/token_storage.dart';
 import 'package:dio/dio.dart';
-import 'package:jwt_decoder/jwt_decoder.dart';
 
 class ApiClient {
   late final Dio dio;
-  final TokenStorage tokenStorage = TokenStorage();
+  final TokenStorage tokenStorage = getIt<TokenStorage>();
 
   ApiClient() {
     dio = Dio(
@@ -41,15 +43,16 @@ class ApiClient {
                   statusCode: 401,
                   data: {
                     'code': 401,
-                    'message': 'No autenticado. Inicie sesión.'
+                    'message': 'No autenticado. Inicie sesión.',
                   },
                 ),
               ),
             );
           }
 
-          if (JwtDecoder.isExpired(token)) {
-            await tokenStorage.deleteToken();
+          final access = tokenStorage.access;
+          if (!access.isAuthenticated) {
+            await _endSession();
             return handler.reject(
               DioException(
                 requestOptions: options,
@@ -59,7 +62,26 @@ class ApiClient {
                   statusCode: 401,
                   data: {
                     'code': 401,
-                    'message': 'Sesión expirada. Inicie sesión nuevamente.'
+                    'message': 'Sesión expirada. Inicie sesión nuevamente.',
+                  },
+                ),
+              ),
+            );
+          }
+
+          if (!access.allows(
+            ApiAccessPolicy.requiredFor(options.path, options.method),
+          )) {
+            return handler.reject(
+              DioException(
+                requestOptions: options,
+                type: DioExceptionType.badResponse,
+                response: Response(
+                  requestOptions: options,
+                  statusCode: 403,
+                  data: {
+                    'code': 403,
+                    'message': 'No tienes acceso a esta operación.',
                   },
                 ),
               ),
@@ -70,10 +92,22 @@ class ApiClient {
           options.headers['Authorization'] = 'Bearer $token';
           handler.next(options);
         },
-        onError: (DioException e, handler) {
+        onError: (DioException e, handler) async {
+          final requiresAuth = e.requestOptions.extra['requiresAuth'] ?? true;
+          if (requiresAuth && e.response?.statusCode == 401) {
+            await _endSession();
+          }
           handler.reject(e);
         },
       ),
     );
+  }
+
+  Future<void> _endSession() async {
+    if (getIt.isRegistered<SessionCoordinator>()) {
+      await getIt<SessionCoordinator>().signOut();
+      return;
+    }
+    await tokenStorage.deleteToken();
   }
 }
