@@ -89,7 +89,7 @@ class XsDrawer extends StatelessWidget {
 
                   _DrawerItem(
                     icon: Icons.inventory_2_rounded,
-                    title: '01 / Productos',
+                    title: 'Productos',
                     isDarkMode: isDarkMode,
                     onTap: () {
                       Navigator.pop(context);
@@ -113,7 +113,7 @@ class XsDrawer extends StatelessWidget {
 
                   _DrawerItem(
                     icon: Icons.shopping_cart_rounded,
-                    title: '02 / Órdenes',
+                    title: 'Órdenes',
                     isDarkMode: isDarkMode,
                     onTap: () {
                       Navigator.pop(context);
@@ -123,7 +123,7 @@ class XsDrawer extends StatelessWidget {
 
                   _DrawerItem(
                     icon: Icons.receipt_long_rounded,
-                    title: '03 / Ventas',
+                    title: 'Ventas',
                     isDarkMode: isDarkMode,
                     onTap: () {
                       Navigator.pop(context);
@@ -143,7 +143,7 @@ class XsDrawer extends StatelessWidget {
 
                   _DrawerItem(
                     icon: Icons.point_of_sale_rounded,
-                    title: '04 / Caja',
+                    title: 'Caja',
                     isDarkMode: isDarkMode,
                     onTap: () {
                       Navigator.pop(context);
@@ -168,7 +168,7 @@ class XsDrawer extends StatelessWidget {
                   if (getIt<AccessControl>().allows(AppCapability.reports))
                     _DrawerItem(
                       icon: Icons.bar_chart_rounded,
-                      title: '04 / Reportes',
+                      title: 'Reportes',
                       isDarkMode: isDarkMode,
                       onTap: () {
                         Navigator.pop(context);
@@ -194,7 +194,7 @@ class XsDrawer extends StatelessWidget {
                   ))
                     _DrawerItem(
                       icon: Icons.inventory_rounded,
-                      title: '05 / Conteo diario',
+                      title: 'Conteo diario',
                       isDarkMode: isDarkMode,
                       onTap: () {
                         Navigator.pop(context);
@@ -223,13 +223,37 @@ class XsDrawer extends StatelessWidget {
                   ))
                     _DrawerItem(
                       icon: Icons.category_rounded,
-                      title: '06 / Categorías',
+                      title: 'Categorías',
                       isDarkMode: isDarkMode,
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.pushReplacementNamed(
                           context,
                           AppRoutes.categories,
+                        );
+                      },
+                    ),
+
+                  if (getIt<AccessControl>().allows(AppCapability.manageUsers))
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: DashedLine(
+                        dashWidth: 6,
+                        dashSpace: 5,
+                        height: 1,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  if (getIt<AccessControl>().allows(AppCapability.manageUsers))
+                    _DrawerItem(
+                      icon: Icons.people_alt_rounded,
+                      title: 'Usuarios',
+                      isDarkMode: isDarkMode,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushReplacementNamed(
+                          context,
+                          AppRoutes.users,
                         );
                       },
                     ),

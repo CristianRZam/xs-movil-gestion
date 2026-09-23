@@ -20,6 +20,7 @@ class ApiAccessPolicy {
     if (resource == 'dashboard') return AppCapability.dashboard;
     if (resource == 'inventory-counts') return AppCapability.inventoryCount;
     if (resource == 'parameter') return AppCapability.manageCategories;
+    if (resource == 'user') return AppCapability.manageUsers;
     if (resource == 'product' &&
         !(segments.length == 2 &&
             segments[1] == 'init' &&

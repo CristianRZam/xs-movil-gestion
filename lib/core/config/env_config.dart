@@ -19,4 +19,8 @@ class EnvConfig {
     final size = int.tryParse(dotenv.env['SALES_ORDERS_PAGE_SIZE'] ?? '');
     return size != null && size > 0 ? size : 20;
   }
+  static int get cashSessionHistoryPageSize {
+    final size = int.tryParse(dotenv.env['CASH_SESSION_HISTORY_PAGE_SIZE'] ?? '');
+    return size != null && size > 0 ? size : 10;
+  }
 }

@@ -7,6 +7,7 @@ enum AppCapability {
   operate,
   manageProducts,
   manageCategories,
+  manageUsers,
   manageInventory,
   inventoryCount,
   reports,

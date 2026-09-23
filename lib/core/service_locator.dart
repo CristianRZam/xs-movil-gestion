@@ -68,6 +68,11 @@ import 'package:app_movil_sistema/features/category/data/datasources/impl/catego
 import 'package:app_movil_sistema/features/category/data/repositories/category_repository_impl.dart';
 import 'package:app_movil_sistema/features/category/domain/repositories/category_repository.dart';
 import 'package:app_movil_sistema/features/category/domain/usecases/category_usecases.dart';
+import 'package:app_movil_sistema/features/user/data/datasources/impl/user_remote_datasource_impl.dart';
+import 'package:app_movil_sistema/features/user/data/datasources/user_remote_datasource.dart';
+import 'package:app_movil_sistema/features/user/data/repositories/user_repository_impl.dart';
+import 'package:app_movil_sistema/features/user/domain/repositories/user_repository.dart';
+import 'package:app_movil_sistema/features/user/domain/usecases/user_usecases.dart';
 
 final getIt = GetIt.instance;
 
@@ -325,6 +330,27 @@ void setupLocator() {
   );
   getIt.registerFactory<CreateCategoryUseCase>(
     () => CreateCategoryUseCase(getIt<CategoryRepository>()),
+  );
+  getIt.registerLazySingleton<UserRemoteDataSource>(
+    () => UserRemoteDataSourceImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<UserRepository>(
+    () => UserRepositoryImpl(getIt<UserRemoteDataSource>()),
+  );
+  getIt.registerFactory<GetUsersUseCase>(
+    () => GetUsersUseCase(getIt<UserRepository>()),
+  );
+  getIt.registerFactory<GetUserFormUseCase>(
+    () => GetUserFormUseCase(getIt<UserRepository>()),
+  );
+  getIt.registerFactory<CreateUserUseCase>(
+    () => CreateUserUseCase(getIt<UserRepository>()),
+  );
+  getIt.registerFactory<UpdateUserUseCase>(
+    () => UpdateUserUseCase(getIt<UserRepository>()),
+  );
+  getIt.registerFactory<UpdateUserStatusUseCase>(
+    () => UpdateUserStatusUseCase(getIt<UserRepository>()),
   );
   getIt.registerLazySingleton<NotificationCubit>(
     () => NotificationCubit(

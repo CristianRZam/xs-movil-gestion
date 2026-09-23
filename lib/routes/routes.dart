@@ -11,6 +11,7 @@ import 'package:app_movil_sistema/features/profile/presentation/pages/profile_sc
 import 'package:app_movil_sistema/features/inventory_count/presentation/pages/inventory_count_screen.dart';
 import 'package:app_movil_sistema/features/notification/presentation/pages/notification_screen.dart';
 import 'package:app_movil_sistema/features/category/presentation/pages/category_screen.dart';
+import 'package:app_movil_sistema/features/user/presentation/pages/user_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:app_movil_sistema/features/settings/presentation/pages/settings_screen.dart';
 
@@ -27,6 +28,7 @@ class AppRoutes {
   static const inventoryCount = '/inventory-count';
   static const notifications = '/notifications';
   static const categories = '/categories';
+  static const users = '/users';
 
   static final routes = <String, WidgetBuilder>{
     login: (context) => LoginScreen(),
@@ -73,6 +75,10 @@ class AppRoutes {
     categories: (context) => AccessGuard(
       capability: AppCapability.manageCategories,
       builder: (_) => const CategoryScreen(),
+    ),
+    users: (context) => AccessGuard(
+      capability: AppCapability.manageUsers,
+      builder: (_) => const UserScreen(),
     ),
   };
 }
