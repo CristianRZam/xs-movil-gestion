@@ -1,5 +1,6 @@
 import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-text.dart';
+import 'package:app_movil_sistema/features/notification/presentation/widgets/notification_bell.dart';
 import 'package:app_movil_sistema/routes/routes.dart';
 import 'package:flutter/material.dart';
 
@@ -85,6 +86,7 @@ class XsAppBar extends StatelessWidget implements PreferredSizeWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ...?actions,
+                  const NotificationBell(),
                   IconButton(
                     icon: const Icon(Icons.menu, color: Colors.white),
                     onPressed: onMenuPressed ?? () => Scaffold.of(context).openEndDrawer(),

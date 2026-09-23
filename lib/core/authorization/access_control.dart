@@ -11,6 +11,7 @@ enum AppCapability {
   reports,
   dashboard,
   deleteOrders,
+  notifications,
 }
 
 enum AuthorizationMode { roles, permissions }

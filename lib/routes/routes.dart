@@ -9,6 +9,7 @@ import 'package:app_movil_sistema/features/sale/presentation/pages/sale_screen.d
 import 'package:app_movil_sistema/features/report/presentation/pages/report_screen.dart';
 import 'package:app_movil_sistema/features/profile/presentation/pages/profile_screen.dart';
 import 'package:app_movil_sistema/features/inventory_count/presentation/pages/inventory_count_screen.dart';
+import 'package:app_movil_sistema/features/notification/presentation/pages/notification_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:app_movil_sistema/features/settings/presentation/pages/settings_screen.dart';
 
@@ -23,6 +24,7 @@ class AppRoutes {
   static const profile = '/profile';
   static const settings = '/settings';
   static const inventoryCount = '/inventory-count';
+  static const notifications = '/notifications';
 
   static final routes = <String, WidgetBuilder>{
     login: (context) => LoginScreen(),
@@ -57,6 +59,10 @@ class AppRoutes {
     inventoryCount: (context) => AccessGuard(
       capability: AppCapability.inventoryCount,
       builder: (_) => const InventoryCountScreen(),
+    ),
+    notifications: (context) => AccessGuard(
+      capability: AppCapability.notifications,
+      builder: (_) => const NotificationScreen(),
     ),
     settings: (context) => AccessGuard(
       capability: AppCapability.operate,

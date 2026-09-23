@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_cubit.dart';
+import 'features/notification/presentation/bloc/notification_cubit.dart';
 import 'routes/routes.dart';
 
 Future<void> main() async {
@@ -17,7 +18,15 @@ Future<void> main() async {
   getIt<AccessControl>().updateToken(await getIt<TokenStorage>().getToken());
   getIt<SessionCoordinator>();
   await dotenv.load(fileName: ".env");
-  runApp(BlocProvider(create: (_) => ThemeCubit(), child: const MyApp()));
+  runApp(
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => ThemeCubit()),
+        BlocProvider.value(value: getIt<NotificationCubit>()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

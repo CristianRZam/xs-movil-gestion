@@ -51,6 +51,12 @@ import 'package:app_movil_sistema/features/dashboard/data/datasources/impl/dashb
 import 'package:app_movil_sistema/features/dashboard/data/repositories/dashboard_repository_impl.dart';
 import 'package:app_movil_sistema/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:app_movil_sistema/features/dashboard/domain/usecases/get_dashboard_summary_usecase.dart';
+import 'package:app_movil_sistema/features/notification/data/datasources/impl/notification_remote_datasource_impl.dart';
+import 'package:app_movil_sistema/features/notification/data/datasources/notification_remote_datasource.dart';
+import 'package:app_movil_sistema/features/notification/data/repositories/notification_repository_impl.dart';
+import 'package:app_movil_sistema/features/notification/domain/repositories/notification_repository.dart';
+import 'package:app_movil_sistema/features/notification/domain/usecases/notification_usecases.dart';
+import 'package:app_movil_sistema/features/notification/presentation/bloc/notification_cubit.dart';
 
 final getIt = GetIt.instance;
 
@@ -263,4 +269,34 @@ void setupLocator() {
   getIt.registerLazySingleton<DashboardRemoteDataSource>(() => DashboardRemoteDataSourceImpl(getIt<ApiClient>()));
   getIt.registerLazySingleton<DashboardRepository>(() => DashboardRepositoryImpl(getIt<DashboardRemoteDataSource>()));
   getIt.registerFactory<GetDashboardSummaryUseCase>(() => GetDashboardSummaryUseCase(getIt<DashboardRepository>()));
+
+  // ============================
+  // NOTIFICATIONS
+  // ============================
+  getIt.registerLazySingleton<NotificationRemoteDataSource>(
+        () => NotificationRemoteDataSourceImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<NotificationRepository>(
+        () => NotificationRepositoryImpl(getIt<NotificationRemoteDataSource>()),
+  );
+  getIt.registerFactory<GetNotificationsUseCase>(
+        () => GetNotificationsUseCase(getIt<NotificationRepository>()),
+  );
+  getIt.registerFactory<GetUnreadNotificationCountUseCase>(
+        () => GetUnreadNotificationCountUseCase(getIt<NotificationRepository>()),
+  );
+  getIt.registerFactory<MarkNotificationAsReadUseCase>(
+        () => MarkNotificationAsReadUseCase(getIt<NotificationRepository>()),
+  );
+  getIt.registerFactory<MarkAllNotificationsAsReadUseCase>(
+        () => MarkAllNotificationsAsReadUseCase(getIt<NotificationRepository>()),
+  );
+  getIt.registerLazySingleton<NotificationCubit>(
+        () => NotificationCubit(
+      getIt<GetNotificationsUseCase>(),
+      getIt<GetUnreadNotificationCountUseCase>(),
+      getIt<MarkNotificationAsReadUseCase>(),
+      getIt<MarkAllNotificationsAsReadUseCase>(),
+    ),
+  );
 }

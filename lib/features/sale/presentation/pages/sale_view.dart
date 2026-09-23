@@ -31,7 +31,7 @@ class SaleView extends StatelessWidget {
         },
         builder: (context, state) => Scaffold(
           appBar: XsAppBar(
-            title: order == null ? 'Ventas' : 'Cobrar ${order!.orderNumber}',
+            title: order == null ? 'Ventas' : 'Cobrar',
             backIcon: false,
           ),
           endDrawer: const XsDrawer(),
@@ -212,7 +212,7 @@ class _SaleFormState extends State<_SaleForm> {
         title: Text(
           widget.order == null
               ? 'Nueva venta directa'
-              : 'Cobrar ${widget.order!.orderNumber}',
+              : 'Cobrar',
         ),
         content: SizedBox(
           width: 520,
@@ -223,6 +223,35 @@ class _SaleFormState extends State<_SaleForm> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (widget.order != null) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.receipt_long_rounded,
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Orden en cobro: ${widget.order!.orderNumber}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   _PaymentSummary(total: _total, paid: _paid),
                   const SizedBox(height: 20),
                   Row(

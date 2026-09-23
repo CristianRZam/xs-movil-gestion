@@ -10,6 +10,7 @@ class ApiAccessPolicy {
     if (segments.isEmpty) return AppCapability.operate;
     final resource = segments.first;
     if (resource == 'reports') return AppCapability.reports;
+    if (resource == 'notifications') return AppCapability.notifications;
     // The backend selects GLOBAL or PERSONAL from the authenticated user.
     if (resource == 'dashboard' &&
         segments.length == 1 &&
