@@ -1,5 +1,4 @@
 class InventoryMovementCreateRequest {
-
   final int productId;
   final String type;
   final double quantity;
@@ -19,5 +18,4 @@ class InventoryMovementCreateRequest {
     this.referenceType,
     this.referenceId,
   });
-
 }

@@ -9,10 +9,25 @@ import 'package:app_movil_sistema/features/shared/widgets/loading_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class SaleScreen extends StatelessWidget { const SaleScreen({super.key});
-  @override Widget build(BuildContext context) {
+class SaleScreen extends StatelessWidget {
+  const SaleScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
     final argument = ModalRoute.of(context)?.settings.arguments;
     final order = argument is Order ? argument : null;
-    return BlocProvider(create: (_) => SaleBloc(getIt<GetSalesUseCase>(), getIt<CreateSaleUseCase>(), getIt<GetProductViewUseCase>(), getIt<ExistsOpenCashSessionUseCase>())..add(const LoadSales()), child: BlocBuilder<SaleBloc, SaleState>(builder: (_, state) => LoadingOverlay(isLoading: state.status == SaleStatus.loading, child: SaleView(order: order))));
+    return BlocProvider(
+      create: (_) => SaleBloc(
+        getIt<GetSalesUseCase>(),
+        getIt<CreateSaleUseCase>(),
+        getIt<GetProductViewUseCase>(),
+        getIt<ExistsOpenCashSessionUseCase>(),
+      )..add(const LoadSales()),
+      child: BlocBuilder<SaleBloc, SaleState>(
+        builder: (_, state) => LoadingOverlay(
+          isLoading: state.status == SaleStatus.loading,
+          child: SaleView(order: order),
+        ),
+      ),
+    );
   }
 }

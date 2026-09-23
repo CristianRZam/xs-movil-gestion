@@ -17,11 +17,17 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
   final GetProductViewUseCase getProductViewUseCase;
   final ExistsOpenCashSessionUseCase existsOpenCashSessionUseCase;
 
-  OrderBloc(this.getOrdersUseCase, this.createOrderUseCase, this.updateOrderUseCase,
-      this.updateOrderStatusUseCase, this.deleteOrderUseCase, this.getProductViewUseCase,
-      this.existsOpenCashSessionUseCase)
-      : super(const OrderState()) {
+  OrderBloc(
+    this.getOrdersUseCase,
+    this.createOrderUseCase,
+    this.updateOrderUseCase,
+    this.updateOrderStatusUseCase,
+    this.deleteOrderUseCase,
+    this.getProductViewUseCase,
+    this.existsOpenCashSessionUseCase,
+  ) : super(const OrderState()) {
     on<LoadOrders>(_loadOrders);
+    on<LoadMoreOrders>(_loadMoreOrders);
     on<LoadOrderProducts>(_loadProducts);
     on<LoadMoreOrderProducts>(_loadMoreProducts);
     on<SearchOrderProducts>(_searchProducts);
@@ -30,43 +36,107 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     on<SaveOrder>(_saveOrder);
     on<ChangeOrderStatus>(_changeStatus);
     on<DeleteOrder>(_deleteOrder);
-    on<ClearOrderAction>((_, emit) => emit(state.copyWith(savedOrder: null, deleted: null)));
-    on<ClearOrderError>((_, emit) => emit(state.copyWith(status: OrderStatus.success, errorMessage: null)));
+    on<ClearOrderAction>(
+      (_, emit) => emit(state.copyWith(savedOrder: null, deleted: null)),
+    );
+    on<ClearOrderError>(
+      (_, emit) =>
+          emit(state.copyWith(status: OrderStatus.success, errorMessage: null)),
+    );
   }
 
   Future<void> _checkOpenCashSession(
-      CheckOpenCashSession event,
-      Emitter<OrderState> emit,
-      ) async {
+    CheckOpenCashSession event,
+    Emitter<OrderState> emit,
+  ) async {
     final result = await existsOpenCashSessionUseCase();
     result.fold(
-      (failure) => emit(state.copyWith(
-        isCashSessionOpen: false,
-        errorMessage: failure.message,
-      )),
+      (failure) => emit(
+        state.copyWith(isCashSessionOpen: false, errorMessage: failure.message),
+      ),
       (isOpen) => emit(state.copyWith(isCashSessionOpen: isOpen)),
     );
   }
 
   Future<void> _loadOrders(LoadOrders event, Emitter<OrderState> emit) async {
     emit(state.copyWith(status: OrderStatus.loading));
-    final result = await getOrdersUseCase();
+    final result = await getOrdersUseCase(
+      page: 0,
+      size: EnvConfig.salesAndOrdersPageSize,
+      from: event.fromDate,
+      to: event.toDate,
+    );
     result.fold(
-      (failure) => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
-      (orders) => emit(state.copyWith(status: OrderStatus.success, orders: orders)),
+      (failure) => emit(
+        state.copyWith(
+          status: OrderStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
+      (page) => emit(
+        state.copyWith(
+          status: OrderStatus.success,
+          orders: page.orders,
+          ordersPage: page.page,
+          hasMoreOrders: page.hasMore,
+          isLoadingMoreOrders: false,
+          dateFilter: event.filter,
+          fromDate: event.fromDate,
+          toDate: event.toDate,
+        ),
+      ),
     );
   }
 
-  Future<void> _loadProducts(LoadOrderProducts event, Emitter<OrderState> emit) async {
+  Future<void> _loadMoreOrders(
+    LoadMoreOrders event,
+    Emitter<OrderState> emit,
+  ) async {
+    if (!state.hasMoreOrders || state.isLoadingMoreOrders) return;
+    emit(state.copyWith(isLoadingMoreOrders: true));
+    final result = await getOrdersUseCase(
+      page: state.ordersPage + 1,
+      size: EnvConfig.salesAndOrdersPageSize,
+      from: state.fromDate,
+      to: state.toDate,
+    );
+    result.fold(
+      (failure) => emit(
+        state.copyWith(
+          isLoadingMoreOrders: false,
+          errorMessage: failure.message,
+        ),
+      ),
+      (page) => emit(
+        state.copyWith(
+          orders: [...state.orders, ...page.orders],
+          ordersPage: page.page,
+          hasMoreOrders: page.hasMore,
+          isLoadingMoreOrders: false,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _loadProducts(
+    LoadOrderProducts event,
+    Emitter<OrderState> emit,
+  ) async {
     final result = await getProductViewUseCase(
-      ProductViewRequest(page: 0, size: EnvConfig.productPageSize, status: true),
+      ProductViewRequest(
+        page: 0,
+        size: EnvConfig.productPageSize,
+        status: true,
+      ),
     );
     result.fold(
       (failure) => emit(state.copyWith(errorMessage: failure.message)),
-      (response) => emit(state.copyWith(
-        products: response.products,
-        totalProducts: response.totalProducts,
-      )),
+      (response) => emit(
+        state.copyWith(
+          products: response.products,
+          totalProducts: response.totalProducts,
+        ),
+      ),
     );
   }
 
@@ -78,18 +148,26 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     emit(state.copyWith(isLoadingMoreProducts: true));
     final page = state.products.length ~/ EnvConfig.productPageSize;
     final result = await getProductViewUseCase(
-      ProductViewRequest(page: page, size: EnvConfig.productPageSize, status: true),
+      ProductViewRequest(
+        page: page,
+        size: EnvConfig.productPageSize,
+        status: true,
+      ),
     );
     result.fold(
-      (failure) => emit(state.copyWith(
-        isLoadingMoreProducts: false,
-        errorMessage: failure.message,
-      )),
-      (response) => emit(state.copyWith(
-        products: [...state.products, ...response.products],
-        totalProducts: response.totalProducts,
-        isLoadingMoreProducts: false,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          isLoadingMoreProducts: false,
+          errorMessage: failure.message,
+        ),
+      ),
+      (response) => emit(
+        state.copyWith(
+          products: [...state.products, ...response.products],
+          totalProducts: response.totalProducts,
+          isLoadingMoreProducts: false,
+        ),
+      ),
     );
   }
 
@@ -107,10 +185,12 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     );
     result.fold(
       (failure) => emit(state.copyWith(errorMessage: failure.message)),
-      (response) => emit(state.copyWith(
-        products: response.products,
-        totalProducts: response.totalProducts,
-      )),
+      (response) => emit(
+        state.copyWith(
+          products: response.products,
+          totalProducts: response.totalProducts,
+        ),
+      ),
     );
   }
 
@@ -121,15 +201,21 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     Emitter<OrderState> emit,
   ) async {
     final result = await getProductViewUseCase(
-      ProductViewRequest(page: 0, size: EnvConfig.productPageSize, status: true),
+      ProductViewRequest(
+        page: 0,
+        size: EnvConfig.productPageSize,
+        status: true,
+      ),
     );
     result.fold(
       (failure) => event.completer.completeError(StateError(failure.message)),
       (response) {
-        emit(state.copyWith(
-          products: response.products,
-          totalProducts: response.totalProducts,
-        ));
+        emit(
+          state.copyWith(
+            products: response.products,
+            totalProducts: response.totalProducts,
+          ),
+        );
         event.completer.complete(response.products);
       },
     );
@@ -142,10 +228,12 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
 
       cashSessionResult.fold(
         (failure) {
-          emit(state.copyWith(
-            status: OrderStatus.failure,
-            errorMessage: failure.message,
-          ));
+          emit(
+            state.copyWith(
+              status: OrderStatus.failure,
+              errorMessage: failure.message,
+            ),
+          );
         },
         (isOpen) {
           isCashSessionOpen = isOpen;
@@ -155,10 +243,12 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
 
       if (isCashSessionOpen != true) {
         if (isCashSessionOpen == false) {
-          emit(state.copyWith(
-            status: OrderStatus.failure,
-            errorMessage: 'Abra una caja antes de crear una orden.',
-          ));
+          emit(
+            state.copyWith(
+              status: OrderStatus.failure,
+              errorMessage: 'Abra una caja antes de crear una orden.',
+            ),
+          );
         }
         return;
       }
@@ -169,16 +259,29 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
         ? await createOrderUseCase(event.order)
         : await updateOrderUseCase(event.order.id!, event.order);
     await result.fold(
-      (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
+      (failure) async => emit(
+        state.copyWith(
+          status: OrderStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
       (order) => _emitMutationSuccess(emit, savedOrder: order),
     );
   }
 
-  Future<void> _changeStatus(ChangeOrderStatus event, Emitter<OrderState> emit) async {
+  Future<void> _changeStatus(
+    ChangeOrderStatus event,
+    Emitter<OrderState> emit,
+  ) async {
     emit(state.copyWith(status: OrderStatus.loading));
     final result = await updateOrderStatusUseCase(event.id, event.status);
     await result.fold(
-      (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
+      (failure) async => emit(
+        state.copyWith(
+          status: OrderStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
       (order) => _emitMutationSuccess(emit, savedOrder: order),
     );
   }
@@ -187,7 +290,12 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     emit(state.copyWith(status: OrderStatus.loading));
     final result = await deleteOrderUseCase(event.id);
     await result.fold(
-      (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
+      (failure) async => emit(
+        state.copyWith(
+          status: OrderStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
       (_) => _emitMutationSuccess(emit, deleted: true),
     );
   }
@@ -199,24 +307,49 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     Order? savedOrder,
     bool deleted = false,
   }) async {
-    final ordersResult = await getOrdersUseCase();
+    final ordersResult = await getOrdersUseCase(
+      page: 0,
+      size: EnvConfig.salesAndOrdersPageSize,
+      from: state.fromDate,
+      to: state.toDate,
+    );
     final productsResult = await getProductViewUseCase(
-      ProductViewRequest(page: 0, size: EnvConfig.productPageSize, status: true),
+      ProductViewRequest(
+        page: 0,
+        size: EnvConfig.productPageSize,
+        status: true,
+      ),
     );
 
-    final refreshedOrders = ordersResult.fold((_) => state.orders, (orders) => orders);
+    final refreshedOrders = ordersResult.fold(
+      (_) => state.orders,
+      (page) => page.orders,
+    );
     final refreshedProducts = productsResult.fold(
       (_) => state.products,
       (response) => response.products,
     );
 
-    emit(state.copyWith(
-      status: OrderStatus.success,
-      orders: refreshedOrders,
-      products: refreshedProducts,
-      totalProducts: productsResult.fold((_) => state.totalProducts, (response) => response.totalProducts),
-      savedOrder: savedOrder,
-      deleted: deleted ? true : null,
-    ));
+    emit(
+      state.copyWith(
+        status: OrderStatus.success,
+        orders: refreshedOrders,
+        ordersPage: ordersResult.fold(
+          (_) => state.ordersPage,
+          (page) => page.page,
+        ),
+        hasMoreOrders: ordersResult.fold(
+          (_) => state.hasMoreOrders,
+          (page) => page.hasMore,
+        ),
+        products: refreshedProducts,
+        totalProducts: productsResult.fold(
+          (_) => state.totalProducts,
+          (response) => response.totalProducts,
+        ),
+        savedOrder: savedOrder,
+        deleted: deleted ? true : null,
+      ),
+    );
   }
 }

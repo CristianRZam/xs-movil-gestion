@@ -1,6 +1,7 @@
 import 'package:app_movil_sistema/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:app_movil_sistema/routes/routes.dart';
 import 'package:flutter/material.dart';
+import 'package:app_movil_sistema/core/theme/payment_method_style.dart';
 import 'package:intl/intl.dart';
 
 import 'dashboard_card.dart';
@@ -49,15 +50,50 @@ class PersonalDashboard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          summary.summaryDate == null
-              ? 'Tu actividad del día'
-              : 'Tu actividad del ${DateFormat('dd/MM/yyyy').format(summary.summaryDate!)}',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Solo se incluyen las operaciones registradas con tu usuario.',
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.tertiary,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.person_pin_circle_rounded, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text(
+                    'Mi jornada',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                _money(summary.todaySales),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                summary.summaryDate == null
+                    ? 'Ventas registradas hoy'
+                    : DateFormat('dd/MM/yyyy').format(summary.summaryDate!),
+                style: TextStyle(color: Colors.white.withValues(alpha: .88)),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         LayoutBuilder(
@@ -101,7 +137,10 @@ class PersonalDashboard extends StatelessWidget {
           for (final payment in summary.paymentMethods)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.account_balance_wallet_outlined),
+              leading: Icon(
+                PaymentMethodStyle.icon(payment.method),
+                color: PaymentMethodStyle.color(payment.method),
+              ),
               title: Text(_paymentLabel(payment.method)),
               subtitle: Text(_money(payment.total)),
             ),

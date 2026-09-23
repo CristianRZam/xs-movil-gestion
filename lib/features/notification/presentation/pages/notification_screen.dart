@@ -4,6 +4,7 @@ import 'package:app_movil_sistema/features/notification/domain/entities/app_noti
 import 'package:app_movil_sistema/features/notification/presentation/bloc/notification_cubit.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:app_movil_sistema/routes/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -283,6 +284,7 @@ Future<void> _openNotificationDetail(
   if (!context.mounted) return;
 
   final metadata = _metadata(notification.metadata);
+  final action = _notificationAction(notification);
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -421,12 +423,59 @@ Future<void> _openNotificationDetail(
                   label: 'Conteo pendiente',
                   value: '${metadata['pendingHours']} horas',
                 ),
+              if (action != null) ...[
+                const SizedBox(height: 6),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.of(sheetContext).pop();
+                      Navigator.of(context).pushNamed(action.route);
+                    },
+                    icon: Icon(action.icon),
+                    label: Text(action.label),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
     ),
   );
+}
+
+_NotificationAction? _notificationAction(AppNotification notification) {
+  return switch (notification.referenceType) {
+    'PRODUCT' => const _NotificationAction(
+        route: AppRoutes.product,
+        label: 'Ver productos',
+        icon: Icons.inventory_2_outlined,
+      ),
+    'CASH_SESSION' => const _NotificationAction(
+        route: AppRoutes.cashSession,
+        label: 'Revisar caja',
+        icon: Icons.point_of_sale_rounded,
+      ),
+    'INVENTORY_COUNT' => const _NotificationAction(
+        route: AppRoutes.inventoryCount,
+        label: 'Revisar conteo',
+        icon: Icons.fact_check_outlined,
+      ),
+    _ => null,
+  };
+}
+
+class _NotificationAction {
+  const _NotificationAction({
+    required this.route,
+    required this.label,
+    required this.icon,
+  });
+
+  final String route;
+  final String label;
+  final IconData icon;
 }
 
 Map<String, dynamic> _metadata(String? rawMetadata) {

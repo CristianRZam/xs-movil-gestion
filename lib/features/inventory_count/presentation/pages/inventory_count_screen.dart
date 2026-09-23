@@ -1,10 +1,8 @@
 import 'package:app_movil_sistema/core/network/api_client.dart';
 import 'package:app_movil_sistema/core/network/api_response.dart';
-import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:app_movil_sistema/features/inventory_count/presentation/inventory_count_autofill.dart';
-import 'package:app_movil_sistema/features/inventory_movement/domain/usecases/get_inventory_movements_usecase.dart';
 import 'package:app_movil_sistema/features/inventory_movement/presentation/widgets/inventory_count_movement_sheet.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -216,20 +214,10 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
   Future<void> _showProductMovements(Map<String, dynamic> row) =>
       _request(() async {
         final item = row['item'] as Map<String, dynamic>;
-        final result = await getIt<GetInventoryMovementsUseCase>()(
-          item['productId'] as int,
-        );
-        final movements = result.fold((failure) {
-          _message(failure.message);
-          return null;
-        }, (value) => value);
-
-        if (movements == null || !mounted) return;
-
         await showInventoryCountMovementSheet(
           context: context,
+          productId: item['productId'] as int,
           productName: row['productName'] as String,
-          movements: movements,
           countOpenedAt: _openedAt,
         );
       });

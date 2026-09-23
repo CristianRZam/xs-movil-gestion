@@ -14,7 +14,6 @@ import 'product_event.dart';
 import 'product_state.dart';
 
 class ProductBloc extends Bloc<ProductEvent, ProductState> {
-
   final GetProductViewUseCase getProductViewUseCase;
   final GetProductFormUseCase getProductFormUseCase;
   final CreateProductUseCase createProductUseCase;
@@ -24,26 +23,23 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
   final CreateInventoryMovementUseCase createInventoryMovementUseCase;
 
   ProductBloc(
-      this.getProductViewUseCase,
-      this.getProductFormUseCase,
-      this.createProductUseCase,
-      this.updateProductUseCase,
-      this.deleteProductUseCase,
-      this.getInventoryMovementsUseCase,
-      this.createInventoryMovementUseCase,
-      ) : super(
-    const ProductState(),
-  ) {
+    this.getProductViewUseCase,
+    this.getProductFormUseCase,
+    this.createProductUseCase,
+    this.updateProductUseCase,
+    this.deleteProductUseCase,
+    this.getInventoryMovementsUseCase,
+    this.createInventoryMovementUseCase,
+  ) : super(const ProductState()) {
+    on<LoadProductView>(_loadProductView);
 
-    on<LoadProductView>(_loadProductView,);
+    on<FilterProductView>(_filterProductView);
 
-    on<FilterProductView>(_filterProductView,);
-
-    on<ClearProductFilter>(_clearFilter,);
+    on<ClearProductFilter>(_clearFilter);
 
     on<LoadMoreProducts>(_loadMoreProducts);
 
-    on<LoadProductForm>(_loadProductForm,);
+    on<LoadProductForm>(_loadProductForm);
 
     on<ClearProductForm>(_clearProductForm);
 
@@ -64,36 +60,33 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     on<ClearInventoryMovements>(_clearInventoryMovements);
 
     on<ClearSavedInventoryMovement>(_clearSavedInventoryMovement);
-
   }
 
-
-
-  Future<void> _loadProductView(LoadProductView event, Emitter<ProductState> emit,) async {
-
-    await _getProducts(event.request, emit,);
-
+  Future<void> _loadProductView(
+    LoadProductView event,
+    Emitter<ProductState> emit,
+  ) async {
+    await _getProducts(event.request, emit);
   }
 
-
-
-  Future<void> _filterProductView(FilterProductView event, Emitter<ProductState> emit,) async {
-
-    await _getProducts(event.request, emit,);
-
+  Future<void> _filterProductView(
+    FilterProductView event,
+    Emitter<ProductState> emit,
+  ) async {
+    await _getProducts(event.request, emit);
   }
 
+  Future<void> _clearFilter(
+    ClearProductFilter event,
+    Emitter<ProductState> emit,
+  ) async {
+    final request = ProductViewRequest(
+      page: 0,
+      size: EnvConfig.productPageSize,
+    );
 
-
-  Future<void> _clearFilter(ClearProductFilter event, Emitter<ProductState> emit,) async {
-
-    final request = ProductViewRequest(page: 0, size: EnvConfig.productPageSize);
-
-    await _getProducts(request, emit,);
-
+    await _getProducts(request, emit);
   }
-
-
 
   Future<void> _loadMoreProducts(
     LoadMoreProducts event,
@@ -101,8 +94,10 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
   ) async {
     final response = state.response;
     final request = state.currentRequest;
-    if (response == null || request == null ||
-        response.products.length >= response.totalProducts || state.isLoadingMore) {
+    if (response == null ||
+        request == null ||
+        response.products.length >= response.totalProducts ||
+        state.isLoadingMore) {
       return;
     }
 
@@ -110,48 +105,52 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     final nextRequest = request.copyWith(page: request.page + 1);
     final result = await getProductViewUseCase(nextRequest);
     result.fold(
-      (failure) => emit(state.copyWith(
-        isLoadingMore: false,
-        errorCode: failure.code,
-        errorMessage: failure.message,
-      )),
-      (nextResponse) => emit(state.copyWith(
-        isLoadingMore: false,
-        currentRequest: nextRequest,
-        response: _mergeResponses(response, nextResponse),
-      )),
+      (failure) => emit(
+        state.copyWith(
+          isLoadingMore: false,
+          errorCode: failure.code,
+          errorMessage: failure.message,
+        ),
+      ),
+      (nextResponse) => emit(
+        state.copyWith(
+          isLoadingMore: false,
+          currentRequest: nextRequest,
+          response: _mergeResponses(response, nextResponse),
+        ),
+      ),
     );
   }
 
-  Future<void> _getProducts(ProductViewRequest request, Emitter<ProductState> emit,) async {
+  Future<void> _getProducts(
+    ProductViewRequest request,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(status: ProductStatus.loading));
 
-    emit(state.copyWith(status: ProductStatus.loading,),);
-
-    final result = await getProductViewUseCase(request,);
-
+    final result = await getProductViewUseCase(request);
 
     result.fold(
-          (failure) {
-        emit(state.copyWith(
+      (failure) {
+        emit(
+          state.copyWith(
             status: ProductStatus.failure,
             errorCode: failure.code,
             errorMessage: failure.message,
           ),
         );
-
       },
-          (response) {
-        emit(state.copyWith(
+      (response) {
+        emit(
+          state.copyWith(
             status: ProductStatus.success,
             response: response,
             currentRequest: request,
             isLoadingMore: false,
           ),
         );
-
       },
     );
-
   }
 
   ProductViewResponse _mergeResponses(
@@ -170,18 +169,16 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     );
   }
 
-  Future<void> _loadProductForm(LoadProductForm event, Emitter<ProductState> emit,) async {
-
+  Future<void> _loadProductForm(
+    LoadProductForm event,
+    Emitter<ProductState> emit,
+  ) async {
     emit(state.copyWith(status: ProductStatus.loading));
 
-    final result = await getProductFormUseCase(
-      event.request,
-    );
+    final result = await getProductFormUseCase(event.request);
 
     result.fold(
-
-          (failure){
-
+      (failure) {
         emit(
           state.copyWith(
             status: ProductStatus.failure,
@@ -189,50 +186,33 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
             errorMessage: failure.message,
           ),
         );
-
       },
 
-          (response){
-
+      (response) {
         emit(
-          state.copyWith(
-            status: ProductStatus.success,
-            formResponse: response,
-          ),
+          state.copyWith(status: ProductStatus.success, formResponse: response),
         );
-
       },
-
     );
-
   }
 
-  Future<void> _clearProductForm(ClearProductForm event, Emitter<ProductState> emit,) async {
-
-    emit(
-      state.copyWith(
-        formResponse: null,
-      ),
-    );
-
+  Future<void> _clearProductForm(
+    ClearProductForm event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(formResponse: null));
   }
 
-  Future<void> _createProduct(CreateProduct event, Emitter<ProductState> emit,) async {
+  Future<void> _createProduct(
+    CreateProduct event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(status: ProductStatus.loading));
 
-    emit(
-      state.copyWith(
-        status: ProductStatus.loading,
-      ),
-    );
-
-    final result = await createProductUseCase(
-      event.request,
-    );
+    final result = await createProductUseCase(event.request);
 
     result.fold(
-
-          (failure) {
-
+      (failure) {
         emit(
           state.copyWith(
             status: ProductStatus.failure,
@@ -240,40 +220,24 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
             errorMessage: failure.message,
           ),
         );
-
       },
 
-          (product) {
-
-        emit(
-          state.copyWith(
-            status: ProductStatus.success,
-            product: product,
-          ),
-        );
-
+      (product) {
+        emit(state.copyWith(status: ProductStatus.success, product: product));
       },
-
     );
-
   }
 
-  Future<void> _updateProduct(UpdateProduct event, Emitter<ProductState> emit,) async {
+  Future<void> _updateProduct(
+    UpdateProduct event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(status: ProductStatus.loading));
 
-    emit(
-      state.copyWith(
-        status: ProductStatus.loading,
-      ),
-    );
-
-    final result = await updateProductUseCase(
-      event.request,
-    );
+    final result = await updateProductUseCase(event.request);
 
     result.fold(
-
-          (failure) {
-
+      (failure) {
         emit(
           state.copyWith(
             status: ProductStatus.failure,
@@ -281,53 +245,31 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
             errorMessage: failure.message,
           ),
         );
-
       },
 
-          (product) {
-
-        emit(
-          state.copyWith(
-            status: ProductStatus.success,
-            product: product,
-          ),
-        );
-
+      (product) {
+        emit(state.copyWith(status: ProductStatus.success, product: product));
       },
-
     );
-
   }
 
-  Future<void> _clearSavedProduct(ClearSavedProduct event, Emitter<ProductState> emit,) async {
-
-    emit(
-      state.copyWith(
-        product: null,
-      ),
-    );
-
+  Future<void> _clearSavedProduct(
+    ClearSavedProduct event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(product: null));
   }
 
   Future<void> _deleteProduct(
-      DeleteProduct event,
-      Emitter<ProductState> emit,
-      ) async {
+    DeleteProduct event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(status: ProductStatus.loading));
 
-    emit(
-      state.copyWith(
-        status: ProductStatus.loading,
-      ),
-    );
-
-    final result = await deleteProductUseCase(
-      event.id,
-    );
+    final result = await deleteProductUseCase(event.id);
 
     result.fold(
-
-          (failure) {
-
+      (failure) {
         emit(
           state.copyWith(
             status: ProductStatus.failure,
@@ -335,56 +277,35 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
             errorMessage: failure.message,
           ),
         );
-
       },
 
-          (deleted) {
-
-        emit(
-          state.copyWith(
-            status: ProductStatus.success,
-            deleted: deleted,
-          ),
-        );
-
+      (deleted) {
+        emit(state.copyWith(status: ProductStatus.success, deleted: deleted));
       },
-
     );
-
   }
 
   Future<void> _clearDeletedProduct(
-      ClearDeletedProduct event,
-      Emitter<ProductState> emit,
-      ) async {
-
-    emit(
-      state.copyWith(
-        deleted: null,
-      ),
-    );
-
+    ClearDeletedProduct event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(deleted: null));
   }
 
   Future<void> _loadInventoryMovements(
-      LoadInventoryMovements event,
-      Emitter<ProductState> emit,
-      ) async {
-
-    emit(
-      state.copyWith(
-        status: ProductStatus.loading,
-      ),
-    );
+    LoadInventoryMovements event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(status: ProductStatus.loading));
 
     final result = await getInventoryMovementsUseCase(
       event.productId,
+      page: 0,
+      size: 20,
     );
 
     result.fold(
-
-          (failure) {
-
+      (failure) {
         emit(
           state.copyWith(
             status: ProductStatus.failure,
@@ -392,43 +313,29 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
             errorMessage: failure.message,
           ),
         );
-
       },
 
-          (movements) {
-
+      (movementPage) {
         emit(
           state.copyWith(
             status: ProductStatus.success,
-            inventoryMovements: movements,
+            inventoryMovements: movementPage.movements,
           ),
         );
-
       },
-
     );
-
   }
 
   Future<void> _createInventoryMovement(
-      CreateInventoryMovement event,
-      Emitter<ProductState> emit,
-      ) async {
+    CreateInventoryMovement event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(status: ProductStatus.loading));
 
-    emit(
-      state.copyWith(
-        status: ProductStatus.loading,
-      ),
-    );
-
-    final result = await createInventoryMovementUseCase(
-      event.request,
-    );
+    final result = await createInventoryMovementUseCase(event.request);
 
     result.fold(
-
-          (failure) {
-
+      (failure) {
         emit(
           state.copyWith(
             status: ProductStatus.failure,
@@ -436,48 +343,30 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
             errorMessage: failure.message,
           ),
         );
-
       },
 
-          (movement) {
-
+      (movement) {
         emit(
           state.copyWith(
             status: ProductStatus.success,
             inventoryMovement: movement,
           ),
         );
-
       },
-
     );
-
   }
 
   Future<void> _clearInventoryMovements(
-      ClearInventoryMovements event,
-      Emitter<ProductState> emit,
-      ) async {
-
-    emit(
-      state.copyWith(
-        inventoryMovements: null,
-      ),
-    );
-
+    ClearInventoryMovements event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(inventoryMovements: null));
   }
 
   Future<void> _clearSavedInventoryMovement(
-      ClearSavedInventoryMovement event,
-      Emitter<ProductState> emit,
-      ) async {
-
-    emit(
-      state.copyWith(
-        inventoryMovement: null,
-      ),
-    );
-
+    ClearSavedInventoryMovement event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(inventoryMovement: null));
   }
-
 }

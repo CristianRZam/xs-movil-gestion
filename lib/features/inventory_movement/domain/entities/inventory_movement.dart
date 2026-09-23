@@ -1,5 +1,4 @@
 class InventoryMovement {
-
   final int id;
   final int productId;
   final String type;
@@ -23,5 +22,4 @@ class InventoryMovement {
     this.referenceId,
     required this.deleted,
   });
-
 }

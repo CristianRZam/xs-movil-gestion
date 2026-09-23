@@ -10,30 +10,73 @@ abstract class OrderEvent extends Equatable {
   List<Object?> get props => const [];
 }
 
-class LoadOrders extends OrderEvent { const LoadOrders(); }
-class LoadOrderProducts extends OrderEvent { const LoadOrderProducts(); }
-class LoadMoreOrderProducts extends OrderEvent { const LoadMoreOrderProducts(); }
-class SearchOrderProducts extends OrderEvent { final String query; const SearchOrderProducts(this.query); }
+enum OrderDateFilter { all, today, week, month, custom }
+
+class LoadOrders extends OrderEvent {
+  final OrderDateFilter filter;
+  final DateTime? fromDate;
+  final DateTime? toDate;
+  const LoadOrders({
+    this.filter = OrderDateFilter.all,
+    this.fromDate,
+    this.toDate,
+  });
+  @override
+  List<Object?> get props => [filter, fromDate, toDate];
+}
+
+class LoadMoreOrders extends OrderEvent {
+  const LoadMoreOrders();
+}
+
+class LoadOrderProducts extends OrderEvent {
+  const LoadOrderProducts();
+}
+
+class LoadMoreOrderProducts extends OrderEvent {
+  const LoadMoreOrderProducts();
+}
+
+class SearchOrderProducts extends OrderEvent {
+  final String query;
+  const SearchOrderProducts(this.query);
+}
+
 class RefreshOrderProducts extends OrderEvent {
   final Completer<List<Product>> completer;
   RefreshOrderProducts(this.completer);
 }
-class CheckOpenCashSession extends OrderEvent { const CheckOpenCashSession(); }
+
+class CheckOpenCashSession extends OrderEvent {
+  const CheckOpenCashSession();
+}
+
 class SaveOrder extends OrderEvent {
   final Order order;
   const SaveOrder(this.order);
-  @override List<Object?> get props => [order];
+  @override
+  List<Object?> get props => [order];
 }
+
 class ChangeOrderStatus extends OrderEvent {
   final int id;
   final String status;
   const ChangeOrderStatus(this.id, this.status);
-  @override List<Object?> get props => [id, status];
+  @override
+  List<Object?> get props => [id, status];
 }
+
 class DeleteOrder extends OrderEvent {
   final int id;
   const DeleteOrder(this.id);
-  @override List<Object?> get props => [id];
+  @override
+  List<Object?> get props => [id];
 }
-class ClearOrderAction extends OrderEvent { const ClearOrderAction(); }
-class ClearOrderError extends OrderEvent { const ClearOrderError(); }
+
+class ClearOrderAction extends OrderEvent {
+  const ClearOrderAction();
+}
+
+class ClearOrderError extends OrderEvent {
+  const ClearOrderError();
+}

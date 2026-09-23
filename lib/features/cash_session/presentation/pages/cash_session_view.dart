@@ -18,21 +18,16 @@ import 'package:app_movil_sistema/features/shared/widgets/xs-number-field.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-textfield.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:flutter/material.dart';
+import 'package:app_movil_sistema/core/theme/payment_method_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class CashSessionView extends StatelessWidget {
-
-  const CashSessionView({
-    super.key,
-  });
+  const CashSessionView({super.key});
 
   @override
   Widget build(BuildContext context) {
-
-    final isDark =
-        Theme.of(context).brightness ==
-            Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final tokenStorage = getIt<TokenStorage>();
 
@@ -40,30 +35,20 @@ class CashSessionView extends StatelessWidget {
       future: tokenStorage.getToken(),
 
       builder: (context, snapshot) {
-
-        final hasToken =
-            snapshot.hasData &&
-                snapshot.data != null;
+        final hasToken = snapshot.hasData && snapshot.data != null;
 
         return PopScope(
           canPop: !hasToken,
 
-          onPopInvokedWithResult:
-              (didPop, result) {
-
+          onPopInvokedWithResult: (didPop, result) {
             if (hasToken && !didPop) {
               SystemNavigator.pop();
             }
           },
 
-          child: BlocConsumer<
-              CashSessionBloc,
-              CashSessionState>(
-
+          child: BlocConsumer<CashSessionBloc, CashSessionState>(
             listener: (context, state) {
-
               if (state.savedSession != null) {
-
                 final session = state.savedSession!;
 
                 // Cerrar el diálogo solamente cuando la operación
@@ -73,135 +58,79 @@ class CashSessionView extends StatelessWidget {
                 }
 
                 if (session.status == "OPEN") {
-
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        "Caja abierta correctamente",
-                      ),
-                    ),
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Caja abierta correctamente")),
                   );
-
                 } else {
-
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        "Caja cerrada correctamente",
-                      ),
-                    ),
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Caja cerrada correctamente")),
                   );
                 }
 
-                context
-                    .read<CashSessionBloc>()
-                    .add(
+                context.read<CashSessionBloc>().add(
                   const ClearSavedCashSession(),
                 );
               }
 
               if (state.history != null) {
+                openCashSessionHistoryDialog(context, state.history!);
 
-                openCashSessionHistoryDialog(
-                  context,
-                  state.history!,
-                );
-
-                context
-                    .read<CashSessionBloc>()
-                    .add(
+                context.read<CashSessionBloc>().add(
                   const ClearCashSessionHistory(),
                 );
               }
 
-              if (state.status ==
-                  CashSessionStatus.failure &&
+              if (state.status == CashSessionStatus.failure &&
                   state.errorMessage != null) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
 
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      state.errorMessage!,
-                    ),
-                  ),
-                );
-
-                context
-                    .read<CashSessionBloc>()
-                    .add(
+                context.read<CashSessionBloc>().add(
                   const ClearCashSessionError(),
                 );
               }
             },
 
             builder: (context, state) {
+              final session = state.currentSession;
 
-              final session =
-                  state.currentSession;
-
-              final isOpen =
-                  session != null &&
-                      session.status == "OPEN";
+              final isOpen = session != null && session.status == "OPEN";
 
               return Scaffold(
-
-                backgroundColor:
-                isDark
+                backgroundColor: isDark
                     ? AppColors.darkBackground
                     : AppColors.lightBackground,
 
-                appBar: const XsAppBar(
-                  title: "Caja",
-                  backIcon: false,
-                ),
+                appBar: const XsAppBar(title: "Caja", backIcon: false),
 
                 endDrawer: const XsDrawer(),
 
                 floatingActionButton: isOpen
                     ? FloatingActionButton.small(
                         tooltip: 'Actualizar montos de caja',
-                        onPressed: () => context
-                            .read<CashSessionBloc>()
-                            .add(const LoadCurrentCashSession()),
+                        onPressed: () => context.read<CashSessionBloc>().add(
+                          const LoadCurrentCashSession(),
+                        ),
                         child: const Icon(Icons.refresh_rounded),
                       )
                     : null,
 
                 body: SafeArea(
-
                   child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
 
-                    physics:
-                    const BouncingScrollPhysics(),
-
-                    padding:
-                    const EdgeInsets.fromLTRB(
-                      16,
-                      18,
-                      16,
-                      40,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 40),
 
                     child: Column(
-
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
 
                       children: [
-
                         if (isOpen) ...[
-
                           CashSessionCard(
                             session: session,
                             onClose: () {
-
-                              openCloseCashSessionDialog(
-                                context,
-                                session,
-                              );
+                              openCloseCashSessionDialog(context, session);
                             },
                           ),
 
@@ -209,40 +138,33 @@ class CashSessionView extends StatelessWidget {
 
                           Row(
                             children: [
-
                               Expanded(
-                                child:
-                                CashSessionSummaryCard(
+                                child: CashSessionSummaryCard(
                                   title: "Apertura",
                                   value:
-                                  "S/ ${session.openingAmount.toStringAsFixed(2)}",
-                                  icon:
-                                  Icons.lock_open_rounded,
+                                      "S/ ${session.openingAmount.toStringAsFixed(2)}",
+                                  icon: Icons.lock_open_rounded,
                                 ),
                               ),
 
                               const SizedBox(width: 10),
 
                               Expanded(
-                                child:
-                                CashSessionSummaryCard(
+                                child: CashSessionSummaryCard(
                                   title: "Esperado",
                                   value:
-                                  "S/ ${(session.expectedAmount ?? 0).toStringAsFixed(2)}",
-                                  icon:
-                                  Icons.calculate_outlined,
+                                      "S/ ${(session.expectedAmount ?? 0).toStringAsFixed(2)}",
+                                  icon: Icons.calculate_outlined,
                                 ),
                               ),
 
                               const SizedBox(width: 10),
 
                               Expanded(
-                                child:
-                                CashSessionSummaryCard(
+                                child: CashSessionSummaryCard(
                                   title: "Estado",
                                   value: "ABIERTA",
-                                  icon:
-                                  Icons.point_of_sale_rounded,
+                                  icon: Icons.point_of_sale_rounded,
                                 ),
                               ),
                             ],
@@ -251,7 +173,8 @@ class CashSessionView extends StatelessWidget {
                           const SizedBox(height: 22),
 
                           OutlinedButton.icon(
-                            onPressed: () => _openCashSalesHistory(context, session.id),
+                            onPressed: () =>
+                                _openCashSalesHistory(context, session.id),
                             icon: const Icon(Icons.receipt_long_outlined),
                             label: const Text('Ver ventas de esta caja'),
                           ),
@@ -261,48 +184,29 @@ class CashSessionView extends StatelessWidget {
                           SizedBox(
                             width: double.infinity,
 
-                            child:
-                            FilledButton.icon(
+                            child: FilledButton.icon(
                               onPressed: () {
-
-                                openCloseCashSessionDialog(
-                                  context,
-                                  session,
-                                );
+                                openCloseCashSessionDialog(context, session);
                               },
 
-                              icon: const Icon(
-                                Icons.lock_rounded,
-                              ),
+                              icon: const Icon(Icons.lock_rounded),
 
-                              label: const Text(
-                                "Cerrar caja",
-                              ),
+                              label: const Text("Cerrar caja"),
 
-                              style:
-                              FilledButton.styleFrom(
-                                backgroundColor:
-                                Colors.red,
-                                padding:
-                                const EdgeInsets
-                                    .symmetric(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
                               ),
                             ),
                           ),
-
                         ] else ...[
-
                           _ClosedCashCard(
                             onOpen: () {
-
-                              openOpenCashSessionDialog(
-                                context,
-                              );
+                              openOpenCashSessionDialog(context);
                             },
                           ),
-
                         ],
 
                         const SizedBox(height: 22),
@@ -312,31 +216,17 @@ class CashSessionView extends StatelessWidget {
 
                           child: OutlinedButton.icon(
                             onPressed: () {
-
-                              context
-                                  .read<
-                                  CashSessionBloc>()
-                                  .add(
-                                const
-                                LoadCashSessionHistory(),
+                              context.read<CashSessionBloc>().add(
+                                const LoadCashSessionHistory(),
                               );
                             },
 
-                            icon: const Icon(
-                              Icons.history_rounded,
-                            ),
+                            icon: const Icon(Icons.history_rounded),
 
-                            label: const Text(
-                              "Historial de cajas",
-                            ),
+                            label: const Text("Historial de cajas"),
 
-                            style:
-                            OutlinedButton.styleFrom(
-                              padding:
-                              const EdgeInsets
-                                  .symmetric(
-                                vertical: 15,
-                              ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 15),
                             ),
                           ),
                         ),
@@ -353,48 +243,33 @@ class CashSessionView extends StatelessWidget {
   }
 }
 
-
 class _ClosedCashCard extends StatelessWidget {
-
   final VoidCallback onOpen;
 
-  const _ClosedCashCard({
-    required this.onOpen,
-  });
+  const _ClosedCashCard({required this.onOpen});
 
   @override
   Widget build(BuildContext context) {
-
-    final theme =
-    Theme.of(context);
+    final theme = Theme.of(context);
 
     return Container(
-
       width: double.infinity,
 
-      padding:
-      const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
 
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius:
-        BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(24),
       ),
 
       child: Column(
-
         children: [
-
           Container(
             width: 70,
             height: 70,
 
             decoration: BoxDecoration(
-              color:
-              AppColors.primary
-                  .withValues(
-                alpha: .10,
-              ),
+              color: AppColors.primary.withValues(alpha: .10),
 
               shape: BoxShape.circle,
             ),
@@ -410,11 +285,7 @@ class _ClosedCashCard extends StatelessWidget {
 
           const Text(
             "No hay una caja abierta",
-            style: TextStyle(
-              fontSize: 19,
-              fontWeight:
-              FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
           ),
 
           const SizedBox(height: 8),
@@ -422,8 +293,7 @@ class _ClosedCashCard extends StatelessWidget {
           Text(
             "Abra una caja para comenzar a registrar operaciones.",
             textAlign: TextAlign.center,
-            style:
-            theme.textTheme.bodyMedium,
+            style: theme.textTheme.bodyMedium,
           ),
 
           const SizedBox(height: 22),
@@ -434,22 +304,13 @@ class _ClosedCashCard extends StatelessWidget {
             child: FilledButton.icon(
               onPressed: onOpen,
 
-              icon: const Icon(
-                Icons.lock_open_rounded,
-              ),
+              icon: const Icon(Icons.lock_open_rounded),
 
-              label: const Text(
-                "Abrir caja",
-              ),
+              label: const Text("Abrir caja"),
 
-              style:
-              FilledButton.styleFrom(
-                backgroundColor:
-                AppColors.primary,
-                padding:
-                const EdgeInsets.symmetric(
-                  vertical: 15,
-                ),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 15),
               ),
             ),
           ),
@@ -459,39 +320,27 @@ class _ClosedCashCard extends StatelessWidget {
   }
 }
 
+void openOpenCashSessionDialog(BuildContext parentContext) {
+  final amountController = TextEditingController();
 
-void openOpenCashSessionDialog(
-    BuildContext parentContext,
-    ) {
+  final commentController = TextEditingController();
 
-  final amountController =
-  TextEditingController();
-
-  final commentController =
-  TextEditingController();
-
-  final formKey =
-  GlobalKey<FormState>();
+  final formKey = GlobalKey<FormState>();
 
   showDialog(
     context: parentContext,
 
     builder: (_) {
-
       return Form(
         key: formKey,
 
         child: XsDialog(
-
           title: "Abrir caja",
 
           confirmText: "Abrir caja",
 
           onConfirm: () {
-
-            if (!(formKey.currentState
-                ?.validate() ??
-                false)) {
+            if (!(formKey.currentState?.validate() ?? false)) {
               return;
             }
 
@@ -503,84 +352,54 @@ void openOpenCashSessionDialog(
              * CashSessionOpenRequest.
              */
 
-            final request =
-            CashSession(
+            final request = CashSession(
               id: 0,
               cashRegisterId: 1,
               openedBy: 0,
-              openedAt:
-              DateTime.now(),
+              openedAt: DateTime.now(),
 
-              openingAmount:
-              double.parse(
-                amountController.text,
-              ),
+              openingAmount: double.parse(amountController.text),
 
               status: "OPEN",
 
-              openingComment:
-              commentController.text
-                  .trim()
-                  .isEmpty
+              openingComment: commentController.text.trim().isEmpty
                   ? null
-                  : commentController.text
-                  .trim(),
+                  : commentController.text.trim(),
 
               deleted: false,
             );
 
-            parentContext
-                .read<CashSessionBloc>()
-                .add(
-              OpenCashSession(request),
-            );
-
+            parentContext.read<CashSessionBloc>().add(OpenCashSession(request));
           },
 
           child: Column(
-            mainAxisSize:
-            MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min,
 
             children: [
-
               XsNumberField(
-                controller:
-                amountController,
+                controller: amountController,
 
-                labelText:
-                "Monto de apertura",
+                labelText: "Monto de apertura",
 
                 decimal: true,
 
-                prefixIcon:
-                const Icon(
-                  Icons.attach_money,
-                ),
+                prefixIcon: const Icon(Icons.attach_money),
 
-                validator: (value) =>
-                    composeValidators([
-                      InputValidators.requiredField(
-                        "Ingrese el monto de apertura",
-                      ),
-                    ], value),
+                validator: (value) => composeValidators([
+                  InputValidators.requiredField("Ingrese el monto de apertura"),
+                ], value),
               ),
 
               const SizedBox(height: 16),
 
               XsTextField(
-                controller:
-                commentController,
+                controller: commentController,
 
-                labelText:
-                "Comentario",
+                labelText: "Comentario",
 
-                keyboardType:
-                TextInputType.multiline,
+                keyboardType: TextInputType.multiline,
 
-                prefixIcon:
-                const Icon(
-                  Icons.description_outlined,
-                ),
+                prefixIcon: const Icon(Icons.description_outlined),
               ),
             ],
           ),
@@ -590,15 +409,14 @@ void openOpenCashSessionDialog(
   );
 }
 
-
 Future<void> _openCashSalesHistory(BuildContext context, int sessionId) async {
   final result = await getIt<GetCashSessionSalesSummaryUseCase>()(sessionId);
   if (!context.mounted) return;
 
   result.fold(
-    (failure) => ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(failure.message)),
-    ),
+    (failure) => ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(failure.message))),
     (summary) => showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -616,49 +434,81 @@ class _CashSalesHistory extends StatefulWidget {
 }
 
 class _CashSalesHistoryState extends State<_CashSalesHistory> {
-
   @override
   Widget build(BuildContext context) => SafeArea(
-        child: DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: .72,
-          maxChildSize: .92,
-          builder: (_, controller) => ListView(
-            controller: controller,
-            padding: const EdgeInsets.all(20),
-            children: [
-              const Text('Ventas de la caja', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              Text('Total vendido: S/ ${widget.summary.totalSold.toStringAsFixed(2)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const Divider(height: 28),
-              const Text('Resumen por método de pago', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...widget.summary.paymentMethods.map((item) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(_cashPaymentLabel(item.paymentMethod)),
-                trailing: Text('S/ ${item.total.toStringAsFixed(2)}'),
-              )),
-              const Divider(height: 28),
-              const Text('Ventas registradas', style: TextStyle(fontWeight: FontWeight.bold)),
-              if (widget.summary.sales.isEmpty)
-                const Padding(padding: EdgeInsets.only(top: 16), child: Text('No hay ventas registradas en esta caja.')),
-              ...widget.summary.sales.map((sale) => ExpansionTile(
-                tilePadding: EdgeInsets.zero,
-                title: Text(sale.saleNumber),
-                subtitle: Text('${sale.createdByName ?? 'Usuario no disponible'} · ${sale.payments.map((p) => _cashPaymentLabel(p.paymentMethod)).join(' + ')}'),
-                trailing: Text('S/ ${sale.total.toStringAsFixed(2)}'),
-                children: sale.items.map((item) => ListTile(
-                  dense: true,
-                  contentPadding: const EdgeInsets.only(left: 16, right: 8),
-                  leading: const Icon(Icons.inventory_2_outlined),
-                  title: Text(item.productName ?? 'Producto #${item.productId}'),
-                  subtitle: Text('${item.quantity.toInt()} × S/ ${item.unitPrice.toStringAsFixed(2)}'),
-                  trailing: Text('S/ ${item.subtotal.toStringAsFixed(2)}'),
-                )).toList(),
-              )),
-            ],
+    child: DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: .72,
+      maxChildSize: .92,
+      builder: (_, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.all(20),
+        children: [
+          const Text(
+            'Ventas de la caja',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
-        ),
-      );
+          const SizedBox(height: 6),
+          Text(
+            'Total vendido: S/ ${widget.summary.totalSold.toStringAsFixed(2)}',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const Divider(height: 28),
+          const Text(
+            'Resumen por método de pago',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          ...widget.summary.paymentMethods.map(
+            (item) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                PaymentMethodStyle.icon(item.paymentMethod),
+                color: PaymentMethodStyle.color(item.paymentMethod),
+              ),
+              title: Text(_cashPaymentLabel(item.paymentMethod)),
+              trailing: Text('S/ ${item.total.toStringAsFixed(2)}'),
+            ),
+          ),
+          const Divider(height: 28),
+          const Text(
+            'Ventas registradas',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          if (widget.summary.sales.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 16),
+              child: Text('No hay ventas registradas en esta caja.'),
+            ),
+          ...widget.summary.sales.map(
+            (sale) => ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: Text(sale.saleNumber),
+              subtitle: Text(
+                '${sale.createdByName ?? 'Usuario no disponible'} · ${sale.payments.map((p) => _cashPaymentLabel(p.paymentMethod)).join(' + ')}',
+              ),
+              trailing: Text('S/ ${sale.total.toStringAsFixed(2)}'),
+              children: sale.items
+                  .map(
+                    (item) => ListTile(
+                      dense: true,
+                      contentPadding: const EdgeInsets.only(left: 16, right: 8),
+                      leading: const Icon(Icons.inventory_2_outlined),
+                      title: Text(
+                        item.productName ?? 'Producto #${item.productId}',
+                      ),
+                      subtitle: Text(
+                        '${item.quantity.toInt()} × S/ ${item.unitPrice.toStringAsFixed(2)}',
+                      ),
+                      trailing: Text('S/ ${item.subtotal.toStringAsFixed(2)}'),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 String _cashPaymentLabel(String method) => switch (method) {
@@ -670,58 +520,34 @@ String _cashPaymentLabel(String method) => switch (method) {
 };
 
 void openCloseCashSessionDialog(
-    BuildContext parentContext,
-    CashSession session,
-    ) {
+  BuildContext parentContext,
+  CashSession session,
+) {
+  final closingAmountController = TextEditingController();
 
-  final closingAmountController =
-  TextEditingController();
-
-  final expectedAmountController =
-  TextEditingController(
-    text:
-    (session.expectedAmount ?? 0)
-        .toStringAsFixed(2),
+  final expectedAmountController = TextEditingController(
+    text: (session.expectedAmount ?? 0).toStringAsFixed(2),
   );
 
   var calculatedDifference = 0.0;
 
-  final commentController =
-  TextEditingController();
+  final commentController = TextEditingController();
 
-  final formKey =
-  GlobalKey<FormState>();
+  final formKey = GlobalKey<FormState>();
 
   showDialog(
     context: parentContext,
 
     builder: (_) {
-
       return StatefulBuilder(
-
-        builder: (
-            context,
-            setState,
-            ) {
-
+        builder: (context, setState) {
           void calculateDifference() {
-
-            final closing =
-                double.tryParse(
-                  closingAmountController
-                      .text,
-                ) ??
-                    0;
+            final closing = double.tryParse(closingAmountController.text) ?? 0;
 
             final expected =
-                double.tryParse(
-                  expectedAmountController
-                      .text,
-                ) ??
-                    0;
+                double.tryParse(expectedAmountController.text) ?? 0;
 
-            final difference =
-                closing - expected;
+            final difference = closing - expected;
 
             calculatedDifference = difference;
 
@@ -732,110 +558,70 @@ void openCloseCashSessionDialog(
             key: formKey,
 
             child: XsDialog(
-
               title: "Cerrar caja",
 
               confirmText: "Cerrar caja",
 
               onConfirm: () {
-
-                if (!(formKey.currentState
-                    ?.validate() ??
-                    false)) {
+                if (!(formKey.currentState?.validate() ?? false)) {
                   return;
                 }
 
-                final closingAmount =
-                double.parse(
-                  closingAmountController
-                      .text,
+                final closingAmount = double.parse(
+                  closingAmountController.text,
                 );
 
-                final expectedAmount =
-                double.parse(
-                  expectedAmountController
-                      .text,
+                final expectedAmount = double.parse(
+                  expectedAmountController.text,
                 );
 
-                final difference =
-                    closingAmount -
-                        expectedAmount;
+                final difference = closingAmount - expectedAmount;
 
-                final request =
-                CashSessionCloseRequest(
+                final request = CashSessionCloseRequest(
                   id: session.id,
-                  closingAmount:
-                  closingAmount,
-                  expectedAmount:
-                  expectedAmount,
-                  difference:
-                  difference,
-                  closingComment:
-                  commentController.text
-                      .trim()
-                      .isEmpty
+                  closingAmount: closingAmount,
+                  expectedAmount: expectedAmount,
+                  difference: difference,
+                  closingComment: commentController.text.trim().isEmpty
                       ? null
-                      : commentController
-                      .text
-                      .trim(),
+                      : commentController.text.trim(),
                 );
 
-                parentContext
-                    .read<CashSessionBloc>()
-                    .add(
-                  CloseCashSession(
-                    request,
-                  ),
+                parentContext.read<CashSessionBloc>().add(
+                  CloseCashSession(request),
                 );
               },
 
               child: Column(
-                mainAxisSize:
-                MainAxisSize.min,
+                mainAxisSize: MainAxisSize.min,
 
                 children: [
-
                   XsNumberField(
-                    controller:
-                    expectedAmountController,
+                    controller: expectedAmountController,
 
-                    labelText:
-                    "Monto esperado (automático)",
+                    labelText: "Monto esperado (automático)",
 
                     decimal: true,
 
                     readOnly: true,
 
-                    prefixIcon:
-                    const Icon(
-                      Icons.calculate_outlined,
-                    ),
-
+                    prefixIcon: const Icon(Icons.calculate_outlined),
                   ),
 
                   const SizedBox(height: 14),
 
                   XsNumberField(
-                    controller:
-                    closingAmountController,
+                    controller: closingAmountController,
 
-                    labelText:
-                    "Monto contado",
+                    labelText: "Monto contado",
 
                     decimal: true,
 
-                    prefixIcon:
-                    const Icon(
-                      Icons.payments_outlined,
-                    ),
+                    prefixIcon: const Icon(Icons.payments_outlined),
 
-                    validator:
-                        (value) =>
-                        composeValidators([
-                          InputValidators.requiredField(
-                            "Ingrese el monto contado",
-                          ),
-                        ], value),
+                    validator: (value) => composeValidators([
+                      InputValidators.requiredField("Ingrese el monto contado"),
+                    ], value),
 
                     onChanged: (_) {
                       calculateDifference();
@@ -852,8 +638,10 @@ void openCloseCashSessionDialog(
                     decoration: BoxDecoration(
                       color: calculatedDifference == 0
                           ? Colors.blue.withValues(alpha: .10)
-                          : (calculatedDifference > 0 ? Colors.green : Colors.red)
-                              .withValues(alpha: .10),
+                          : (calculatedDifference > 0
+                                    ? Colors.green
+                                    : Colors.red)
+                                .withValues(alpha: .10),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -865,19 +653,13 @@ void openCloseCashSessionDialog(
                   const SizedBox(height: 14),
 
                   XsTextField(
-                    controller:
-                    commentController,
+                    controller: commentController,
 
-                    labelText:
-                    "Comentario de cierre",
+                    labelText: "Comentario de cierre",
 
-                    keyboardType:
-                    TextInputType.multiline,
+                    keyboardType: TextInputType.multiline,
 
-                    prefixIcon:
-                    const Icon(
-                      Icons.description_outlined,
-                    ),
+                    prefixIcon: const Icon(Icons.description_outlined),
                   ),
                 ],
               ),

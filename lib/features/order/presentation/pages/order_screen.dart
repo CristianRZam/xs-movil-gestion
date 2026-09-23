@@ -15,16 +15,24 @@ class OrderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => BlocProvider(
-        create: (_) => OrderBloc(
-          getIt<GetOrdersUseCase>(), getIt<CreateOrderUseCase>(), getIt<UpdateOrderUseCase>(),
-          getIt<UpdateOrderStatusUseCase>(), getIt<DeleteOrderUseCase>(), getIt<GetProductViewUseCase>(),
-          getIt<ExistsOpenCashSessionUseCase>(),
-        )..add(const LoadOrders())..add(const LoadOrderProducts())..add(const CheckOpenCashSession()),
-        child: BlocBuilder<OrderBloc, OrderState>(
-          builder: (context, state) => LoadingOverlay(
-            isLoading: state.status == OrderStatus.loading,
-            child: const OrderView(),
-          ),
-        ),
-      );
+    create: (_) =>
+        OrderBloc(
+            getIt<GetOrdersUseCase>(),
+            getIt<CreateOrderUseCase>(),
+            getIt<UpdateOrderUseCase>(),
+            getIt<UpdateOrderStatusUseCase>(),
+            getIt<DeleteOrderUseCase>(),
+            getIt<GetProductViewUseCase>(),
+            getIt<ExistsOpenCashSessionUseCase>(),
+          )
+          ..add(const LoadOrders())
+          ..add(const LoadOrderProducts())
+          ..add(const CheckOpenCashSession()),
+    child: BlocBuilder<OrderBloc, OrderState>(
+      builder: (context, state) => LoadingOverlay(
+        isLoading: state.status == OrderStatus.loading,
+        child: const OrderView(),
+      ),
+    ),
+  );
 }

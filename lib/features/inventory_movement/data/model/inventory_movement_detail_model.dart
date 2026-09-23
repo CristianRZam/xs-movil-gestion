@@ -4,9 +4,7 @@ import '../../domain/entities/inventory_movement_detail.dart';
 part 'inventory_movement_detail_model.g.dart';
 
 @JsonSerializable()
-class InventoryMovementDetailModel
-    extends InventoryMovementDetail {
-
+class InventoryMovementDetailModel extends InventoryMovementDetail {
   const InventoryMovementDetailModel({
     required super.id,
     required super.type,
@@ -32,17 +30,14 @@ class InventoryMovementDetailModel
     super.deletedBy,
   });
 
-  factory InventoryMovementDetailModel.fromJson(
-      Map<String, dynamic> json,
-      ) =>
+  factory InventoryMovementDetailModel.fromJson(Map<String, dynamic> json) =>
       _$InventoryMovementDetailModelFromJson(json);
 
-  Map<String, dynamic> toJson() =>
-      _$InventoryMovementDetailModelToJson(this);
+  Map<String, dynamic> toJson() => _$InventoryMovementDetailModelToJson(this);
 
   factory InventoryMovementDetailModel.fromEntity(
-      InventoryMovementDetail entity,
-      ) {
+    InventoryMovementDetail entity,
+  ) {
     return InventoryMovementDetailModel(
       id: entity.id,
       type: entity.type,

@@ -1,48 +1,114 @@
+import 'package:app_movil_sistema/core/config/env_config.dart';
+import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/inventory_movement/domain/entities/inventory_movement_detail.dart';
+import 'package:app_movil_sistema/features/inventory_movement/domain/usecases/get_inventory_movements_usecase.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 Future<void> showInventoryCountMovementSheet({
   required BuildContext context,
+  required int productId,
   required String productName,
-  required List<InventoryMovementDetail> movements,
   DateTime? countOpenedAt,
-}) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    builder: (_) => DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: .72,
-      minChildSize: .45,
-      maxChildSize: .92,
-      builder: (context, controller) => _InventoryCountMovementSheet(
-        productName: productName,
-        movements: movements,
-        countOpenedAt: countOpenedAt,
-        scrollController: controller,
-      ),
+}) => showModalBottomSheet<void>(
+  context: context,
+  isScrollControlled: true,
+  builder: (_) => DraggableScrollableSheet(
+    expand: false,
+    initialChildSize: .72,
+    minChildSize: .45,
+    maxChildSize: .92,
+    builder: (context, controller) => _InventoryMovementSheet(
+      productId: productId,
+      productName: productName,
+      countOpenedAt: countOpenedAt,
+      scrollController: controller,
     ),
-  );
-}
+  ),
+);
 
-class _InventoryCountMovementSheet extends StatelessWidget {
-  const _InventoryCountMovementSheet({
+class _InventoryMovementSheet extends StatefulWidget {
+  const _InventoryMovementSheet({
+    required this.productId,
     required this.productName,
-    required this.movements,
     required this.countOpenedAt,
     required this.scrollController,
   });
-
+  final int productId;
   final String productName;
-  final List<InventoryMovementDetail> movements;
   final DateTime? countOpenedAt;
   final ScrollController scrollController;
+  @override
+  State<_InventoryMovementSheet> createState() =>
+      _InventoryMovementSheetState();
+}
+
+class _InventoryMovementSheetState extends State<_InventoryMovementSheet> {
+  final _useCase = getIt<GetInventoryMovementsUseCase>();
+  final List<InventoryMovementDetail> _movements = [];
+  bool _loading = true, _loadingMore = false, _hasMore = false;
+  int _page = 0;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFirstPage();
+  }
+
+  Future<void> _loadFirstPage() async {
+    final result = await _useCase(
+      widget.productId,
+      page: 0,
+      size: EnvConfig.inventoryMovementPageSize,
+    );
+    if (!mounted) return;
+    result.fold(
+      (failure) => setState(() {
+        _error = failure.message;
+        _loading = false;
+      }),
+      (data) => setState(() {
+        _movements.addAll(data.movements);
+        _hasMore = data.hasMore;
+        _page = data.page;
+        _loading = false;
+      }),
+    );
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    final result = await _useCase(
+      widget.productId,
+      page: _page + 1,
+      size: EnvConfig.inventoryMovementPageSize,
+    );
+    if (!mounted) return;
+    result.fold(
+      (failure) => setState(() {
+        _error = failure.message;
+        _loadingMore = false;
+      }),
+      (data) => setState(() {
+        _movements.addAll(data.movements);
+        _hasMore = data.hasMore;
+        _page = data.page;
+        _loadingMore = false;
+      }),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final duringCount = movements.where(_occurredDuringCount).length;
-
+    final duringCount = _movements
+        .where(
+          (m) =>
+              widget.countOpenedAt != null &&
+              !m.createdAt.isBefore(widget.countOpenedAt!),
+        )
+        .length;
     return SafeArea(
       top: false,
       child: Column(
@@ -70,7 +136,7 @@ class _InventoryCountMovementSheet extends StatelessWidget {
                         'Movimientos del producto',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      Text(productName),
+                      Text(widget.productName),
                     ],
                   ),
                 ),
@@ -82,41 +148,70 @@ class _InventoryCountMovementSheet extends StatelessWidget {
               ],
             ),
           ),
-          if (countOpenedAt != null)
+          if (widget.countOpenedAt != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Chip(
                   avatar: const Icon(Icons.schedule_rounded, size: 18),
-                  label: Text('$duringCount movimiento(s) desde el inicio'),
+                  label: Text(
+                    '$duringCount movimiento(s) cargados desde el inicio',
+                  ),
                 ),
               ),
             ),
           const Divider(),
-          Expanded(
-            child: movements.isEmpty
-                ? const Center(
-                    child: Text('Este producto todavía no tiene movimientos.'),
-                  )
-                : ListView.separated(
-                    controller: scrollController,
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    itemCount: movements.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (_, index) => _MovementTile(
-                      movement: movements[index],
-                      occurredDuringCount: _occurredDuringCount(movements[index]),
-                    ),
-                  ),
-          ),
+          Expanded(child: _body()),
         ],
       ),
     );
   }
 
-  bool _occurredDuringCount(InventoryMovementDetail movement) {
-    return countOpenedAt != null && !movement.createdAt.isBefore(countOpenedAt!);
+  Widget _body() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null && _movements.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(_error!, textAlign: TextAlign.center),
+        ),
+      );
+    }
+    if (_movements.isEmpty) {
+      return const Center(
+        child: Text('Este producto todavía no tiene movimientos.'),
+      );
+    }
+    return ListView.separated(
+      controller: widget.scrollController,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      itemCount: _movements.length + (_hasMore || _loadingMore ? 1 : 0),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (_, index) {
+        if (index == _movements.length) {
+          return Center(
+            child: _loadingMore
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: CircularProgressIndicator(),
+                  )
+                : OutlinedButton.icon(
+                    onPressed: _loadMore,
+                    icon: const Icon(Icons.expand_more_rounded),
+                    label: const Text('Ver más movimientos'),
+                  ),
+          );
+        }
+        final movement = _movements[index];
+        final during =
+            widget.countOpenedAt != null &&
+            !movement.createdAt.isBefore(widget.countOpenedAt!);
+        return _MovementTile(movement: movement, occurredDuringCount: during);
+      },
+    );
   }
 }
 
@@ -125,15 +220,12 @@ class _MovementTile extends StatelessWidget {
     required this.movement,
     required this.occurredDuringCount,
   });
-
   final InventoryMovementDetail movement;
   final bool occurredDuringCount;
-
   @override
   Widget build(BuildContext context) {
     final metadata = _movementMetadata(movement.type);
     final quantity = _quantityText(movement);
-
     return Card(
       elevation: 0,
       color: occurredDuringCount
@@ -173,33 +265,49 @@ class _MovementTile extends StatelessWidget {
     );
   }
 
-  String _quantityText(InventoryMovementDetail movement) {
-    if (movement.type == 'ADJUSTMENT') {
-      return '${_number(movement.previousStock)} → ${_number(movement.currentStock)}';
-    }
-    final prefix = {'SALE', 'WASTE'}.contains(movement.type) ? '-' : '+';
-    return '$prefix${_number(movement.quantity)}';
-  }
-
-  String _number(double value) {
-    return value % 1 == 0 ? value.toInt().toString() : value.toString();
-  }
+  String _quantityText(InventoryMovementDetail movement) =>
+      movement.type == 'ADJUSTMENT'
+      ? '${_number(movement.previousStock)} → ${_number(movement.currentStock)}'
+      : '${{'SALE', 'WASTE'}.contains(movement.type) ? '-' : '+'}${_number(movement.quantity)}';
+  String _number(double value) =>
+      value % 1 == 0 ? value.toInt().toString() : value.toString();
 }
 
-_MovementMetadata _movementMetadata(String type) {
-  return switch (type) {
-    'ENTRY' => const _MovementMetadata('Entrada', Icons.add_box_rounded, Colors.green),
-    'SALE' => const _MovementMetadata('Venta', Icons.shopping_bag_rounded, Colors.blue),
-    'WASTE' => const _MovementMetadata('Merma', Icons.delete_outline_rounded, Colors.red),
-    'SALE_RETURN' => const _MovementMetadata('Devolución', Icons.assignment_return_rounded, Colors.deepPurple),
-    'ADJUSTMENT' => const _MovementMetadata('Ajuste', Icons.tune_rounded, Colors.orange),
-    _ => const _MovementMetadata('Movimiento', Icons.history_rounded, Colors.grey),
-  };
-}
+_MovementMetadata _movementMetadata(String type) => switch (type) {
+  'ENTRY' => const _MovementMetadata(
+    'Entrada',
+    Icons.add_box_rounded,
+    Colors.green,
+  ),
+  'SALE' => const _MovementMetadata(
+    'Venta',
+    Icons.shopping_bag_rounded,
+    Colors.blue,
+  ),
+  'WASTE' => const _MovementMetadata(
+    'Merma',
+    Icons.delete_outline_rounded,
+    Colors.red,
+  ),
+  'SALE_RETURN' => const _MovementMetadata(
+    'Devolución',
+    Icons.assignment_return_rounded,
+    Colors.deepPurple,
+  ),
+  'ADJUSTMENT' => const _MovementMetadata(
+    'Ajuste',
+    Icons.tune_rounded,
+    Colors.orange,
+  ),
+  _ => const _MovementMetadata(
+    'Movimiento',
+    Icons.history_rounded,
+    Colors.grey,
+  ),
+};
 
 class _MovementMetadata {
   const _MovementMetadata(this.label, this.icon, this.color);
-
   final String label;
   final IconData icon;
   final Color color;

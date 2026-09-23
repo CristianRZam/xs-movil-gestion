@@ -5,7 +5,6 @@ part 'inventory_movement_model.g.dart';
 
 @JsonSerializable()
 class InventoryMovementModel extends InventoryMovement {
-
   const InventoryMovementModel({
     required super.id,
     required super.productId,
@@ -19,17 +18,12 @@ class InventoryMovementModel extends InventoryMovement {
     required super.deleted,
   });
 
-  factory InventoryMovementModel.fromJson(
-      Map<String, dynamic> json,
-      ) =>
+  factory InventoryMovementModel.fromJson(Map<String, dynamic> json) =>
       _$InventoryMovementModelFromJson(json);
 
-  Map<String, dynamic> toJson() =>
-      _$InventoryMovementModelToJson(this);
+  Map<String, dynamic> toJson() => _$InventoryMovementModelToJson(this);
 
-  factory InventoryMovementModel.fromEntity(
-      InventoryMovement entity,
-      ) {
+  factory InventoryMovementModel.fromEntity(InventoryMovement entity) {
     return InventoryMovementModel(
       id: entity.id,
       productId: entity.productId,

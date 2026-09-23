@@ -11,5 +11,10 @@ class CashSessionSalesSummary {
   final double totalSold;
   final List<PaymentMethodTotal> paymentMethods;
   final List<Sale> sales;
-  const CashSessionSalesSummary({required this.cashSessionId, required this.totalSold, required this.paymentMethods, required this.sales});
+  const CashSessionSalesSummary({
+    required this.cashSessionId,
+    required this.totalSold,
+    required this.paymentMethods,
+    required this.sales,
+  });
 }

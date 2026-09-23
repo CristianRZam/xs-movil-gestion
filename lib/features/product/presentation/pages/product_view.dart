@@ -6,6 +6,7 @@ import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/core/validators/input_validators.dart';
 import 'package:app_movil_sistema/features/inventory_movement/domain/entities/inventory_movement_create_request.dart';
 import 'package:app_movil_sistema/features/inventory_movement/domain/entities/inventory_movement_detail.dart';
+import 'package:app_movil_sistema/features/inventory_movement/presentation/widgets/inventory_count_movement_sheet.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_form_request.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_form_response.dart';
@@ -30,10 +31,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 class ProductView extends StatelessWidget {
-
-  const ProductView({
-    super.key,
-  });
+  const ProductView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -44,8 +42,7 @@ class ProductView extends StatelessWidget {
     String searchValue = "";
 
     final GlobalKey<XsMultiFilterState> categoryKey =
-    GlobalKey<XsMultiFilterState>();
-
+        GlobalKey<XsMultiFilterState>();
 
     List<int> selectedCategories = [];
 
@@ -65,50 +62,34 @@ class ProductView extends StatelessWidget {
           child: BlocConsumer<ProductBloc, ProductState>(
             listener: (context, state) {
               if (state.formResponse != null) {
+                openProductDialog(context, state.formResponse!);
 
-                openProductDialog(
-                  context,
-                  state.formResponse!,
-                );
-
-                context.read<ProductBloc>().add(
-                  const ClearProductForm(),
-                );
-
+                context.read<ProductBloc>().add(const ClearProductForm());
               }
 
               if (state.product != null) {
-
                 Navigator.of(context).pop();
 
-                context.read<ProductBloc>().add(
-                  const ClearSavedProduct(),
-                );
+                context.read<ProductBloc>().add(const ClearSavedProduct());
 
                 context.read<ProductBloc>().add(
-
                   FilterProductView(
                     ProductViewRequest(
                       page: 0,
                       size: EnvConfig.productPageSize,
                     ),
                   ),
-
                 );
-
               }
 
               if (state.deleted == true) {
-
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text("Producto eliminado correctamente"),
                   ),
                 );
 
-                context.read<ProductBloc>().add(
-                  const ClearDeletedProduct(),
-                );
+                context.read<ProductBloc>().add(const ClearDeletedProduct());
 
                 context.read<ProductBloc>().add(
                   FilterProductView(
@@ -118,11 +99,9 @@ class ProductView extends StatelessWidget {
                     ),
                   ),
                 );
-
               }
 
               if (state.inventoryMovement != null) {
-
                 Navigator.of(context).pop();
 
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -143,11 +122,9 @@ class ProductView extends StatelessWidget {
                     ),
                   ),
                 );
-
               }
 
               if (state.inventoryMovements != null) {
-
                 openInventoryMovementHistoryDialog(
                   context,
                   state.inventoryMovements!,
@@ -156,9 +133,7 @@ class ProductView extends StatelessWidget {
                 context.read<ProductBloc>().add(
                   const ClearInventoryMovements(),
                 );
-
               }
-
             },
 
             builder: (context, state) {
@@ -166,44 +141,36 @@ class ProductView extends StatelessWidget {
               final products = response?.products ?? [];
 
               return Scaffold(
-                backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
-                appBar: const XsAppBar(
-                  title: "Productos",
-                  backIcon: false,
-                ),
+                backgroundColor: isDark
+                    ? AppColors.darkBackground
+                    : AppColors.lightBackground,
+                appBar: const XsAppBar(title: "Productos", backIcon: false),
 
                 endDrawer: const XsDrawer(),
 
-                floatingActionButton: !getIt<AccessControl>().allows(AppCapability.manageProducts) ? null : FloatingActionButton.extended(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  icon: const Icon(Icons.add),
-                  label: const Text(
-                    "Nuevo producto",
-                  ),
-                  onPressed: (){
-
-                    context.read<ProductBloc>().add(
-
-                      const LoadProductForm(
-                        ProductFormRequest(),
+                floatingActionButton:
+                    !getIt<AccessControl>().allows(AppCapability.manageProducts)
+                    ? null
+                    : FloatingActionButton.extended(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        icon: const Icon(Icons.add),
+                        label: const Text("Nuevo producto"),
+                        onPressed: () {
+                          context.read<ProductBloc>().add(
+                            const LoadProductForm(ProductFormRequest()),
+                          );
+                        },
                       ),
-
-                    );
-
-                  },
-                ),
 
                 body: SafeArea(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 90,),
+                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 90),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-
                         Row(
-
                           children: [
                             Expanded(
                               child: ProductSummaryCard(
@@ -214,7 +181,7 @@ class ProductView extends StatelessWidget {
                               ),
                             ),
 
-                            const SizedBox(width: 10,),
+                            const SizedBox(width: 10),
 
                             Expanded(
                               child: ProductSummaryCard(
@@ -225,11 +192,10 @@ class ProductView extends StatelessWidget {
                               ),
                             ),
 
-                            const SizedBox(width: 10,),
+                            const SizedBox(width: 10),
 
                             Expanded(
-                              child:
-                              ProductSummaryCard(
+                              child: ProductSummaryCard(
                                 title: "Stock",
                                 value: "${response?.totalStock ?? 0}",
                                 icon: Icons.inventory,
@@ -237,38 +203,32 @@ class ProductView extends StatelessWidget {
                               ),
                             ),
                           ],
-
                         ),
 
                         const SizedBox(height: 18),
 
                         ProductSearch(
-
                           controller: searchController,
 
-                          onChanged: (value){
-
+                          onChanged: (value) {
                             searchValue = value;
-
                           },
-
                         ),
 
-                        const SizedBox(height: 16,),
+                        const SizedBox(height: 16),
 
                         XsMultiFilter(
                           key: categoryKey,
                           items: response?.categories ?? [],
-                          labelBuilder: (category){
+                          labelBuilder: (category) {
                             return category.name;
                           },
-                          valueBuilder: (category){
+                          valueBuilder: (category) {
                             return category.parameterId;
                           },
-                          onChanged: (values){
+                          onChanged: (values) {
                             selectedCategories = values;
                           },
-
                         ),
 
                         const SizedBox(height: 18),
@@ -281,7 +241,6 @@ class ProductView extends StatelessWidget {
                           ),
                           child: Row(
                             children: [
-
                               Expanded(
                                 child: InkWell(
                                   onTap: () {
@@ -314,13 +273,9 @@ class ProductView extends StatelessWidget {
                                 flex: 3,
                                 child: InkWell(
                                   onTap: () {
-                                    debugPrint(
-                                      "Aplicando filtros",
-                                    );
+                                    debugPrint("Aplicando filtros");
 
-                                    debugPrint(
-                                      "Producto: $searchValue",
-                                    );
+                                    debugPrint("Producto: $searchValue");
 
                                     debugPrint(
                                       "Categorías: $selectedCategories",
@@ -351,12 +306,11 @@ class ProductView extends StatelessWidget {
                                   ),
                                 ),
                               ),
-
                             ],
                           ),
                         ),
 
-                        const SizedBox(height: 22,),
+                        const SizedBox(height: 22),
 
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -365,9 +319,9 @@ class ProductView extends StatelessWidget {
                             borderRadius: BorderRadius.circular(28),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: .05,),
+                                color: Colors.black.withValues(alpha: .05),
                                 blurRadius: 15,
-                                offset: const Offset(0, 5,),
+                                offset: const Offset(0, 5),
                               ),
                             ],
                           ),
@@ -391,17 +345,14 @@ class ProductView extends StatelessWidget {
                                     product: product,
                                     type: "ENTRY",
                                   );
-
                                 },
 
                                 onWaste: () {
-
                                   openInventoryMovementDialog(
                                     context,
                                     product: product,
                                     type: "WASTE",
                                   );
-
                                 },
 
                                 onAdjustment: () {
@@ -413,28 +364,21 @@ class ProductView extends StatelessWidget {
                                 },
 
                                 onMovement: () {
-
-                                  context.read<ProductBloc>().add(
-                                    LoadInventoryMovements(product.id),
+                                  showInventoryCountMovementSheet(
+                                    context: context,
+                                    productId: product.id,
+                                    productName: product.name,
                                   );
-
                                 },
 
                                 onEdit: () {
-
                                   context.read<ProductBloc>().add(
-
                                     LoadProductForm(
-                                      ProductFormRequest(
-                                        id: product.id,
-                                      ),
+                                      ProductFormRequest(id: product.id),
                                     ),
-
                                   );
-
                                 },
                                 onDelete: () async {
-
                                   final confirm = await showDialog<bool>(
                                     context: context,
                                     builder: (_) => AlertDialog(
@@ -444,11 +388,13 @@ class ProductView extends StatelessWidget {
                                       ),
                                       actions: [
                                         TextButton(
-                                          onPressed: () => Navigator.pop(context, false),
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
                                           child: const Text("Cancelar"),
                                         ),
                                         FilledButton(
-                                          onPressed: () => Navigator.pop(context, true),
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
                                           child: const Text("Eliminar"),
                                         ),
                                       ],
@@ -472,14 +418,16 @@ class ProductView extends StatelessWidget {
                             child: OutlinedButton.icon(
                               onPressed: state.isLoadingMore
                                   ? null
-                                  : () => context
-                                      .read<ProductBloc>()
-                                      .add(const LoadMoreProducts()),
+                                  : () => context.read<ProductBloc>().add(
+                                      const LoadMoreProducts(),
+                                    ),
                               icon: state.isLoadingMore
                                   ? const SizedBox(
                                       width: 18,
                                       height: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
                                     )
                                   : const Icon(Icons.expand_more_rounded),
                               label: Text(
@@ -504,19 +452,14 @@ class ProductView extends StatelessWidget {
 }
 
 void openProductDialog(
-    BuildContext parentContext,
-    ProductFormResponse response,
-    ) {
-
+  BuildContext parentContext,
+  ProductFormResponse response,
+) {
   final product = response.product;
 
-  final codeController = TextEditingController(
-    text: product?.code ?? "",
-  );
+  final codeController = TextEditingController(text: product?.code ?? "");
 
-  final nameController = TextEditingController(
-    text: product?.name ?? "",
-  );
+  final nameController = TextEditingController(text: product?.name ?? "");
 
   final priceController = TextEditingController(
     text: product?.basePrice.toStringAsFixed(2) ?? "",
@@ -527,193 +470,151 @@ void openProductDialog(
   );
 
   showDialog(
-
     context: parentContext,
 
     builder: (_) {
-
       int? selectedCategoryId = product?.categoryId;
       final formKey = GlobalKey<FormState>();
 
       return StatefulBuilder(
-
         builder: (context, setState) {
-
           return Form(
-              key: formKey,
-              child: XsDialog(
+            key: formKey,
+            child: XsDialog(
+              title: product == null ? "Nuevo producto" : "Editar producto",
 
-                title: product == null
-                    ? "Nuevo producto"
-                    : "Editar producto",
+              confirmText: product == null ? "Guardar" : "Actualizar",
 
-                confirmText: product == null
-                    ? "Guardar"
-                    : "Actualizar",
+              onConfirm: () {
+                if (!(formKey.currentState?.validate() ?? false)) {
+                  return;
+                }
 
-                onConfirm: () {
+                final isNew = product == null;
 
-                  if (!(formKey.currentState?.validate() ?? false)) {
-                    return;
-                  }
+                if (isNew) {
+                  final request = ProductRequest(
+                    code: codeController.text.trim(),
+                    name: nameController.text.trim(),
+                    description: descriptionController.text.trim(),
+                    categoryId: selectedCategoryId!,
+                    unitMeasureId: response.unitMeasures.first.parameterId,
+                    valuationMethodId:
+                        response.valuationMethods.first.parameterId,
+                    basePrice: double.parse(priceController.text),
+                    promoPrice: null,
+                    baseCost: 0,
+                  );
 
-                  final isNew = product == null;
+                  parentContext.read<ProductBloc>().add(CreateProduct(request));
+                } else {
+                  final request = ProductRequest(
+                    id: product.id,
 
-                  if (isNew) {
+                    code: codeController.text.trim(),
+                    name: nameController.text.trim(),
+                    description: descriptionController.text.trim(),
+                    categoryId: selectedCategoryId!,
 
-                    final request = ProductRequest(
-                      code: codeController.text.trim(),
-                      name: nameController.text.trim(),
-                      description: descriptionController.text.trim(),
-                      categoryId: selectedCategoryId!,
-                      unitMeasureId: response.unitMeasures.first.parameterId,
-                      valuationMethodId: response.valuationMethods.first.parameterId,
-                      basePrice: double.parse(priceController.text),
-                      promoPrice: null,
-                      baseCost: 0,
-                    );
+                    // Estos NO los edita el usuario
+                    unitMeasureId: product.unitMeasureId,
+                    valuationMethodId: product.valuationMethodId,
+                    baseCost: product.baseCost,
+                    promoPrice: product.promoPrice,
 
-                    parentContext.read<ProductBloc>().add(
-                      CreateProduct(request),
-                    );
+                    basePrice: double.parse(priceController.text),
+                  );
 
-                  } else {
+                  parentContext.read<ProductBloc>().add(UpdateProduct(request));
+                }
+              },
 
-                    final request = ProductRequest(
-                      id: product.id,
+              child: Column(
+                children: [
+                  XsTextField(
+                    controller: codeController,
+                    labelText: "Código",
+                    prefixIcon: const Icon(Icons.qr_code),
+                    autoValidate: true,
+                    validator: (value) => composeValidators([
+                      InputValidators.requiredField("Ingrese el código"),
+                    ], value),
+                  ),
 
-                      code: codeController.text.trim(),
-                      name: nameController.text.trim(),
-                      description: descriptionController.text.trim(),
-                      categoryId: selectedCategoryId!,
+                  const SizedBox(height: 12),
 
-                      // Estos NO los edita el usuario
-                      unitMeasureId: product.unitMeasureId,
-                      valuationMethodId: product.valuationMethodId,
-                      baseCost: product.baseCost,
-                      promoPrice: product.promoPrice,
+                  XsTextField(
+                    controller: nameController,
+                    labelText: "Nombre",
+                    prefixIcon: const Icon(Icons.inventory),
+                    autoValidate: true,
+                    validator: (value) => composeValidators([
+                      InputValidators.requiredField("Ingrese el nombre"),
+                    ], value),
+                  ),
 
-                      basePrice: double.parse(priceController.text),
-                    );
+                  const SizedBox(height: 12),
 
-                    parentContext.read<ProductBloc>().add(
-                      UpdateProduct(request),
-                    );
-
-                  }
-
-                },
-
-                child: Column(
-
-                  children: [
-
-                    XsTextField(
-                      controller: codeController,
-                      labelText: "Código",
-                      prefixIcon: const Icon(
-                        Icons.qr_code,
-                      ),
-                      autoValidate: true,
-                      validator: (value) => composeValidators([
-                        InputValidators.requiredField("Ingrese el código"),
-                      ], value),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    XsTextField(
-                      controller: nameController,
-                      labelText: "Nombre",
-                      prefixIcon: const Icon(
-                        Icons.inventory,
-                      ),
-                      autoValidate: true,
-                      validator: (value) => composeValidators([
-                        InputValidators.requiredField("Ingrese el nombre"),
-                      ], value),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    XsSelect(
-                      labelText: "Categoría",
-                      items: response.categories,
-                      initialValue: product == null
-                          ? null
-                          : response.categories.firstWhere(
+                  XsSelect(
+                    labelText: "Categoría",
+                    items: response.categories,
+                    initialValue: product == null
+                        ? null
+                        : response.categories.firstWhere(
                             (e) => e.parameterId == product.categoryId,
-                      ),
-                      labelBuilder: (item) => item.name,
-                      prefixIcon: const Icon(
-                        Icons.category,
-                      ),
-                      autoValidate: true,
-                      validator: InputValidators.requiredSelect("Seleccione una categoría"),
-                      onChanged: (value) {
-
-                        setState(() {
-
-                          selectedCategoryId = value?.parameterId;
-
-                        });
-
-                      },
-
+                          ),
+                    labelBuilder: (item) => item.name,
+                    prefixIcon: const Icon(Icons.category),
+                    autoValidate: true,
+                    validator: InputValidators.requiredSelect(
+                      "Seleccione una categoría",
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedCategoryId = value?.parameterId;
+                      });
+                    },
+                  ),
 
-                    const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-                    XsNumberField(
-                      controller: priceController,
-                      labelText: "Precio",
-                      decimal: true,
-                      prefixIcon: const Icon(
-                        Icons.attach_money,
-                      ),
-                      validator: (value) => composeValidators([
-                        InputValidators.requiredField("Ingrese el precio"),
-                      ], value),
-                    ),
+                  XsNumberField(
+                    controller: priceController,
+                    labelText: "Precio",
+                    decimal: true,
+                    prefixIcon: const Icon(Icons.attach_money),
+                    validator: (value) => composeValidators([
+                      InputValidators.requiredField("Ingrese el precio"),
+                    ], value),
+                  ),
 
-                    const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-                    XsTextField(
-                      controller: descriptionController,
-                      labelText: "Descripción",
-                      keyboardType: TextInputType.multiline,
-                      prefixIcon: const Icon(
-                        Icons.description,
-                      ),
-                      autoValidate: true,
-                      validator: (value) => composeValidators([
-                        InputValidators.requiredField("Ingrese la descripción"),
-                      ], value),
-                    ),
-
-                  ],
-
-                ),
-
-              )
+                  XsTextField(
+                    controller: descriptionController,
+                    labelText: "Descripción",
+                    keyboardType: TextInputType.multiline,
+                    prefixIcon: const Icon(Icons.description),
+                    autoValidate: true,
+                    validator: (value) => composeValidators([
+                      InputValidators.requiredField("Ingrese la descripción"),
+                    ], value),
+                  ),
+                ],
+              ),
+            ),
           );
-
         },
-
       );
-
     },
-
   );
 }
 
-
-
 void openInventoryMovementDialog(
-    BuildContext parentContext, {
-      required Product product,
-      required String type,
-    }) {
+  BuildContext parentContext, {
+  required Product product,
+  required String type,
+}) {
   final quantityController = TextEditingController();
 
   final commentController = TextEditingController();
@@ -740,35 +641,32 @@ void openInventoryMovementDialog(
                   ? "Registrar"
                   : "Ajustar",
 
-                onConfirm: () {
+              onConfirm: () {
+                if (!(formKey.currentState?.validate() ?? false)) {
+                  return;
+                }
 
-                  if (!(formKey.currentState?.validate() ?? false)) {
-                    return;
-                  }
+                final request = InventoryMovementCreateRequest(
+                  productId: product.id,
+                  type: type,
+                  quantity: double.parse(quantityController.text),
+                  previousStock: 0,
+                  currentStock: 0,
+                  reason: commentController.text.trim().isEmpty
+                      ? null
+                      : commentController.text.trim(),
+                  referenceType: null,
+                  referenceId: null,
+                );
 
-                  final request = InventoryMovementCreateRequest(
-                    productId: product.id,
-                    type: type,
-                    quantity: double.parse(quantityController.text),
-                    previousStock: 0,
-                    currentStock: 0,
-                    reason: commentController.text.trim().isEmpty
-                        ? null
-                        : commentController.text.trim(),
-                    referenceType: null,
-                    referenceId: null,
-                  );
-
-                  parentContext.read<ProductBloc>().add(
-                    CreateInventoryMovement(request),
-                  );
-
-                },
+                parentContext.read<ProductBloc>().add(
+                  CreateInventoryMovement(request),
+                );
+              },
 
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-
                   // Información del producto
                   Container(
                     width: double.infinity,
@@ -779,7 +677,6 @@ void openInventoryMovementDialog(
                     ),
                     child: Row(
                       children: [
-
                         Container(
                           width: 48,
                           height: 48,
@@ -797,10 +694,8 @@ void openInventoryMovementDialog(
 
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-
                               Text(
                                 product.name,
                                 style: const TextStyle(
@@ -813,9 +708,7 @@ void openInventoryMovementDialog(
 
                               Text(
                                 "Código: ${product.code}",
-                                style: TextStyle(
-                                  color: Colors.grey.shade700,
-                                ),
+                                style: TextStyle(color: Colors.grey.shade700),
                               ),
 
                               const SizedBox(height: 2),
@@ -826,11 +719,9 @@ void openInventoryMovementDialog(
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-
                             ],
                           ),
                         ),
-
                       ],
                     ),
                   ),
@@ -842,13 +733,9 @@ void openInventoryMovementDialog(
                     controller: quantityController,
                     labelText: "Cantidad",
                     decimal: true,
-                    prefixIcon: const Icon(
-                      Icons.inventory,
-                    ),
+                    prefixIcon: const Icon(Icons.inventory),
                     validator: (value) => composeValidators([
-                      InputValidators.requiredField(
-                        "Ingrese la cantidad",
-                      ),
+                      InputValidators.requiredField("Ingrese la cantidad"),
                     ], value),
                   ),
 
@@ -859,9 +746,7 @@ void openInventoryMovementDialog(
                     controller: commentController,
                     labelText: "Comentarios",
                     keyboardType: TextInputType.multiline,
-                    prefixIcon: const Icon(
-                      Icons.description_outlined,
-                    ),
+                    prefixIcon: const Icon(Icons.description_outlined),
                   ),
                 ],
               ),
@@ -874,26 +759,22 @@ void openInventoryMovementDialog(
 }
 
 void openInventoryMovementHistoryDialog(
-    BuildContext context,
-    List<InventoryMovementDetail> movements,
-    ) {
+  BuildContext context,
+  List<InventoryMovementDetail> movements,
+) {
   final theme = Theme.of(context);
   final isDark = Theme.of(context).brightness == Brightness.dark;
 
   final backgroundColor = theme.scaffoldBackgroundColor;
   final surfaceColor = theme.cardColor;
 
-
   showDialog(
     context: context,
     builder: (_) {
-
       return Dialog(
         backgroundColor: surfaceColor,
 
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
 
         child: SizedBox(
           width: 420,
@@ -901,110 +782,74 @@ void openInventoryMovementHistoryDialog(
 
           child: Column(
             children: [
-
               /// HEADER
               Container(
-
                 padding: const EdgeInsets.all(18),
 
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.dark : AppColors.primary,
 
-                  borderRadius:
-                  const BorderRadius.vertical(
+                  borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(20),
                   ),
                 ),
 
                 child: Row(
                   children: [
-
-                    const Icon(
-                      Icons.swap_horiz,
-                      color: Colors.white,
-                    ),
-
+                    const Icon(Icons.swap_horiz, color: Colors.white),
 
                     const SizedBox(width: 12),
 
-
                     Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
 
                         children: [
-
                           const Text(
                             "Movimientos",
 
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 18,
-                              fontWeight:
-                              FontWeight.bold,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-
 
                           Text(
                             movements.first.productName,
 
                             style: TextStyle(
-                              color:
-                              Colors.white.withValues(
-                                alpha: .75,
-                              ),
+                              color: Colors.white.withValues(alpha: .75),
                             ),
                           ),
-
                         ],
                       ),
                     ),
 
-
                     IconButton(
+                      onPressed: () => Navigator.pop(context),
 
-                      onPressed: () =>
-                          Navigator.pop(context),
-
-                      icon: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                      ),
-                    )
-
+                      icon: const Icon(Icons.close, color: Colors.white),
+                    ),
                   ],
                 ),
               ),
 
-
-
               Expanded(
-
                 child: Container(
-
                   color: backgroundColor,
 
                   child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
 
-                    padding:
-                    const EdgeInsets.all(16),
+                    itemCount: movements.length,
 
-                    itemCount:
-                    movements.length,
-
-
-                    separatorBuilder: (_, __) =>
-                    const SizedBox(height: 14),
-
+                    separatorBuilder: (_, __) => const SizedBox(height: 14),
 
                     itemBuilder: (_, index) {
-
                       final movement = movements[index];
 
                       return _MovementCard(
-
                         type: movement.type,
 
                         quantity: movement.quantity,
@@ -1017,20 +862,14 @@ void openInventoryMovementHistoryDialog(
 
                         date: DateFormat(
                           "dd/MM/yyyy HH:mm",
-                        ).format(
-                          movement.createdAt,
-                        ),
+                        ).format(movement.createdAt),
 
                         user: movement.createdBy,
-
                       );
-
                     },
-
                   ),
                 ),
               ),
-
             ],
           ),
         ),
@@ -1068,12 +907,9 @@ class _MovementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
-    final isDark =
-        Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final theme = Theme.of(context);
-
 
     late final Color color;
     late final IconData icon;
@@ -1081,9 +917,7 @@ class _MovementCard extends StatelessWidget {
     late final String badge;
     late final String quantityText;
 
-
     switch (type) {
-
       case "ENTRY":
         color = Colors.green;
         icon = Icons.inventory_2_outlined;
@@ -1091,7 +925,6 @@ class _MovementCard extends StatelessWidget {
         badge = "ENTRADA";
         quantityText = "+${formatQuantity(quantity)}";
         break;
-
 
       case "SALE":
         color = Colors.blue;
@@ -1101,7 +934,6 @@ class _MovementCard extends StatelessWidget {
         quantityText = "-${formatQuantity(quantity)}";
         break;
 
-
       case "SALE_RETURN":
         color = Colors.deepPurple;
         icon = Icons.assignment_return_outlined;
@@ -1109,7 +941,6 @@ class _MovementCard extends StatelessWidget {
         badge = "DEVOLUCIÓN";
         quantityText = "+${formatQuantity(quantity)}";
         break;
-
 
       case "WASTE":
         color = Colors.red;
@@ -1119,16 +950,14 @@ class _MovementCard extends StatelessWidget {
         quantityText = "-${formatQuantity(quantity)}";
         break;
 
-
       case "ADJUSTMENT":
         color = Colors.orange;
         icon = Icons.tune;
         title = "Ajuste";
         badge = "AJUSTE";
         quantityText =
-        "${formatQuantity(previous)} → ${formatQuantity(current)}";
+            "${formatQuantity(previous)} → ${formatQuantity(current)}";
         break;
-
 
       default:
         color = Colors.grey;
@@ -1138,398 +967,216 @@ class _MovementCard extends StatelessWidget {
         quantityText = formatQuantity(quantity);
     }
 
-
-
     return Card(
-
       elevation: 0,
 
       color: theme.cardColor,
 
       margin: EdgeInsets.zero,
 
-
       shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
 
-        borderRadius:
-        BorderRadius.circular(18),
-
-        side: BorderSide(
-          color: color.withValues(
-            alpha: .15,
-          ),
-        ),
+        side: BorderSide(color: color.withValues(alpha: .15)),
       ),
 
-
       child: Padding(
-
-        padding:
-        const EdgeInsets.all(18),
-
+        padding: const EdgeInsets.all(18),
 
         child: Column(
-
-          crossAxisAlignment:
-          CrossAxisAlignment.start,
-
+          crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
-
-
             Row(
-
               children: [
-
-
                 CircleAvatar(
-
                   radius: 22,
 
-                  backgroundColor:
-                  color.withValues(
-                    alpha: .10,
-                  ),
+                  backgroundColor: color.withValues(alpha: .10),
 
-
-                  child: Icon(
-                    icon,
-                    color: color,
-                  ),
+                  child: Icon(icon, color: color),
                 ),
-
-
 
                 const SizedBox(width: 14),
 
-
-
                 Expanded(
-
                   child: Column(
-
-                    crossAxisAlignment:
-                    CrossAxisAlignment.start,
-
+                    crossAxisAlignment: CrossAxisAlignment.start,
 
                     children: [
-
-
                       Text(
-
                         title,
 
                         style: TextStyle(
+                          color: theme.textTheme.bodyLarge?.color,
 
-                          color:
-                          theme.textTheme.bodyLarge?.color,
-
-                          fontWeight:
-                          FontWeight.w700,
+                          fontWeight: FontWeight.w700,
 
                           fontSize: 16,
                         ),
                       ),
 
-
-
                       const SizedBox(height: 4),
 
-
-
                       Container(
-
-                        padding:
-                        const EdgeInsets.symmetric(
-
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 10,
 
                           vertical: 4,
-
                         ),
-
 
                         decoration: BoxDecoration(
+                          color: color.withValues(alpha: .10),
 
-                          color:
-                          color.withValues(
-                            alpha: .10,
-                          ),
-
-
-                          borderRadius:
-                          BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(30),
                         ),
 
-
-
                         child: Text(
-
                           badge,
 
-
                           style: TextStyle(
-
                             color: color,
 
-                            fontWeight:
-                            FontWeight.bold,
+                            fontWeight: FontWeight.bold,
 
                             fontSize: 11,
                           ),
                         ),
-                      )
-
+                      ),
                     ],
                   ),
                 ),
 
-
-
                 Text(
-
                   quantityText,
 
-
                   style: TextStyle(
-
                     color: color,
 
-                    fontWeight:
-                    FontWeight.bold,
+                    fontWeight: FontWeight.bold,
 
                     fontSize: 22,
                   ),
-                )
-
+                ),
               ],
             ),
 
-
-
             const SizedBox(height: 20),
 
-
-
-
             /// Motivo
-
             Container(
-
               width: double.infinity,
 
-
-              padding:
-              const EdgeInsets.all(14),
-
-
+              padding: const EdgeInsets.all(14),
 
               decoration: BoxDecoration(
-
                 color: isDark
-
-                    ? Colors.white.withValues(
-                  alpha: .05,
-                )
-
+                    ? Colors.white.withValues(alpha: .05)
                     : Colors.grey.shade100,
 
-
-                borderRadius:
-                BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12),
               ),
 
-
-
               child: Row(
-
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
-
+                crossAxisAlignment: CrossAxisAlignment.start,
 
                 children: [
-
-
                   Icon(
-
                     Icons.description_outlined,
 
                     size: 18,
 
-                    color:
-                    theme.iconTheme.color,
+                    color: theme.iconTheme.color,
                   ),
-
-
 
                   const SizedBox(width: 10),
 
-
-
                   Expanded(
-
                     child: Text(
-
                       reason,
 
                       style: TextStyle(
-
-                        color:
-                        theme.textTheme.bodyMedium?.color,
-
+                        color: theme.textTheme.bodyMedium?.color,
                       ),
                     ),
-                  )
-
+                  ),
                 ],
               ),
             ),
 
-
-
             const SizedBox(height: 20),
 
-
-
-
             /// Stock
-
             Row(
-
               children: [
-
-
                 Expanded(
-
                   child: _StockItem(
-
                     title: "Anterior",
 
                     value: formatQuantity(previous),
                   ),
                 ),
 
-
-
                 Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
 
-                  padding:
-                  const EdgeInsets.symmetric(
-                    horizontal: 12,
-                  ),
-
-
-                  child: Icon(
-
-                    Icons.arrow_forward_rounded,
-
-                    color: color,
-                  ),
+                  child: Icon(Icons.arrow_forward_rounded, color: color),
                 ),
-
-
 
                 Expanded(
-
                   child: _StockItem(
-
                     title: "Actual",
 
-                    value:formatQuantity(current),
+                    value: formatQuantity(current),
                   ),
                 ),
-
               ],
             ),
 
-
-
             const SizedBox(height: 18),
 
-
-
-            Divider(
-
-              color:
-              theme.dividerColor,
-            ),
-
-
+            Divider(color: theme.dividerColor),
 
             const SizedBox(height: 10),
 
-
-
-
             /// Footer
-
             Row(
-
               children: [
-
-
                 Icon(
-
                   Icons.person_outline,
 
                   size: 18,
 
-                  color:
-                  theme.iconTheme.color,
+                  color: theme.iconTheme.color,
                 ),
-
-
 
                 const SizedBox(width: 6),
 
-
-
                 Expanded(
-
                   child: Text(
-
                     user,
 
-                    style: TextStyle(
-
-                      color:
-                      theme.textTheme.bodyMedium?.color,
-                    ),
+                    style: TextStyle(color: theme.textTheme.bodyMedium?.color),
                   ),
                 ),
 
-
-
                 Icon(
-
                   Icons.schedule_outlined,
 
                   size: 18,
 
-                  color:
-                  theme.iconTheme.color,
+                  color: theme.iconTheme.color,
                 ),
-
-
 
                 const SizedBox(width: 6),
 
-
-
                 Text(
-
                   date,
 
-                  style: TextStyle(
-
-                    color:
-                    theme.textTheme.bodyMedium?.color,
-                  ),
+                  style: TextStyle(color: theme.textTheme.bodyMedium?.color),
                 ),
-
               ],
-            )
-
+            ),
           ],
         ),
       ),
@@ -1537,94 +1184,54 @@ class _MovementCard extends StatelessWidget {
   }
 }
 
-
 class _StockItem extends StatelessWidget {
-
   final String title;
   final String value;
 
-  const _StockItem({
-    required this.title,
-    required this.value,
-  });
+  const _StockItem({required this.title, required this.value});
 
   @override
   Widget build(BuildContext context) {
-
-    final isDark =
-        Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final theme = Theme.of(context);
 
-
     return Container(
-
-      padding: const EdgeInsets.symmetric(
-        vertical: 12,
-      ),
-
+      padding: const EdgeInsets.symmetric(vertical: 12),
 
       decoration: BoxDecoration(
-
         color: isDark
-
-            ? Colors.white.withValues(
-          alpha: .05,
-        )
-
+            ? Colors.white.withValues(alpha: .05)
             : Colors.grey.shade100,
 
-
-        borderRadius:
-        BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12),
       ),
 
-
-
       child: Column(
-
         children: [
-
-
           Text(
-
             title,
 
             style: TextStyle(
-
-              color:
-              theme.textTheme.bodySmall?.color
-                  ?.withValues(
-                alpha: .65,
-              ),
+              color: theme.textTheme.bodySmall?.color?.withValues(alpha: .65),
 
               fontSize: 12,
             ),
           ),
 
-
-
           const SizedBox(height: 4),
 
-
-
           Text(
-
             value,
 
             style: TextStyle(
+              color: theme.textTheme.bodyLarge?.color,
 
-              color:
-              theme.textTheme.bodyLarge?.color,
-
-              fontWeight:
-              FontWeight.bold,
+              fontWeight: FontWeight.bold,
 
               fontSize: 18,
             ),
           ),
-
-
         ],
       ),
     );

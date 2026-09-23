@@ -2,9 +2,9 @@ import 'package:app_movil_sistema/core/authorization/access_control.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:app_movil_sistema/features/dashboard/domain/usecases/get_dashboard_summary_usecase.dart';
-import 'package:app_movil_sistema/features/home/presentation/widgets/dashboard_card.dart';
-import 'package:app_movil_sistema/features/home/presentation/widgets/dashboard_sale_analityc.dart';
 import 'package:app_movil_sistema/features/home/presentation/widgets/personal_dashboard.dart';
+import 'package:app_movil_sistema/features/home/presentation/widgets/owner_dashboard.dart';
+import 'package:app_movil_sistema/features/home/presentation/widgets/dashboard_sale_analityc.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-bottom-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
@@ -115,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (summary.isPersonal)
                       PersonalDashboard(summary: summary, onRefresh: _refresh)
                     else ...[
-                      DashboardGrid(summary: summary),
+                      OwnerDashboard(summary: summary),
                       const SizedBox(height: 16),
                       DashboardSaleAnalytic(summary: summary),
                     ],

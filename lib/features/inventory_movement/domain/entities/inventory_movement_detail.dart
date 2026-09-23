@@ -1,5 +1,4 @@
 class InventoryMovementDetail {
-
   // Movimiento
   final int id;
   final String type;
@@ -44,5 +43,4 @@ class InventoryMovementDetail {
     this.deletedAt,
     this.deletedBy,
   });
-
 }

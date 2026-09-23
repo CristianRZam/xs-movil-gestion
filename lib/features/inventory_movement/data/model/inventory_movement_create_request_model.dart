@@ -6,7 +6,6 @@ part 'inventory_movement_create_request_model.g.dart';
 @JsonSerializable()
 class InventoryMovementCreateRequestModel
     extends InventoryMovementCreateRequest {
-
   const InventoryMovementCreateRequestModel({
     required super.productId,
     required super.type,
@@ -19,16 +18,15 @@ class InventoryMovementCreateRequestModel
   });
 
   factory InventoryMovementCreateRequestModel.fromJson(
-      Map<String, dynamic> json,
-      ) =>
-      _$InventoryMovementCreateRequestModelFromJson(json);
+    Map<String, dynamic> json,
+  ) => _$InventoryMovementCreateRequestModelFromJson(json);
 
   Map<String, dynamic> toJson() =>
       _$InventoryMovementCreateRequestModelToJson(this);
 
   factory InventoryMovementCreateRequestModel.fromEntity(
-      InventoryMovementCreateRequest entity,
-      ) {
+    InventoryMovementCreateRequest entity,
+  ) {
     return InventoryMovementCreateRequestModel(
       productId: entity.productId,
       type: entity.type,
