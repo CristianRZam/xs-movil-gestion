@@ -66,19 +66,14 @@ void setupLocator() {
   // Servicios base
   // ============================
 
-  getIt.registerLazySingleton<ApiClient>(
-        () => ApiClient(),
-  );
+  getIt.registerLazySingleton<ApiClient>(() => ApiClient());
 
   getIt.registerLazySingleton<TokenStorage>(
-        () => TokenStorage(getIt<AccessControl>()),
+    () => TokenStorage(getIt<AccessControl>()),
   );
 
   getIt.registerLazySingleton<SessionCoordinator>(
-        () => SessionCoordinator(
-      getIt<AccessControl>(),
-      getIt<TokenStorage>(),
-    ),
+    () => SessionCoordinator(getIt<AccessControl>(), getIt<TokenStorage>()),
   );
 
   // ============================
@@ -87,14 +82,12 @@ void setupLocator() {
 
   /// DataSource
   getIt.registerLazySingleton<LoginRemoteDataSource>(
-        () => LoginRemoteDataSourceImpl(
-      getIt<ApiClient>(),
-    ),
+    () => LoginRemoteDataSourceImpl(getIt<ApiClient>()),
   );
 
   /// Repository
   getIt.registerLazySingleton<AuthRepository>(
-        () => AuthRepositoryImpl(
+    () => AuthRepositoryImpl(
       getIt<LoginRemoteDataSource>(),
       getIt<TokenStorage>(),
     ),
@@ -102,9 +95,7 @@ void setupLocator() {
 
   /// UseCase
   getIt.registerFactory<LoginUseCase>(
-        () => LoginUseCase(
-      getIt<AuthRepository>(),
-    ),
+    () => LoginUseCase(getIt<AuthRepository>()),
   );
 
   // ============================
@@ -113,47 +104,33 @@ void setupLocator() {
 
   /// DataSource
   getIt.registerLazySingleton<ProductRemoteDataSource>(
-        () => ProductRemoteDataSourceImpl(
-      getIt<ApiClient>(),
-    ),
+    () => ProductRemoteDataSourceImpl(getIt<ApiClient>()),
   );
 
   /// Repository
   getIt.registerLazySingleton<ProductRepository>(
-        () => ProductRepositoryImpl(
-      getIt<ProductRemoteDataSource>(),
-    ),
+    () => ProductRepositoryImpl(getIt<ProductRemoteDataSource>()),
   );
 
   /// UseCase
   getIt.registerFactory<GetProductViewUseCase>(
-        () => GetProductViewUseCase(
-      getIt<ProductRepository>(),
-    ),
+    () => GetProductViewUseCase(getIt<ProductRepository>()),
   );
 
   getIt.registerFactory<GetProductFormUseCase>(
-        () => GetProductFormUseCase(
-      getIt<ProductRepository>(),
-    ),
+    () => GetProductFormUseCase(getIt<ProductRepository>()),
   );
 
   getIt.registerFactory<CreateProductUseCase>(
-        () => CreateProductUseCase(
-      getIt<ProductRepository>(),
-    ),
+    () => CreateProductUseCase(getIt<ProductRepository>()),
   );
 
   getIt.registerFactory<UpdateProductUseCase>(
-        () => UpdateProductUseCase(
-      getIt<ProductRepository>(),
-    ),
+    () => UpdateProductUseCase(getIt<ProductRepository>()),
   );
 
   getIt.registerFactory<DeleteProductUseCase>(
-        () => DeleteProductUseCase(
-      getIt<ProductRepository>(),
-    ),
+    () => DeleteProductUseCase(getIt<ProductRepository>()),
   );
 
   // ============================
@@ -162,139 +139,148 @@ void setupLocator() {
 
   /// DataSource
   getIt.registerLazySingleton<InventoryMovementRemoteDataSource>(
-        () => InventoryMovementRemoteDataSourceImpl(
-      getIt<ApiClient>(),
-    ),
+    () => InventoryMovementRemoteDataSourceImpl(getIt<ApiClient>()),
   );
 
   /// Repository
   getIt.registerLazySingleton<InventoryMovementRepository>(
-        () => InventoryMovementRepositoryImpl(
+    () => InventoryMovementRepositoryImpl(
       getIt<InventoryMovementRemoteDataSource>(),
     ),
   );
 
   /// UseCase
   getIt.registerFactory<GetInventoryMovementsUseCase>(
-        () => GetInventoryMovementsUseCase(
-      getIt<InventoryMovementRepository>(),
-    ),
+    () => GetInventoryMovementsUseCase(getIt<InventoryMovementRepository>()),
   );
 
   getIt.registerFactory<CreateInventoryMovementUseCase>(
-        () => CreateInventoryMovementUseCase(
-      getIt<InventoryMovementRepository>(),
-    ),
+    () => CreateInventoryMovementUseCase(getIt<InventoryMovementRepository>()),
   );
 
-
   // ============================
-// CASH SESSION
-// ============================
+  // CASH SESSION
+  // ============================
 
   /// DataSource
   getIt.registerLazySingleton<CashSessionRemoteDataSource>(
-        () => CashSessionRemoteDataSourceImpl(
-      getIt<ApiClient>(),
-    ),
+    () => CashSessionRemoteDataSourceImpl(getIt<ApiClient>()),
   );
 
   /// Repository
   getIt.registerLazySingleton<CashSessionRepository>(
-        () => CashSessionRepositoryImpl(
-      getIt<CashSessionRemoteDataSource>(),
-    ),
+    () => CashSessionRepositoryImpl(getIt<CashSessionRemoteDataSource>()),
   );
 
   /// UseCase
   getIt.registerFactory<OpenCashSessionUseCase>(
-        () => OpenCashSessionUseCase(
-      getIt<CashSessionRepository>(),
-    ),
+    () => OpenCashSessionUseCase(getIt<CashSessionRepository>()),
   );
 
   getIt.registerFactory<GetCurrentCashSessionUseCase>(
-        () => GetCurrentCashSessionUseCase(
-      getIt<CashSessionRepository>(),
-    ),
+    () => GetCurrentCashSessionUseCase(getIt<CashSessionRepository>()),
   );
 
   getIt.registerFactory<ExistsOpenCashSessionUseCase>(
-        () => ExistsOpenCashSessionUseCase(
-      getIt<CashSessionRepository>(),
-    ),
+    () => ExistsOpenCashSessionUseCase(getIt<CashSessionRepository>()),
   );
 
   getIt.registerFactory<CloseCashSessionUseCase>(
-        () => CloseCashSessionUseCase(
-      getIt<CashSessionRepository>(),
-    ),
+    () => CloseCashSessionUseCase(getIt<CashSessionRepository>()),
   );
 
   getIt.registerFactory<GetCashSessionHistoryUseCase>(
-        () => GetCashSessionHistoryUseCase(
-      getIt<CashSessionRepository>(),
-    ),
+    () => GetCashSessionHistoryUseCase(getIt<CashSessionRepository>()),
   );
 
   // ============================
   // ORDERS
   // ============================
   getIt.registerLazySingleton<OrderRemoteDataSource>(
-        () => OrderRemoteDataSourceImpl(getIt<ApiClient>()),
+    () => OrderRemoteDataSourceImpl(getIt<ApiClient>()),
   );
 
   getIt.registerLazySingleton<OrderRepository>(
-        () => OrderRepositoryImpl(getIt<OrderRemoteDataSource>()),
+    () => OrderRepositoryImpl(getIt<OrderRemoteDataSource>()),
   );
 
-  getIt.registerFactory<GetOrdersUseCase>(() => GetOrdersUseCase(getIt<OrderRepository>()));
-  getIt.registerFactory<CreateOrderUseCase>(() => CreateOrderUseCase(getIt<OrderRepository>()));
-  getIt.registerFactory<UpdateOrderUseCase>(() => UpdateOrderUseCase(getIt<OrderRepository>()));
-  getIt.registerFactory<UpdateOrderStatusUseCase>(() => UpdateOrderStatusUseCase(getIt<OrderRepository>()));
-  getIt.registerFactory<DeleteOrderUseCase>(() => DeleteOrderUseCase(getIt<OrderRepository>()));
+  getIt.registerFactory<GetOrdersUseCase>(
+    () => GetOrdersUseCase(getIt<OrderRepository>()),
+  );
+  getIt.registerFactory<CreateOrderUseCase>(
+    () => CreateOrderUseCase(getIt<OrderRepository>()),
+  );
+  getIt.registerFactory<UpdateOrderUseCase>(
+    () => UpdateOrderUseCase(getIt<OrderRepository>()),
+  );
+  getIt.registerFactory<UpdateOrderStatusUseCase>(
+    () => UpdateOrderStatusUseCase(getIt<OrderRepository>()),
+  );
+  getIt.registerFactory<DeleteOrderUseCase>(
+    () => DeleteOrderUseCase(getIt<OrderRepository>()),
+  );
 
   // ============================
   // SALES
   // ============================
-  getIt.registerLazySingleton<SaleRemoteDataSource>(() => SaleRemoteDataSourceImpl(getIt<ApiClient>()));
-  getIt.registerLazySingleton<SaleRepository>(() => SaleRepositoryImpl(getIt<SaleRemoteDataSource>()));
-  getIt.registerFactory<GetSalesUseCase>(() => GetSalesUseCase(getIt<SaleRepository>()));
-  getIt.registerFactory<CreateSaleUseCase>(() => CreateSaleUseCase(getIt<SaleRepository>()));
-  getIt.registerFactory<GetCashSessionSalesSummaryUseCase>(() => GetCashSessionSalesSummaryUseCase(getIt<SaleRepository>()));
+  getIt.registerLazySingleton<SaleRemoteDataSource>(
+    () => SaleRemoteDataSourceImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<SaleRepository>(
+    () => SaleRepositoryImpl(getIt<SaleRemoteDataSource>()),
+  );
+  getIt.registerFactory<GetSalesUseCase>(
+    () => GetSalesUseCase(getIt<SaleRepository>()),
+  );
+  getIt.registerFactory<CreateSaleUseCase>(
+    () => CreateSaleUseCase(getIt<SaleRepository>()),
+  );
+  getIt.registerFactory<GetCashSessionSalesSummaryUseCase>(
+    () => GetCashSessionSalesSummaryUseCase(getIt<SaleRepository>()),
+  );
 
   // ============================
   // DASHBOARD
   // ============================
-  getIt.registerLazySingleton<DashboardRemoteDataSource>(() => DashboardRemoteDataSourceImpl(getIt<ApiClient>()));
-  getIt.registerLazySingleton<DashboardRepository>(() => DashboardRepositoryImpl(getIt<DashboardRemoteDataSource>()));
-  getIt.registerFactory<GetDashboardSummaryUseCase>(() => GetDashboardSummaryUseCase(getIt<DashboardRepository>()));
+  getIt.registerLazySingleton<DashboardRemoteDataSource>(
+    () => DashboardRemoteDataSourceImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<DashboardRepository>(
+    () => DashboardRepositoryImpl(getIt<DashboardRemoteDataSource>()),
+  );
+  getIt.registerFactory<GetDashboardSummaryUseCase>(
+    () => GetDashboardSummaryUseCase(getIt<DashboardRepository>()),
+  );
 
   // ============================
   // NOTIFICATIONS
   // ============================
   getIt.registerLazySingleton<NotificationRemoteDataSource>(
-        () => NotificationRemoteDataSourceImpl(getIt<ApiClient>()),
+    () => NotificationRemoteDataSourceImpl(getIt<ApiClient>()),
   );
   getIt.registerLazySingleton<NotificationRepository>(
-        () => NotificationRepositoryImpl(getIt<NotificationRemoteDataSource>()),
+    () => NotificationRepositoryImpl(getIt<NotificationRemoteDataSource>()),
   );
   getIt.registerFactory<GetNotificationsUseCase>(
-        () => GetNotificationsUseCase(getIt<NotificationRepository>()),
+    () => GetNotificationsUseCase(getIt<NotificationRepository>()),
   );
   getIt.registerFactory<GetUnreadNotificationCountUseCase>(
-        () => GetUnreadNotificationCountUseCase(getIt<NotificationRepository>()),
+    () => GetUnreadNotificationCountUseCase(getIt<NotificationRepository>()),
+  );
+  getIt.registerFactory<GetNotificationVisibleDaysUseCase>(
+    () => GetNotificationVisibleDaysUseCase(getIt<NotificationRepository>()),
   );
   getIt.registerFactory<MarkNotificationAsReadUseCase>(
-        () => MarkNotificationAsReadUseCase(getIt<NotificationRepository>()),
+    () => MarkNotificationAsReadUseCase(getIt<NotificationRepository>()),
   );
   getIt.registerFactory<MarkAllNotificationsAsReadUseCase>(
-        () => MarkAllNotificationsAsReadUseCase(getIt<NotificationRepository>()),
+    () => MarkAllNotificationsAsReadUseCase(getIt<NotificationRepository>()),
   );
   getIt.registerLazySingleton<NotificationCubit>(
-        () => NotificationCubit(
+    () => NotificationCubit(
       getIt<GetNotificationsUseCase>(),
       getIt<GetUnreadNotificationCountUseCase>(),
+      getIt<GetNotificationVisibleDaysUseCase>(),
       getIt<MarkNotificationAsReadUseCase>(),
       getIt<MarkAllNotificationsAsReadUseCase>(),
     ),

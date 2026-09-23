@@ -1,4 +1,5 @@
 import 'package:app_movil_sistema/features/notification/domain/entities/app_notification.dart';
+import 'package:app_movil_sistema/features/notification/domain/entities/notification_filter.dart';
 import 'package:app_movil_sistema/features/notification/domain/usecases/notification_usecases.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,18 +11,24 @@ class NotificationState extends Equatable {
     this.status = NotificationStatus.initial,
     this.notifications = const [],
     this.unreadCount = 0,
+    this.visibleDays = 7,
+    this.filter = const NotificationFilter(),
     this.errorMessage,
   });
 
   final NotificationStatus status;
   final List<AppNotification> notifications;
   final int unreadCount;
+  final int visibleDays;
+  final NotificationFilter filter;
   final String? errorMessage;
 
   NotificationState copyWith({
     NotificationStatus? status,
     List<AppNotification>? notifications,
     int? unreadCount,
+    int? visibleDays,
+    NotificationFilter? filter,
     String? errorMessage,
     bool clearError = false,
   }) {
@@ -29,50 +36,81 @@ class NotificationState extends Equatable {
       status: status ?? this.status,
       notifications: notifications ?? this.notifications,
       unreadCount: unreadCount ?? this.unreadCount,
+      visibleDays: visibleDays ?? this.visibleDays,
+      filter: filter ?? this.filter,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
   }
 
   @override
-  List<Object?> get props => [status, notifications, unreadCount, errorMessage];
+  List<Object?> get props => [
+    status,
+    notifications,
+    unreadCount,
+    visibleDays,
+    filter,
+    errorMessage,
+  ];
 }
 
 class NotificationCubit extends Cubit<NotificationState> {
   NotificationCubit(
     this._getNotifications,
     this._getUnreadCount,
+    this._getVisibleDays,
     this._markAsRead,
     this._markAllAsRead,
   ) : super(const NotificationState());
 
   final GetNotificationsUseCase _getNotifications;
   final GetUnreadNotificationCountUseCase _getUnreadCount;
+  final GetNotificationVisibleDaysUseCase _getVisibleDays;
   final MarkNotificationAsReadUseCase _markAsRead;
   final MarkAllNotificationsAsReadUseCase _markAllAsRead;
 
   Future<void> loadUnreadCount() async {
     final result = await _getUnreadCount();
+    result.fold((_) {}, (count) => emit(state.copyWith(unreadCount: count)));
+  }
+
+  Future<void> loadNotifications([NotificationFilter? filter]) async {
+    final activeFilter = filter ?? state.filter;
+    emit(state.copyWith(status: NotificationStatus.loading, clearError: true));
+    final result = await _getNotifications(activeFilter);
+    final visibleDaysResult = await _getVisibleDays();
     result.fold(
-      (_) {},
-      (count) => emit(state.copyWith(unreadCount: count)),
+      (failure) => emit(
+        state.copyWith(
+          status: NotificationStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
+      (notifications) => emit(
+        state.copyWith(
+          status: NotificationStatus.success,
+          notifications: notifications,
+          filter: activeFilter,
+          unreadCount: notifications
+              .where((notification) => !notification.read)
+              .length,
+          visibleDays: visibleDaysResult.fold(
+            (_) => state.visibleDays,
+            (days) => days,
+          ),
+        ),
+      ),
     );
   }
 
-  Future<void> loadNotifications() async {
-    emit(state.copyWith(status: NotificationStatus.loading, clearError: true));
-    final result = await _getNotifications();
-    result.fold(
-      (failure) => emit(state.copyWith(
-        status: NotificationStatus.failure,
-        errorMessage: failure.message,
-      )),
-      (notifications) => emit(state.copyWith(
-        status: NotificationStatus.success,
-        notifications: notifications,
-        unreadCount: notifications.where((notification) => !notification.read).length,
-      )),
-    );
-  }
+  Future<void> updateFilter(NotificationFilter filter) =>
+      loadNotifications(filter);
+
+  Future<void> updateSearch(String value) => loadNotifications(
+    state.filter.copyWith(
+      search: value.trim().isEmpty ? null : value.trim(),
+      clearSearch: value.trim().isEmpty,
+    ),
+  );
 
   Future<void> markAsRead(AppNotification notification) async {
     if (notification.read) return;
@@ -82,27 +120,31 @@ class NotificationCubit extends Cubit<NotificationState> {
       (_) {
         final now = DateTime.now();
         final updated = state.notifications
-            .map((item) => item.id == notification.id
-                ? AppNotification(
-                    id: item.id,
-                    type: item.type,
-                    priority: item.priority,
-                    title: item.title,
-                    message: item.message,
-                    referenceType: item.referenceType,
-                    referenceId: item.referenceId,
-                    metadata: item.metadata,
-                    createdAt: item.createdAt,
-                    read: true,
-                    readAt: now,
-                  )
-                : item)
+            .map(
+              (item) => item.id == notification.id
+                  ? AppNotification(
+                      id: item.id,
+                      type: item.type,
+                      priority: item.priority,
+                      title: item.title,
+                      message: item.message,
+                      referenceType: item.referenceType,
+                      referenceId: item.referenceId,
+                      metadata: item.metadata,
+                      createdAt: item.createdAt,
+                      read: true,
+                      readAt: now,
+                    )
+                  : item,
+            )
             .toList();
-        emit(state.copyWith(
-          notifications: updated,
-          unreadCount: state.unreadCount > 0 ? state.unreadCount - 1 : 0,
-          clearError: true,
-        ));
+        emit(
+          state.copyWith(
+            notifications: updated,
+            unreadCount: state.unreadCount > 0 ? state.unreadCount - 1 : 0,
+            clearError: true,
+          ),
+        );
       },
     );
   }
@@ -112,27 +154,31 @@ class NotificationCubit extends Cubit<NotificationState> {
     final result = await _markAllAsRead();
     result.fold(
       (failure) => emit(state.copyWith(errorMessage: failure.message)),
-      (_) => emit(state.copyWith(
-        notifications: state.notifications
-            .map((item) => item.read
-                ? item
-                : AppNotification(
-                    id: item.id,
-                    type: item.type,
-                    priority: item.priority,
-                    title: item.title,
-                    message: item.message,
-                    referenceType: item.referenceType,
-                    referenceId: item.referenceId,
-                    metadata: item.metadata,
-                    createdAt: item.createdAt,
-                    read: true,
-                    readAt: DateTime.now(),
-                  ))
-            .toList(),
-        unreadCount: 0,
-        clearError: true,
-      )),
+      (_) => emit(
+        state.copyWith(
+          notifications: state.notifications
+              .map(
+                (item) => item.read
+                    ? item
+                    : AppNotification(
+                        id: item.id,
+                        type: item.type,
+                        priority: item.priority,
+                        title: item.title,
+                        message: item.message,
+                        referenceType: item.referenceType,
+                        referenceId: item.referenceId,
+                        metadata: item.metadata,
+                        createdAt: item.createdAt,
+                        read: true,
+                        readAt: DateTime.now(),
+                      ),
+              )
+              .toList(),
+          unreadCount: 0,
+          clearError: true,
+        ),
+      ),
     );
   }
 }

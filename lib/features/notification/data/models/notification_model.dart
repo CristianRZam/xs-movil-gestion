@@ -25,7 +25,8 @@ class NotificationModel extends AppNotification {
       referenceType: json['referenceType'] as String?,
       referenceId: (json['referenceId'] as num?)?.toInt(),
       metadata: json['metadata'] as String?,
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
       read: json['read'] as bool? ?? false,
       readAt: json['readAt'] == null

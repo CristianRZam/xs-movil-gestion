@@ -1,5 +1,6 @@
 import 'package:app_movil_sistema/core/failures/failure.dart';
 import 'package:app_movil_sistema/features/notification/domain/entities/app_notification.dart';
+import 'package:app_movil_sistema/features/notification/domain/entities/notification_filter.dart';
 import 'package:app_movil_sistema/features/notification/domain/repositories/notification_repository.dart';
 import 'package:app_movil_sistema/features/notification/domain/usecases/notification_usecases.dart';
 import 'package:app_movil_sistema/features/notification/presentation/bloc/notification_cubit.dart';
@@ -21,6 +22,7 @@ void main() {
     final cubit = NotificationCubit(
       GetNotificationsUseCase(repository),
       GetUnreadNotificationCountUseCase(repository),
+      GetNotificationVisibleDaysUseCase(repository),
       MarkNotificationAsReadUseCase(repository),
       MarkAllNotificationsAsReadUseCase(repository),
     );
@@ -45,12 +47,15 @@ class _NotificationRepositoryFake implements NotificationRepository {
   final List<int> readNotificationIds = [];
 
   @override
-  Future<Either<Failure, List<AppNotification>>> getNotifications() async =>
+  Future<Either<Failure, List<AppNotification>>> getNotifications(NotificationFilter filter) async =>
       Right(notifications);
 
   @override
   Future<Either<Failure, int>> getUnreadCount() async =>
       Right(notifications.where((notification) => !notification.read).length);
+
+  @override
+  Future<Either<Failure, int>> getVisibleDays() async => const Right(7);
 
   @override
   Future<Either<Failure, void>> markAsRead(int notificationId) async {

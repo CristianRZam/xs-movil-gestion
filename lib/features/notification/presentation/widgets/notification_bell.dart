@@ -35,47 +35,54 @@ class _NotificationBellState extends State<NotificationBell> {
       builder: (context, _) {
         if (!_canShow) return const SizedBox.shrink();
         return BlocBuilder<NotificationCubit, NotificationState>(
-        bloc: getIt<NotificationCubit>(),
-        buildWhen: (previous, current) =>
-            previous.unreadCount != current.unreadCount,
-        builder: (context, state) {
-          final count = state.unreadCount;
-          return IconButton(
-            tooltip: count == 0
-                ? 'Notificaciones'
-                : '$count notificaciones sin leer',
-            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.notifications),
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.notifications_none_rounded, color: Colors.white),
-                if (count > 0)
-                  Positioned(
-                    right: -8,
-                    top: -8,
-                    child: Container(
-                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Colors.redAccent,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        count > 99 ? '99+' : '$count',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
+          bloc: getIt<NotificationCubit>(),
+          buildWhen: (previous, current) =>
+              previous.unreadCount != current.unreadCount,
+          builder: (context, state) {
+            final count = state.unreadCount;
+            return IconButton(
+              tooltip: count == 0
+                  ? 'Notificaciones'
+                  : '$count notificaciones sin leer',
+              onPressed: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.notifications),
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(
+                    Icons.notifications_none_rounded,
+                    color: Colors.white,
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: -8,
+                      top: -8,
+                      child: Container(
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          count > 99 ? '99+' : '$count',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
         );
       },
     );

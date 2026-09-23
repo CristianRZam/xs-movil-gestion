@@ -2,6 +2,7 @@ import 'package:app_movil_sistema/core/failures/failure.dart';
 import 'package:app_movil_sistema/core/failures/failure_mapper.dart';
 import 'package:app_movil_sistema/features/notification/data/datasources/notification_remote_datasource.dart';
 import 'package:app_movil_sistema/features/notification/domain/entities/app_notification.dart';
+import 'package:app_movil_sistema/features/notification/domain/entities/notification_filter.dart';
 import 'package:app_movil_sistema/features/notification/domain/repositories/notification_repository.dart';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
@@ -12,12 +13,16 @@ class NotificationRepositoryImpl implements NotificationRepository {
   final NotificationRemoteDataSource _remoteDataSource;
 
   @override
-  Future<Either<Failure, List<AppNotification>>> getNotifications() =>
-      _handle(_remoteDataSource.getNotifications);
+  Future<Either<Failure, List<AppNotification>>> getNotifications(
+    NotificationFilter filter,
+  ) => _handle(() => _remoteDataSource.getNotifications(filter));
 
   @override
   Future<Either<Failure, int>> getUnreadCount() =>
       _handle(_remoteDataSource.getUnreadCount);
+  @override
+  Future<Either<Failure, int>> getVisibleDays() =>
+      _handle(_remoteDataSource.getVisibleDays);
 
   @override
   Future<Either<Failure, void>> markAsRead(int notificationId) =>
