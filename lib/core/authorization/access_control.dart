@@ -6,6 +6,7 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 enum AppCapability {
   operate,
   manageProducts,
+  manageCategories,
   manageInventory,
   inventoryCount,
   reports,

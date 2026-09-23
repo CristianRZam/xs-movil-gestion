@@ -21,7 +21,12 @@ class XsDrawer extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 40, left: 20, right: 20, bottom: 20),
+            padding: const EdgeInsets.only(
+              top: 40,
+              left: 20,
+              right: 20,
+              bottom: 20,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -68,10 +73,7 @@ class XsDrawer extends StatelessWidget {
                     onTap: () {
                       Navigator.pop(context);
 
-                      Navigator.pushReplacementNamed(
-                        context,
-                        AppRoutes.home,
-                      );
+                      Navigator.pushReplacementNamed(context, AppRoutes.home);
                     },
                   ),
 
@@ -164,31 +166,73 @@ class XsDrawer extends StatelessWidget {
                   ),
 
                   if (getIt<AccessControl>().allows(AppCapability.reports))
-                  _DrawerItem(
-                    icon: Icons.bar_chart_rounded,
-                    title: '04 / Reportes',
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, AppRoutes.reports);
-                    },
-                  ),
+                    _DrawerItem(
+                      icon: Icons.bar_chart_rounded,
+                      title: '04 / Reportes',
+                      isDarkMode: isDarkMode,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushReplacementNamed(
+                          context,
+                          AppRoutes.reports,
+                        );
+                      },
+                    ),
 
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
-                    child: DashedLine(dashWidth: 6, dashSpace: 5, height: 1, color: Colors.grey),
+                    child: DashedLine(
+                      dashWidth: 6,
+                      dashSpace: 5,
+                      height: 1,
+                      color: Colors.grey,
+                    ),
                   ),
 
-                  if (getIt<AccessControl>().allows(AppCapability.inventoryCount))
-                  _DrawerItem(
-                    icon: Icons.inventory_rounded,
-                    title: '05 / Conteo diario',
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, AppRoutes.inventoryCount);
-                    },
-                  ),
+                  if (getIt<AccessControl>().allows(
+                    AppCapability.inventoryCount,
+                  ))
+                    _DrawerItem(
+                      icon: Icons.inventory_rounded,
+                      title: '05 / Conteo diario',
+                      isDarkMode: isDarkMode,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushReplacementNamed(
+                          context,
+                          AppRoutes.inventoryCount,
+                        );
+                      },
+                    ),
+
+                  if (getIt<AccessControl>().allows(
+                    AppCapability.manageCategories,
+                  ))
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: DashedLine(
+                        dashWidth: 6,
+                        dashSpace: 5,
+                        height: 1,
+                        color: Colors.grey,
+                      ),
+                    ),
+
+                  if (getIt<AccessControl>().allows(
+                    AppCapability.manageCategories,
+                  ))
+                    _DrawerItem(
+                      icon: Icons.category_rounded,
+                      title: '06 / Categorías',
+                      isDarkMode: isDarkMode,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushReplacementNamed(
+                          context,
+                          AppRoutes.categories,
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -233,17 +277,13 @@ class _DrawerItem extends StatelessWidget {
         contentPadding: EdgeInsets.zero,
         leading: Icon(
           icon,
-          color: isDarkMode
-              ? AppColors.white
-              : AppColors.primary,
+          color: isDarkMode ? AppColors.white : AppColors.primary,
         ),
         title: Text(
           title,
           style: TextStyle(
             fontSize: 15,
-            color: isDarkMode
-                ? AppColors.white
-                : AppColors.dark,
+            color: isDarkMode ? AppColors.white : AppColors.dark,
           ),
         ),
         onTap: onTap,

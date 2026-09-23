@@ -63,6 +63,11 @@ import 'package:app_movil_sistema/features/profile/data/datasources/profile_remo
 import 'package:app_movil_sistema/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:app_movil_sistema/features/profile/domain/repositories/profile_repository.dart';
 import 'package:app_movil_sistema/features/profile/domain/usecases/profile_usecases.dart';
+import 'package:app_movil_sistema/features/category/data/datasources/category_remote_datasource.dart';
+import 'package:app_movil_sistema/features/category/data/datasources/impl/category_remote_datasource_impl.dart';
+import 'package:app_movil_sistema/features/category/data/repositories/category_repository_impl.dart';
+import 'package:app_movil_sistema/features/category/domain/repositories/category_repository.dart';
+import 'package:app_movil_sistema/features/category/domain/usecases/category_usecases.dart';
 
 final getIt = GetIt.instance;
 
@@ -304,6 +309,22 @@ void setupLocator() {
   );
   getIt.registerFactory<UpdateProfilePasswordUseCase>(
     () => UpdateProfilePasswordUseCase(getIt<ProfileRepository>()),
+  );
+
+  // ============================
+  // CATEGORIAS DE PRODUCTOS
+  // ============================
+  getIt.registerLazySingleton<CategoryRemoteDataSource>(
+    () => CategoryRemoteDataSourceImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<CategoryRepository>(
+    () => CategoryRepositoryImpl(getIt<CategoryRemoteDataSource>()),
+  );
+  getIt.registerFactory<GetCategoriesUseCase>(
+    () => GetCategoriesUseCase(getIt<CategoryRepository>()),
+  );
+  getIt.registerFactory<CreateCategoryUseCase>(
+    () => CreateCategoryUseCase(getIt<CategoryRepository>()),
   );
   getIt.registerLazySingleton<NotificationCubit>(
     () => NotificationCubit(

@@ -10,6 +10,7 @@ import 'package:app_movil_sistema/features/report/presentation/pages/report_scre
 import 'package:app_movil_sistema/features/profile/presentation/pages/profile_screen.dart';
 import 'package:app_movil_sistema/features/inventory_count/presentation/pages/inventory_count_screen.dart';
 import 'package:app_movil_sistema/features/notification/presentation/pages/notification_screen.dart';
+import 'package:app_movil_sistema/features/category/presentation/pages/category_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:app_movil_sistema/features/settings/presentation/pages/settings_screen.dart';
 
@@ -25,6 +26,7 @@ class AppRoutes {
   static const settings = '/settings';
   static const inventoryCount = '/inventory-count';
   static const notifications = '/notifications';
+  static const categories = '/categories';
 
   static final routes = <String, WidgetBuilder>{
     login: (context) => LoginScreen(),
@@ -67,6 +69,10 @@ class AppRoutes {
     settings: (context) => AccessGuard(
       capability: AppCapability.operate,
       builder: (_) => const SettingsScreen(),
+    ),
+    categories: (context) => AccessGuard(
+      capability: AppCapability.manageCategories,
+      builder: (_) => const CategoryScreen(),
     ),
   };
 }
