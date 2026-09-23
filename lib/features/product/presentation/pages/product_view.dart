@@ -19,7 +19,7 @@ import 'package:app_movil_sistema/features/shared/widgets/xs-dialog.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-number-field.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-select.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-textfield.dart';
-import 'package:app_movil_sistema/features/shared/widgets/xs_multi_filter.dart';
+import 'package:app_movil_sistema/features/parameter/domain/entities/parameter.dart';
 import 'package:app_movil_sistema/features/product/presentation/widgets/product_card.dart';
 import 'package:app_movil_sistema/features/product/presentation/widgets/product_search.dart';
 import 'package:app_movil_sistema/features/product/presentation/widgets/product_summary_card.dart';
@@ -30,21 +30,187 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
-class ProductView extends StatelessWidget {
+class ProductView extends StatefulWidget {
   const ProductView({super.key});
+
+  @override
+  State<ProductView> createState() => _ProductViewState();
+}
+
+class _ProductViewState extends State<ProductView> {
+  final TextEditingController _searchController = TextEditingController();
+  final List<int> _selectedCategories = [];
+  bool? _selectedStatus;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _applyFilters() {
+    context.read<ProductBloc>().add(
+      FilterProductView(
+        ProductViewRequest(
+          name: _searchController.text.trim().isEmpty
+              ? null
+              : _searchController.text.trim(),
+          categories: _selectedCategories,
+          status: _selectedStatus,
+          page: 0,
+          size: EnvConfig.productPageSize,
+        ),
+      ),
+    );
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _searchController.clear();
+      _selectedCategories.clear();
+      _selectedStatus = null;
+    });
+    context.read<ProductBloc>().add(const ClearProductFilter());
+  }
+
+  Future<void> _openFilters(List<Parameter> categories) async {
+    final selectedCategories = List<int>.from(_selectedCategories);
+    bool? selectedStatus = _selectedStatus;
+
+    final shouldApply = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              4,
+              20,
+              20 + MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Filtros de productos',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Estado',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Todos'),
+                        selected: selectedStatus == null,
+                        onSelected: (_) => setSheetState(
+                          () => selectedStatus = null,
+                        ),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Activos'),
+                        selected: selectedStatus == true,
+                        onSelected: (_) => setSheetState(
+                          () => selectedStatus = true,
+                        ),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Inactivos'),
+                        selected: selectedStatus == false,
+                        onSelected: (_) => setSheetState(
+                          () => selectedStatus = false,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Categorías',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  if (categories.isEmpty)
+                    const Text('No hay categorías disponibles.')
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: categories.map((category) {
+                        final isSelected = selectedCategories.contains(
+                          category.parameterId,
+                        );
+                        return FilterChip(
+                          label: Text(category.name),
+                          selected: isSelected,
+                          onSelected: (selected) => setSheetState(() {
+                            if (selected) {
+                              selectedCategories.add(category.parameterId);
+                            } else {
+                              selectedCategories.remove(category.parameterId);
+                            }
+                          }),
+                        );
+                      }).toList(),
+                    ),
+                  const SizedBox(height: 28),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => setSheetState(() {
+                            selectedCategories.clear();
+                            selectedStatus = null;
+                          }),
+                          child: const Text('Limpiar'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () => Navigator.of(sheetContext).pop(true),
+                          child: const Text('Aplicar filtros'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (shouldApply == true && mounted) {
+      setState(() {
+        _selectedCategories
+          ..clear()
+          ..addAll(selectedCategories);
+        _selectedStatus = selectedStatus;
+      });
+      _applyFilters();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final tokenStorage = getIt<TokenStorage>();
-
-    final TextEditingController searchController = TextEditingController();
-    String searchValue = "";
-
-    final GlobalKey<XsMultiFilterState> categoryKey =
-        GlobalKey<XsMultiFilterState>();
-
-    List<int> selectedCategories = [];
 
     return FutureBuilder<String?>(
       future: tokenStorage.getToken(),
@@ -246,28 +412,29 @@ class ProductView extends StatelessWidget {
 
                         const SizedBox(height: 18),
 
-                        ProductSearch(
-                          controller: searchController,
-
-                          onChanged: (value) {
-                            searchValue = value;
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        XsMultiFilter(
-                          key: categoryKey,
-                          items: response?.categories ?? [],
-                          labelBuilder: (category) {
-                            return category.name;
-                          },
-                          valueBuilder: (category) {
-                            return category.parameterId;
-                          },
-                          onChanged: (values) {
-                            selectedCategories = values;
-                          },
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ProductSearch(
+                                controller: _searchController,
+                                onSubmitted: (_) => _applyFilters(),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Badge(
+                              isLabelVisible:
+                                  _selectedStatus != null ||
+                                  _selectedCategories.isNotEmpty,
+                              smallSize: 9,
+                              child: IconButton.filledTonal(
+                                tooltip: 'Filtros',
+                                onPressed: () => _openFilters(
+                                  response?.categories ?? const [],
+                                ),
+                                icon: const Icon(Icons.tune_rounded),
+                              ),
+                            ),
+                          ],
                         ),
 
                         const SizedBox(height: 18),
@@ -282,17 +449,8 @@ class ProductView extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: InkWell(
-                                  onTap: () {
-                                    searchController.clear();
-                                    searchValue = "";
-                                    categoryKey.currentState?.clear();
-                                    context.read<ProductBloc>().add(
-                                      const ClearProductFilter(),
-                                    );
-                                  },
-
+                                  onTap: _clearFilters,
                                   borderRadius: BorderRadius.circular(30),
-
                                   child: const Center(
                                     child: Icon(
                                       Icons.restart_alt,
@@ -301,42 +459,19 @@ class ProductView extends StatelessWidget {
                                   ),
                                 ),
                               ),
-
                               Container(
                                 width: 1,
                                 height: 24,
                                 color: Colors.white24,
                               ),
-
                               Expanded(
                                 flex: 3,
                                 child: InkWell(
-                                  onTap: () {
-                                    debugPrint("Aplicando filtros");
-
-                                    debugPrint("Producto: $searchValue");
-
-                                    debugPrint(
-                                      "Categorías: $selectedCategories",
-                                    );
-
-                                    context.read<ProductBloc>().add(
-                                      FilterProductView(
-                                        ProductViewRequest(
-                                          name: searchValue,
-                                          categories: selectedCategories,
-                                          page: 0,
-                                          size: EnvConfig.productPageSize,
-                                        ),
-                                      ),
-                                    );
-                                  },
-
+                                  onTap: _applyFilters,
                                   borderRadius: BorderRadius.circular(30),
-
                                   child: const Center(
                                     child: Text(
-                                      "Aplicar filtros",
+                                      'Buscar',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w600,
@@ -349,7 +484,7 @@ class ProductView extends StatelessWidget {
                           ),
                         ),
 
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 18),
 
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -479,7 +614,7 @@ class ProductView extends StatelessWidget {
                                     ),
                                   );
 
-                                  if (confirm == true) {
+                                  if (confirm == true && context.mounted) {
                                     context.read<ProductBloc>().add(
                                       DeleteProduct(product.id),
                                     );
@@ -922,7 +1057,7 @@ void openInventoryMovementHistoryDialog(
 
                     itemCount: movements.length,
 
-                    separatorBuilder: (_, __) => const SizedBox(height: 14),
+                    separatorBuilder: (_, _) => const SizedBox(height: 14),
 
                     itemBuilder: (_, index) {
                       final movement = movements[index];

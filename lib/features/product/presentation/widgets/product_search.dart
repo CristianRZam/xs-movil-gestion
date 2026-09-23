@@ -2,11 +2,15 @@ import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class ProductSearch extends StatelessWidget {
-  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
 
   final TextEditingController controller;
 
-  const ProductSearch({super.key, required this.controller, this.onChanged});
+  const ProductSearch({
+    super.key,
+    required this.controller,
+    this.onSubmitted,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,9 +19,8 @@ class ProductSearch extends StatelessWidget {
     return TextField(
       controller: controller,
 
-      onChanged: (value) {
-        onChanged?.call(value.trim());
-      },
+      textInputAction: TextInputAction.search,
+      onSubmitted: (value) => onSubmitted?.call(value.trim()),
 
       decoration: InputDecoration(
         hintText: "Buscar producto...",
