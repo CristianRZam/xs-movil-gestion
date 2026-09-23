@@ -1,4 +1,6 @@
 import 'package:app_movil_sistema/features/inventory_movement/domain/usecases/create_inventory_movement_usecase.dart';
+import 'package:app_movil_sistema/core/config/env_config.dart';
+import 'package:app_movil_sistema/features/product/domain/entities/product_view_response.dart';
 import 'package:app_movil_sistema/features/inventory_movement/domain/usecases/get_inventory_movements_usecase.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_view_request.dart';
 import 'package:app_movil_sistema/features/product/domain/usecases/create_product_usecase.dart';
@@ -38,6 +40,8 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     on<FilterProductView>(_filterProductView,);
 
     on<ClearProductFilter>(_clearFilter,);
+
+    on<LoadMoreProducts>(_loadMoreProducts);
 
     on<LoadProductForm>(_loadProductForm,);
 
@@ -83,13 +87,41 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
 
   Future<void> _clearFilter(ClearProductFilter event, Emitter<ProductState> emit,) async {
 
-    const request = ProductViewRequest(page: 0, size: 1000,);
+    final request = ProductViewRequest(page: 0, size: EnvConfig.productPageSize);
 
     await _getProducts(request, emit,);
 
   }
 
 
+
+  Future<void> _loadMoreProducts(
+    LoadMoreProducts event,
+    Emitter<ProductState> emit,
+  ) async {
+    final response = state.response;
+    final request = state.currentRequest;
+    if (response == null || request == null ||
+        response.products.length >= response.totalProducts || state.isLoadingMore) {
+      return;
+    }
+
+    emit(state.copyWith(isLoadingMore: true));
+    final nextRequest = request.copyWith(page: request.page + 1);
+    final result = await getProductViewUseCase(nextRequest);
+    result.fold(
+      (failure) => emit(state.copyWith(
+        isLoadingMore: false,
+        errorCode: failure.code,
+        errorMessage: failure.message,
+      )),
+      (nextResponse) => emit(state.copyWith(
+        isLoadingMore: false,
+        currentRequest: nextRequest,
+        response: _mergeResponses(response, nextResponse),
+      )),
+    );
+  }
 
   Future<void> _getProducts(ProductViewRequest request, Emitter<ProductState> emit,) async {
 
@@ -112,12 +144,30 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
         emit(state.copyWith(
             status: ProductStatus.success,
             response: response,
+            currentRequest: request,
+            isLoadingMore: false,
           ),
         );
 
       },
     );
 
+  }
+
+  ProductViewResponse _mergeResponses(
+    ProductViewResponse current,
+    ProductViewResponse next,
+  ) {
+    return ProductViewResponse(
+      products: [...current.products, ...next.products],
+      totalProducts: next.totalProducts,
+      activeProducts: next.activeProducts,
+      inactiveProducts: next.inactiveProducts,
+      totalStock: next.totalStock,
+      categories: next.categories,
+      unitMeasures: next.unitMeasures,
+      valuationMethods: next.valuationMethods,
+    );
   }
 
   Future<void> _loadProductForm(LoadProductForm event, Emitter<ProductState> emit,) async {

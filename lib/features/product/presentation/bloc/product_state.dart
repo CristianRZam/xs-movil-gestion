@@ -4,6 +4,7 @@ import 'package:app_movil_sistema/features/product/domain/entities/product.dart'
 import 'package:app_movil_sistema/features/product/domain/entities/product_form_response.dart';
 
 import '../../domain/entities/product_view_response.dart';
+import '../../domain/entities/product_view_request.dart';
 
 enum ProductStatus {
   initial,
@@ -22,6 +23,8 @@ class ProductState {
   final bool? deleted;
   final List<InventoryMovementDetail>? inventoryMovements;
   final InventoryMovement? inventoryMovement;
+  final ProductViewRequest? currentRequest;
+  final bool isLoadingMore;
 
   const ProductState({
     this.status = ProductStatus.initial,
@@ -33,6 +36,8 @@ class ProductState {
     this.deleted,
     this.inventoryMovements,
     this.inventoryMovement,
+    this.currentRequest,
+    this.isLoadingMore = false,
   });
 
   ProductState copyWith({
@@ -45,6 +50,8 @@ class ProductState {
     Object? deleted = _sentinel,
     Object? inventoryMovements = _sentinel,
     Object? inventoryMovement = _sentinel,
+    Object? currentRequest = _sentinel,
+    bool? isLoadingMore,
   }) {
     return ProductState(
       status: status ?? this.status,
@@ -73,6 +80,10 @@ class ProductState {
           : inventoryMovement as InventoryMovement?,
       errorCode: errorCode ?? this.errorCode,
       errorMessage: errorMessage ?? this.errorMessage,
+      currentRequest: identical(currentRequest, _sentinel)
+          ? this.currentRequest
+          : currentRequest as ProductViewRequest?,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 

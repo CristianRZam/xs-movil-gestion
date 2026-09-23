@@ -12,6 +12,8 @@ abstract class OrderEvent extends Equatable {
 
 class LoadOrders extends OrderEvent { const LoadOrders(); }
 class LoadOrderProducts extends OrderEvent { const LoadOrderProducts(); }
+class LoadMoreOrderProducts extends OrderEvent { const LoadMoreOrderProducts(); }
+class SearchOrderProducts extends OrderEvent { final String query; const SearchOrderProducts(this.query); }
 class RefreshOrderProducts extends OrderEvent {
   final Completer<List<Product>> completer;
   RefreshOrderProducts(this.completer);

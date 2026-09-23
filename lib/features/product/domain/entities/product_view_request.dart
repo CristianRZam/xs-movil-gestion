@@ -29,4 +29,34 @@ class ProductViewRequest {
     this.page = 0,
     this.size = 5,
   });
+
+  ProductViewRequest copyWith({
+    String? code,
+    String? name,
+    String? description,
+    List<int>? categories,
+    List<int>? unitMeasures,
+    List<int>? valuationMethods,
+    bool? manageVariant,
+    int? minimumStock,
+    int? maximumStock,
+    bool? status,
+    int? page,
+    int? size,
+  }) {
+    return ProductViewRequest(
+      code: code ?? this.code,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      categories: categories ?? this.categories,
+      unitMeasures: unitMeasures ?? this.unitMeasures,
+      valuationMethods: valuationMethods ?? this.valuationMethods,
+      manageVariant: manageVariant ?? this.manageVariant,
+      minimumStock: minimumStock ?? this.minimumStock,
+      maximumStock: maximumStock ?? this.maximumStock,
+      status: status ?? this.status,
+      page: page ?? this.page,
+      size: size ?? this.size,
+    );
+  }
 }

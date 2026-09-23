@@ -132,3 +132,7 @@ class ClearSavedInventoryMovement extends ProductEvent {
   const ClearSavedInventoryMovement();
 
 }
+
+class LoadMoreProducts extends ProductEvent {
+  const LoadMoreProducts();
+}

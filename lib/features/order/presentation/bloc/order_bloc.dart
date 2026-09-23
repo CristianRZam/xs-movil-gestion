@@ -1,4 +1,5 @@
 import 'package:app_movil_sistema/features/cash_session/domain/usecases/exists_open_cash_session_usecase.dart';
+import 'package:app_movil_sistema/core/config/env_config.dart';
 import 'package:app_movil_sistema/features/order/domain/entities/order.dart';
 import 'package:app_movil_sistema/features/order/domain/usecases/order_usecases.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_view_request.dart';
@@ -22,6 +23,8 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       : super(const OrderState()) {
     on<LoadOrders>(_loadOrders);
     on<LoadOrderProducts>(_loadProducts);
+    on<LoadMoreOrderProducts>(_loadMoreProducts);
+    on<SearchOrderProducts>(_searchProducts);
     on<RefreshOrderProducts>(_refreshProductsForForm);
     on<CheckOpenCashSession>(_checkOpenCashSession);
     on<SaveOrder>(_saveOrder);
@@ -55,10 +58,59 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
   }
 
   Future<void> _loadProducts(LoadOrderProducts event, Emitter<OrderState> emit) async {
-    final result = await getProductViewUseCase(const ProductViewRequest(page: 0, size: 1000, status: true));
+    final result = await getProductViewUseCase(
+      ProductViewRequest(page: 0, size: EnvConfig.productPageSize, status: true),
+    );
     result.fold(
       (failure) => emit(state.copyWith(errorMessage: failure.message)),
-      (response) => emit(state.copyWith(products: response.products)),
+      (response) => emit(state.copyWith(
+        products: response.products,
+        totalProducts: response.totalProducts,
+      )),
+    );
+  }
+
+  Future<void> _loadMoreProducts(
+    LoadMoreOrderProducts event,
+    Emitter<OrderState> emit,
+  ) async {
+    if (!state.hasMoreProducts || state.isLoadingMoreProducts) return;
+    emit(state.copyWith(isLoadingMoreProducts: true));
+    final page = state.products.length ~/ EnvConfig.productPageSize;
+    final result = await getProductViewUseCase(
+      ProductViewRequest(page: page, size: EnvConfig.productPageSize, status: true),
+    );
+    result.fold(
+      (failure) => emit(state.copyWith(
+        isLoadingMoreProducts: false,
+        errorMessage: failure.message,
+      )),
+      (response) => emit(state.copyWith(
+        products: [...state.products, ...response.products],
+        totalProducts: response.totalProducts,
+        isLoadingMoreProducts: false,
+      )),
+    );
+  }
+
+  Future<void> _searchProducts(
+    SearchOrderProducts event,
+    Emitter<OrderState> emit,
+  ) async {
+    final result = await getProductViewUseCase(
+      ProductViewRequest(
+        name: event.query.isEmpty ? null : event.query,
+        page: 0,
+        size: EnvConfig.productPageSize,
+        status: true,
+      ),
+    );
+    result.fold(
+      (failure) => emit(state.copyWith(errorMessage: failure.message)),
+      (response) => emit(state.copyWith(
+        products: response.products,
+        totalProducts: response.totalProducts,
+      )),
     );
   }
 
@@ -69,12 +121,15 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     Emitter<OrderState> emit,
   ) async {
     final result = await getProductViewUseCase(
-      const ProductViewRequest(page: 0, size: 1000, status: true),
+      ProductViewRequest(page: 0, size: EnvConfig.productPageSize, status: true),
     );
     result.fold(
       (failure) => event.completer.completeError(StateError(failure.message)),
       (response) {
-        emit(state.copyWith(products: response.products));
+        emit(state.copyWith(
+          products: response.products,
+          totalProducts: response.totalProducts,
+        ));
         event.completer.complete(response.products);
       },
     );
@@ -146,7 +201,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
   }) async {
     final ordersResult = await getOrdersUseCase();
     final productsResult = await getProductViewUseCase(
-      const ProductViewRequest(page: 0, size: 1000, status: true),
+      ProductViewRequest(page: 0, size: EnvConfig.productPageSize, status: true),
     );
 
     final refreshedOrders = ordersResult.fold((_) => state.orders, (orders) => orders);
@@ -159,6 +214,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       status: OrderStatus.success,
       orders: refreshedOrders,
       products: refreshedProducts,
+      totalProducts: productsResult.fold((_) => state.totalProducts, (response) => response.totalProducts),
       savedOrder: savedOrder,
       deleted: deleted ? true : null,
     ));

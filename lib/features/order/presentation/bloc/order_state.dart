@@ -11,6 +11,8 @@ class OrderState {
   final Order? savedOrder;
   final bool? deleted;
   final String? errorMessage;
+  final int totalProducts;
+  final bool isLoadingMoreProducts;
 
   const OrderState({
     this.status = OrderStatus.initial,
@@ -20,7 +22,11 @@ class OrderState {
     this.savedOrder,
     this.deleted,
     this.errorMessage,
+    this.totalProducts = 0,
+    this.isLoadingMoreProducts = false,
   });
+
+  bool get hasMoreProducts => products.length < totalProducts;
 
   OrderState copyWith({
     OrderStatus? status,
@@ -30,6 +36,8 @@ class OrderState {
     Object? savedOrder = _sentinel,
     Object? deleted = _sentinel,
     Object? errorMessage = _sentinel,
+    int? totalProducts,
+    bool? isLoadingMoreProducts,
   }) => OrderState(
         status: status ?? this.status,
         orders: orders ?? this.orders,
@@ -40,6 +48,8 @@ class OrderState {
         savedOrder: identical(savedOrder, _sentinel) ? this.savedOrder : savedOrder as Order?,
         deleted: identical(deleted, _sentinel) ? this.deleted : deleted as bool?,
         errorMessage: identical(errorMessage, _sentinel) ? this.errorMessage : errorMessage as String?,
+        totalProducts: totalProducts ?? this.totalProducts,
+        isLoadingMoreProducts: isLoadingMoreProducts ?? this.isLoadingMoreProducts,
       );
   static const _sentinel = Object();
 }

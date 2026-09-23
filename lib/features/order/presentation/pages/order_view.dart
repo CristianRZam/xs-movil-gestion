@@ -9,6 +9,7 @@ import 'package:app_movil_sistema/features/order/presentation/bloc/order_bloc.da
 import 'package:app_movil_sistema/features/order/presentation/bloc/order_event.dart';
 import 'package:app_movil_sistema/features/order/presentation/bloc/order_state.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
+import 'package:app_movil_sistema/features/product/presentation/widgets/product_selector_sheet.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:app_movil_sistema/routes/routes.dart';
@@ -335,8 +336,9 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
   late final TextEditingController notesController;
   late String type;
   late List<OrderItem> items;
+  late List<Product> availableProducts;
   final key = GlobalKey<FormState>();
-  @override void initState() { super.initState(); final o = widget.order; numberController = TextEditingController(text: o?.orderNumber ?? ''); tableController = TextEditingController(text: o?.tableNumber); notesController = TextEditingController(text: o?.notes); type = o?.orderType ?? 'DINE_IN'; items = [...?o?.items]; }
+  @override void initState() { super.initState(); final o = widget.order; numberController = TextEditingController(text: o?.orderNumber ?? ''); tableController = TextEditingController(text: o?.tableNumber); notesController = TextEditingController(text: o?.notes); type = o?.orderType ?? 'DINE_IN'; items = [...?o?.items]; availableProducts = [...widget.products]; }
   @override void dispose() { numberController.dispose(); tableController.dispose(); notesController.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => AlertDialog(
@@ -357,15 +359,37 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
       const SizedBox(height: 12), TextFormField(controller: tableController, decoration: const InputDecoration(labelText: 'Mesa o referencia')),
       const SizedBox(height: 12), TextFormField(controller: notesController, maxLines: 2, decoration: const InputDecoration(labelText: 'Notas')),
       const Divider(height: 30),
-      Row(children: [const Text('Productos', style: TextStyle(fontWeight: FontWeight.bold)), const Spacer(), TextButton.icon(onPressed: widget.products.isEmpty ? null : _addProduct, icon: const Icon(Icons.add), label: const Text('Agregar'))]),
+      Row(children: [const Text('Productos', style: TextStyle(fontWeight: FontWeight.bold)), const Spacer(), TextButton.icon(onPressed: availableProducts.isEmpty ? null : _addProduct, icon: const Icon(Icons.add), label: const Text('Agregar'))]),
       if (items.isEmpty) const Padding(padding: EdgeInsets.all(10), child: Text('Agregue al menos un producto.')),
-      ...items.asMap().entries.map((entry) => _EditableItem(item: entry.value, productName: _productName(widget.products, entry.value.productId), availableQuantity: _maximumQuantityForProduct(entry.value.productId), onChanged: (item) => setState(() => items[entry.key] = item), onDelete: () => setState(() => items.removeAt(entry.key)))),
+      ...items.asMap().entries.map((entry) => _EditableItem(item: entry.value, productName: _productName(availableProducts, entry.value.productId), availableQuantity: _maximumQuantityForProduct(entry.value.productId), onChanged: (item) => setState(() => items[entry.key] = item), onDelete: () => setState(() => items.removeAt(entry.key)))),
       const SizedBox(height: 10), Align(alignment: Alignment.centerRight, child: Text('Total: S/ ${items.fold<double>(0, (sum, item) => sum + item.subtotal).toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
     ])))),
     actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')), FilledButton(onPressed: _submit, child: const Text('Guardar'))],
   );
   Future<void> _addProduct() async {
-    final selected = await showModalBottomSheet<Product>(context: context, builder: (_) => _ProductSelector(products: widget.products));
+    final selected = await showModalBottomSheet<Product>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => BlocProvider.value(
+        value: context.read<OrderBloc>(),
+        child: BlocBuilder<OrderBloc, OrderState>(
+          builder: (sheetContext, state) => SizedBox(
+            height: MediaQuery.sizeOf(sheetContext).height * .78,
+            child: ProductSelectorSheet(
+              products: state.products,
+              hasMore: state.hasMoreProducts,
+              isLoadingMore: state.isLoadingMoreProducts,
+              onLoadMore: () => sheetContext
+                  .read<OrderBloc>()
+                  .add(const LoadMoreOrderProducts()),
+              onSearchChanged: (query) => sheetContext
+                  .read<OrderBloc>()
+                  .add(SearchOrderProducts(query)),
+            ),
+          ),
+        ),
+      ),
+    );
     if (selected == null) return;
     if (selected.availableStock == 0) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('El producto no tiene stock disponible.')));
@@ -377,7 +401,7 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Solo hay $maximumQuantity unidad(es) disponible(s).')));
       return;
     }
-    setState(() { if (index >= 0) { final old = items[index]; items[index] = OrderItem(id: old.id, productId: old.productId, quantity: old.quantity + 1, unitPrice: old.unitPrice, notes: old.notes); } else { items.add(OrderItem(productId: selected.id, quantity: 1, unitPrice: selected.promoPrice ?? selected.basePrice)); } });
+    setState(() { if (!availableProducts.any((product) => product.id == selected.id)) { availableProducts.add(selected); } if (index >= 0) { final old = items[index]; items[index] = OrderItem(id: old.id, productId: old.productId, quantity: old.quantity + 1, unitPrice: old.unitPrice, notes: old.notes); } else { items.add(OrderItem(productId: selected.id, quantity: 1, unitPrice: selected.promoPrice ?? selected.basePrice)); } });
   }
   void _submit() {
     if (!(key.currentState?.validate() ?? false)) return;
@@ -385,7 +409,7 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
     for (final item in items) {
       final availableStock = _maximumQuantityForProduct(item.productId);
       if (availableStock < 0 || item.quantity > availableStock) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('La cantidad de ${_productName(widget.products, item.productId)} supera el stock disponible.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('La cantidad de ${_productName(availableProducts, item.productId)} supera el stock disponible.')));
         return;
       }
     }
@@ -393,7 +417,7 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
   }
 
   int _maximumQuantityForProduct(int productId) {
-    final availableStock = _availableStock(widget.products, productId);
+    final availableStock = _availableStock(availableProducts, productId);
     if (availableStock < 0 || widget.order == null) return availableStock;
 
     final originallyReserved = widget.order!.items
@@ -432,9 +456,6 @@ class _NumberInput extends StatelessWidget {
   const _NumberInput({required this.label, required this.initial, this.maximum, this.wholeNumber = false, required this.onChanged});
   @override Widget build(BuildContext context) => TextFormField(initialValue: initial.toString(), keyboardType: TextInputType.numberWithOptions(decimal: !wholeNumber), autovalidateMode: AutovalidateMode.onUserInteraction, decoration: InputDecoration(labelText: label, isDense: true), validator: (value) { final number = double.tryParse(value ?? ''); if (number == null || number <= 0) return 'Ingrese un valor mayor que cero'; if (wholeNumber && number % 1 != 0) return 'Ingrese un número entero'; if (maximum != null && number > maximum!) return 'Máximo: ${maximum!.toInt()}'; return null; }, onChanged: (v) { final number = double.tryParse(v); if (number != null && number > 0) onChanged(number); });
 }
-
-class _ProductSelector extends StatefulWidget { final List<Product> products; const _ProductSelector({required this.products}); @override State<_ProductSelector> createState() => _ProductSelectorState(); }
-class _ProductSelectorState extends State<_ProductSelector> { String query = ''; @override Widget build(BuildContext context) { final products = widget.products.where((p) => p.name.toLowerCase().contains(query.toLowerCase()) || p.code.toLowerCase().contains(query.toLowerCase())).toList(); return SafeArea(child: Column(children: [Padding(padding: const EdgeInsets.all(16), child: TextField(autofocus: true, onChanged: (v) => setState(() => query = v), decoration: const InputDecoration(labelText: 'Buscar producto', prefixIcon: Icon(Icons.search)))), Expanded(child: ListView.builder(itemCount: products.length, itemBuilder: (_, index) { final product = products[index]; return ListTile(enabled: product.availableStock > 0, title: Text(product.name), subtitle: Text('${product.code} · S/ ${(product.promoPrice ?? product.basePrice).toStringAsFixed(2)}\nStock: ${product.totalStock} · Reservado: ${product.reservedStock}'), trailing: Text('Disp.: ${product.availableStock}'), onTap: product.availableStock > 0 ? () => Navigator.pop(context, product) : null); }))])); } }
 
 String _productName(List<Product> products, int id) {
   for (final product in products) {

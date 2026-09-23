@@ -1,5 +1,6 @@
 import 'package:app_movil_sistema/features/order/domain/entities/order.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
+import 'package:app_movil_sistema/features/product/presentation/widgets/product_selector_sheet.dart';
 import 'package:app_movil_sistema/features/sale/domain/entities/sale.dart';
 import 'package:app_movil_sistema/features/sale/presentation/bloc/sale_bloc.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
@@ -172,10 +173,14 @@ class _SaleFormState extends State<_SaleForm> {
   final _formKey = GlobalKey<FormState>();
   final _items = <SaleItem>[];
   final _payments = <_PaymentDraft>[];
+  final _productsById = <int, Product>{};
 
   @override
   void initState() {
     super.initState();
+    _productsById.addEntries(
+      widget.products.map((product) => MapEntry(product.id, product)),
+    );
     _payments.add(_PaymentDraft());
     final order = widget.order;
     if (order != null) {
@@ -326,30 +331,36 @@ class _SaleFormState extends State<_SaleForm> {
   }
 
   Product? _product(int id) {
-    for (final product in widget.products) {
-      if (product.id == id) return product;
-    }
-    return null;
+    return _productsById[id];
   }
 
   Future<void> _addProduct() async {
     final product = await showModalBottomSheet<Product>(
       context: context,
-      builder: (_) => ListView(
-        children: widget.products
-            .where((product) => product.availableStock > 0)
-            .map(
-              (product) => ListTile(
-                title: Text(product.name),
-                subtitle: Text('Disponible: ${product.availableStock}'),
-                onTap: () => Navigator.pop(context, product),
-              ),
-            )
-            .toList(),
+      isScrollControlled: true,
+      builder: (_) => BlocProvider.value(
+        value: context.read<SaleBloc>(),
+        child: BlocBuilder<SaleBloc, SaleState>(
+          builder: (sheetContext, state) => SizedBox(
+            height: MediaQuery.sizeOf(sheetContext).height * .78,
+            child: ProductSelectorSheet(
+              products: state.products,
+              hasMore: state.hasMoreProducts,
+              isLoadingMore: state.isLoadingMoreProducts,
+              onLoadMore: () => sheetContext
+                  .read<SaleBloc>()
+                  .add(const LoadMoreSaleProducts()),
+              onSearchChanged: (query) => sheetContext
+                  .read<SaleBloc>()
+                  .add(SearchSaleProducts(query)),
+            ),
+          ),
+        ),
       ),
     );
     if (product == null) return;
     setState(() {
+      _productsById[product.id] = product;
       final index = _items.indexWhere((item) => item.productId == product.id);
       if (index >= 0) {
         final old = _items[index];

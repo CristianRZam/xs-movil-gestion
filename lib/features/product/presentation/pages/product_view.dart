@@ -1,4 +1,5 @@
 import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/config/env_config.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/core/storage/token_storage.dart';
 import 'package:app_movil_sistema/core/theme/app_colors.dart';
@@ -89,7 +90,7 @@ class ProductView extends StatelessWidget {
                   FilterProductView(
                     ProductViewRequest(
                       page: 0,
-                      size: 1000,
+                      size: EnvConfig.productPageSize,
                     ),
                   ),
 
@@ -110,10 +111,10 @@ class ProductView extends StatelessWidget {
                 );
 
                 context.read<ProductBloc>().add(
-                  const FilterProductView(
+                  FilterProductView(
                     ProductViewRequest(
                       page: 0,
-                      size: 1000,
+                      size: EnvConfig.productPageSize,
                     ),
                   ),
                 );
@@ -135,10 +136,10 @@ class ProductView extends StatelessWidget {
                 );
 
                 context.read<ProductBloc>().add(
-                  const FilterProductView(
+                  FilterProductView(
                     ProductViewRequest(
                       page: 0,
-                      size: 1000,
+                      size: EnvConfig.productPageSize,
                     ),
                   ),
                 );
@@ -331,7 +332,7 @@ class ProductView extends StatelessWidget {
                                           name: searchValue,
                                           categories: selectedCategories,
                                           page: 0,
-                                          size: 1000,
+                                          size: EnvConfig.productPageSize,
                                         ),
                                       ),
                                     );
@@ -464,6 +465,31 @@ class ProductView extends StatelessWidget {
                             },
                           ),
                         ),
+                        if (response != null &&
+                            products.length < response.totalProducts) ...[
+                          const SizedBox(height: 12),
+                          Center(
+                            child: OutlinedButton.icon(
+                              onPressed: state.isLoadingMore
+                                  ? null
+                                  : () => context
+                                      .read<ProductBloc>()
+                                      .add(const LoadMoreProducts()),
+                              icon: state.isLoadingMore
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.expand_more_rounded),
+                              label: Text(
+                                state.isLoadingMore
+                                    ? 'Cargando...'
+                                    : 'Ver más (${products.length} de ${response.totalProducts})',
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

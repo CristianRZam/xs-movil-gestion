@@ -1,4 +1,5 @@
 import 'package:app_movil_sistema/features/inventory_movement/domain/usecases/create_inventory_movement_usecase.dart';
+import 'package:app_movil_sistema/core/config/env_config.dart';
 import 'package:app_movil_sistema/features/inventory_movement/domain/usecases/get_inventory_movements_usecase.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_view_request.dart';
 import 'package:app_movil_sistema/features/product/domain/usecases/create_product_usecase.dart';
@@ -35,10 +36,10 @@ class ProductScreen extends StatelessWidget {
         getIt<GetInventoryMovementsUseCase>(),
         getIt<CreateInventoryMovementUseCase>(),
       )..add(
-        const LoadProductView(
+        LoadProductView(
           ProductViewRequest(
             page: 0,
-            size: 1000,
+            size: EnvConfig.productPageSize,
           ),
         ),
       ),
