@@ -9,6 +9,7 @@ class ProductCard extends StatelessWidget {
 
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onToggleStatus;
   final VoidCallback? onWaste;
   final VoidCallback? onEnttry;
   final VoidCallback? onMovement;
@@ -19,6 +20,7 @@ class ProductCard extends StatelessWidget {
     required this.product,
     this.onEdit,
     this.onDelete,
+    this.onToggleStatus,
     this.onWaste,
     this.onEnttry,
     this.onMovement,
@@ -35,34 +37,27 @@ class ProductCard extends StatelessWidget {
 
     return Card(
       elevation: 3,
-      color: isDark
-          ? AppColors.dark
-          : AppColors.white,
+      color: isDark ? AppColors.dark : AppColors.white,
       shadowColor: Colors.black.withValues(alpha: .08),
       margin: const EdgeInsets.only(bottom: 14),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-
                       Container(
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: AppColors.secondary.withValues( alpha: .15,),
+                          color: AppColors.secondary.withValues(alpha: .15),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Icon(
@@ -89,15 +84,12 @@ class ProductCard extends StatelessWidget {
                     ],
                   ),
 
-
                   const SizedBox(height: 12),
-
 
                   Wrap(
                     spacing: 8,
                     runSpacing: 6,
                     children: [
-
                       _ChipInfo(
                         icon: Icons.category_outlined,
                         text: product.nameCategory,
@@ -108,28 +100,17 @@ class ProductCard extends StatelessWidget {
                         icon: product.active
                             ? Icons.check_circle
                             : Icons.cancel,
-                        text: product.active
-                            ? 'Activo'
-                            : 'Inactivo',
-                        color: product.active
-                            ? Colors.green
-                            : Colors.red,
+                        text: product.active ? 'Activo' : 'Inactivo',
+                        color: product.active ? Colors.green : Colors.red,
                       ),
                     ],
                   ),
 
-
                   const SizedBox(height: 12),
-
 
                   Row(
                     children: [
-
-                      Icon(
-                        Icons.qr_code,
-                        size: 16,
-                        color: subColor,
-                      ),
+                      Icon(Icons.qr_code, size: 16, color: subColor),
 
                       const SizedBox(width: 5),
 
@@ -142,52 +123,41 @@ class ProductCard extends StatelessWidget {
                           ),
                         ),
                       ),
-
                     ],
                   ),
 
-
                   const SizedBox(height: 12),
-
 
                   Row(
                     children: [
-
                       Expanded(
                         child: _InfoItem(
                           icon: Icons.sell_outlined,
                           title: "Precio",
-                          value:
-                          "S/. ${product.basePrice.toStringAsFixed(2)}",
+                          value: "S/. ${product.basePrice.toStringAsFixed(2)}",
                           color: Colors.green,
                           isDark: isDark,
                         ),
                       ),
 
-
                       Expanded(
                         child: _InfoItem(
                           icon: Icons.inventory_2_outlined,
                           title: "Stock",
-                          value:
-                          product.totalStock.toString(),
+                          value: product.totalStock.toString(),
                           color: Colors.blue,
                           isDark: isDark,
                         ),
                       ),
-
                     ],
                   ),
-
                 ],
               ),
             ),
 
             PopupMenuButton<String>(
               onSelected: (value) {
-
                 switch (value) {
-
                   case 'entry':
                     onEnttry?.call();
                     break;
@@ -212,104 +182,107 @@ class ProductCard extends StatelessWidget {
                     onDelete?.call();
                     break;
 
+                  case 'toggleStatus':
+                    onToggleStatus?.call();
+                    break;
                 }
-
               },
               itemBuilder: (_) => [
-
-                if (getIt<AccessControl>().allows(AppCapability.manageInventory))
-                const PopupMenuItem(
-                  value: 'entry',
-                  child: ListTile(
-                    leading: Icon(Icons.add_box_outlined),
-                    title:
-                    Text('Agregar inventario'),
-                    contentPadding:
-                    EdgeInsets.zero,
-                  ),
-                ),
-
-                if (getIt<AccessControl>().allows(AppCapability.manageInventory))
-                const PopupMenuItem(
-                  value: 'waste',
-                  child: ListTile(
-                    leading: Icon(
-                      Icons.remove_circle_outline,
+                if (getIt<AccessControl>().allows(
+                  AppCapability.manageInventory,
+                ))
+                  const PopupMenuItem(
+                    value: 'entry',
+                    child: ListTile(
+                      leading: Icon(Icons.add_box_outlined),
+                      title: Text('Agregar inventario'),
+                      contentPadding: EdgeInsets.zero,
                     ),
-                    title: Text('Registrar merma'),
-                    contentPadding: EdgeInsets.zero,
                   ),
-                ),
 
-                if (getIt<AccessControl>().allows(AppCapability.manageInventory))
-                const PopupMenuItem(
-                  value: 'adjustment',
-                  child: ListTile(
-                    leading: Icon(
-                      Icons.tune_outlined,
+                if (getIt<AccessControl>().allows(
+                  AppCapability.manageInventory,
+                ))
+                  const PopupMenuItem(
+                    value: 'waste',
+                    child: ListTile(
+                      leading: Icon(Icons.remove_circle_outline),
+                      title: Text('Registrar merma'),
+                      contentPadding: EdgeInsets.zero,
                     ),
-                    title: Text(
-                      'Ajustar inventario',
-                    ),
-                    contentPadding:
-                    EdgeInsets.zero,
                   ),
-                ),
+
+                if (getIt<AccessControl>().allows(
+                  AppCapability.manageInventory,
+                ))
+                  const PopupMenuItem(
+                    value: 'adjustment',
+                    child: ListTile(
+                      leading: Icon(Icons.tune_outlined),
+                      title: Text('Ajustar inventario'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
 
                 PopupMenuItem(
                   value: 'movement',
                   child: ListTile(
-                    leading:
-                    Icon(Icons.swap_horiz),
+                    leading: Icon(Icons.swap_horiz),
                     title: Text('Movimientos'),
-                    contentPadding:
-                    EdgeInsets.zero,
+                    contentPadding: EdgeInsets.zero,
                   ),
                 ),
 
                 if (getIt<AccessControl>().allows(AppCapability.manageProducts))
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: ListTile(
-                    leading:
-                    Icon(Icons.edit_outlined),
-                    title: Text('Editar'),
-                    contentPadding:
-                    EdgeInsets.zero,
-                  ),
-                ),
-
-                if (getIt<AccessControl>().allows(AppCapability.manageProducts))
-                const PopupMenuItem(
-                  enabled: false,
-                  height: 1,
-                  padding: EdgeInsets.zero,
-                  child: Divider(
-                    thickness: 0.5,
-                    color: Color(0xFFF2F2F2),
-                  ),
-                ),
-
-                if (getIt<AccessControl>().allows(AppCapability.manageProducts))
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: ListTile(
-                    leading: Icon(
-                      Icons.delete_outline,
-                      color: Colors.red,
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Editar'),
+                      contentPadding: EdgeInsets.zero,
                     ),
-                    title: Text(
-                      'Eliminar',
-                      style: TextStyle(
-                        color: Colors.red,
+                  ),
+
+                if (getIt<AccessControl>().allows(AppCapability.manageProducts))
+                  PopupMenuItem(
+                    value: 'toggleStatus',
+                    child: ListTile(
+                      leading: Icon(
+                        product.active
+                            ? Icons.toggle_off_outlined
+                            : Icons.toggle_on_outlined,
                       ),
+                      title: Text(
+                        product.active
+                            ? 'Desactivar producto'
+                            : 'Activar producto',
+                      ),
+                      contentPadding: EdgeInsets.zero,
                     ),
-                    contentPadding:
-                    EdgeInsets.zero,
                   ),
-                ),
+
+                if (getIt<AccessControl>().allows(AppCapability.manageProducts))
+                  const PopupMenuItem(
+                    enabled: false,
+                    height: 1,
+                    padding: EdgeInsets.zero,
+                    child: Divider(thickness: 0.5, color: Color(0xFFF2F2F2)),
+                  ),
+
+                if (getIt<AccessControl>().allows(AppCapability.manageProducts))
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      leading: Icon(Icons.delete_outline, color: Colors.red),
+                      title: Text(
+                        'Eliminar',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
               ],
-            )
+            ),
           ],
         ),
       ),
@@ -330,12 +303,8 @@ class _ChipInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 5,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: .10),
         borderRadius: BorderRadius.circular(30),
@@ -343,12 +312,7 @@ class _ChipInfo extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-
-          Icon(
-            icon,
-            size: 14,
-            color: color,
-          ),
+          Icon(icon, size: 14, color: color),
 
           const SizedBox(width: 5),
 
@@ -383,15 +347,9 @@ class _InfoItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Column(
       children: [
-
-        Icon(
-          icon,
-          color: color,
-          size: 18,
-        ),
+        Icon(icon, color: color, size: 18),
 
         const SizedBox(height: 3),
 
@@ -399,9 +357,7 @@ class _InfoItem extends StatelessWidget {
           title,
           style: TextStyle(
             fontSize: 11,
-            color: isDark
-                ? Colors.white60
-                : Colors.grey,
+            color: isDark ? Colors.white60 : Colors.grey,
           ),
         ),
 
@@ -411,9 +367,7 @@ class _InfoItem extends StatelessWidget {
           value,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: isDark
-                ? Colors.white
-                : Colors.black87,
+            color: isDark ? Colors.white : Colors.black87,
           ),
         ),
       ],

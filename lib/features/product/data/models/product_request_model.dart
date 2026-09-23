@@ -7,7 +7,6 @@ part 'product_request_model.g.dart';
 
 @JsonSerializable()
 class ProductRequestModel extends ProductRequest {
-
   const ProductRequestModel({
     super.id,
     required super.code,
@@ -21,21 +20,16 @@ class ProductRequestModel extends ProductRequest {
     required super.baseCost,
   });
 
-  factory ProductRequestModel.fromJson(
-      Map<String, dynamic> json,
-      ) =>
+  factory ProductRequestModel.fromJson(Map<String, dynamic> json) =>
       _$ProductRequestModelFromJson(json);
 
-  Map<String, dynamic> toJson() =>
-      _$ProductRequestModelToJson(this);
+  Map<String, dynamic> toJson() => _$ProductRequestModelToJson(this);
 
   String toJsonString() {
     return jsonEncode(toJson());
   }
 
-  factory ProductRequestModel.fromEntity(
-      ProductRequest entity,
-      ) {
+  factory ProductRequestModel.fromEntity(ProductRequest entity) {
     return ProductRequestModel(
       id: entity.id,
       code: entity.code,

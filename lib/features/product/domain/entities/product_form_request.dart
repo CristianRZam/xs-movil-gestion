@@ -1,7 +1,5 @@
 class ProductFormRequest {
   final int? id;
 
-  const ProductFormRequest({
-    this.id,
-  });
+  const ProductFormRequest({this.id});
 }

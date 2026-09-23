@@ -6,12 +6,7 @@ import 'package:app_movil_sistema/features/product/domain/entities/product_form_
 import '../../domain/entities/product_view_response.dart';
 import '../../domain/entities/product_view_request.dart';
 
-enum ProductStatus {
-  initial,
-  loading,
-  success,
-  failure,
-}
+enum ProductStatus { initial, loading, success, failure }
 
 class ProductState {
   final ProductStatus status;
@@ -21,6 +16,7 @@ class ProductState {
   final String? errorMessage;
   final Product? product;
   final bool? deleted;
+  final bool? statusUpdated;
   final List<InventoryMovementDetail>? inventoryMovements;
   final InventoryMovement? inventoryMovement;
   final ProductViewRequest? currentRequest;
@@ -34,6 +30,7 @@ class ProductState {
     this.errorMessage,
     this.product,
     this.deleted,
+    this.statusUpdated,
     this.inventoryMovements,
     this.inventoryMovement,
     this.currentRequest,
@@ -44,10 +41,11 @@ class ProductState {
     ProductStatus? status,
     ProductViewResponse? response,
     Object? formResponse = _sentinel,
-    int? errorCode,
-    String? errorMessage,
+    Object? errorCode = _sentinel,
+    Object? errorMessage = _sentinel,
     Object? product = _sentinel,
     Object? deleted = _sentinel,
+    Object? statusUpdated = _sentinel,
     Object? inventoryMovements = _sentinel,
     Object? inventoryMovement = _sentinel,
     Object? currentRequest = _sentinel,
@@ -62,24 +60,23 @@ class ProductState {
       product: identical(product, _sentinel)
           ? this.product
           : product as Product?,
-      deleted: identical(deleted, _sentinel)
-          ? this.deleted
-          : deleted as bool?,
-      inventoryMovements: identical(
-        inventoryMovements,
-        _sentinel,
-      )
+      deleted: identical(deleted, _sentinel) ? this.deleted : deleted as bool?,
+      statusUpdated: identical(statusUpdated, _sentinel)
+          ? this.statusUpdated
+          : statusUpdated as bool?,
+      inventoryMovements: identical(inventoryMovements, _sentinel)
           ? this.inventoryMovements
           : inventoryMovements as List<InventoryMovementDetail>?,
 
-      inventoryMovement: identical(
-        inventoryMovement,
-        _sentinel,
-      )
+      inventoryMovement: identical(inventoryMovement, _sentinel)
           ? this.inventoryMovement
           : inventoryMovement as InventoryMovement?,
-      errorCode: errorCode ?? this.errorCode,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorCode: identical(errorCode, _sentinel)
+          ? this.errorCode
+          : errorCode as int?,
+      errorMessage: identical(errorMessage, _sentinel)
+          ? this.errorMessage
+          : errorMessage as String?,
       currentRequest: identical(currentRequest, _sentinel)
           ? this.currentRequest
           : currentRequest as ProductViewRequest?,

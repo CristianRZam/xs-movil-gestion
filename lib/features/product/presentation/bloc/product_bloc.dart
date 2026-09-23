@@ -7,6 +7,7 @@ import 'package:app_movil_sistema/features/product/domain/usecases/create_produc
 import 'package:app_movil_sistema/features/product/domain/usecases/delete_product_usecase.dart';
 import 'package:app_movil_sistema/features/product/domain/usecases/get_product_form_usecase.dart';
 import 'package:app_movil_sistema/features/product/domain/usecases/update_product_usecase.dart';
+import 'package:app_movil_sistema/features/product/domain/usecases/update_product_status_usecase.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/usecases/get_product_view_usecase.dart';
 
@@ -18,6 +19,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
   final GetProductFormUseCase getProductFormUseCase;
   final CreateProductUseCase createProductUseCase;
   final UpdateProductUseCase updateProductUseCase;
+  final UpdateProductStatusUseCase updateProductStatusUseCase;
   final DeleteProductUseCase deleteProductUseCase;
   final GetInventoryMovementsUseCase getInventoryMovementsUseCase;
   final CreateInventoryMovementUseCase createInventoryMovementUseCase;
@@ -27,6 +29,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     this.getProductFormUseCase,
     this.createProductUseCase,
     this.updateProductUseCase,
+    this.updateProductStatusUseCase,
     this.deleteProductUseCase,
     this.getInventoryMovementsUseCase,
     this.createInventoryMovementUseCase,
@@ -43,6 +46,10 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
 
     on<ClearProductForm>(_clearProductForm);
 
+    on<ClearProductError>(
+      (_, emit) => emit(state.copyWith(errorCode: null, errorMessage: null)),
+    );
+
     on<CreateProduct>(_createProduct);
 
     on<UpdateProduct>(_updateProduct);
@@ -51,7 +58,13 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
 
     on<DeleteProduct>(_deleteProduct);
 
+    on<UpdateProductStatus>(_updateProductStatus);
+
     on<ClearDeletedProduct>(_clearDeletedProduct);
+
+    on<ClearUpdatedProductStatus>(
+      (_, emit) => emit(state.copyWith(statusUpdated: null)),
+    );
 
     on<LoadInventoryMovements>(_loadInventoryMovements);
 
@@ -290,6 +303,26 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     emit(state.copyWith(deleted: null));
+  }
+
+  Future<void> _updateProductStatus(
+    UpdateProductStatus event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(status: ProductStatus.loading));
+    final result = await updateProductStatusUseCase(event.id);
+    result.fold(
+      (failure) => emit(
+        state.copyWith(
+          status: ProductStatus.failure,
+          errorCode: failure.code,
+          errorMessage: failure.message,
+        ),
+      ),
+      (updated) => emit(
+        state.copyWith(status: ProductStatus.success, statusUpdated: updated),
+      ),
+    );
   }
 
   Future<void> _loadInventoryMovements(

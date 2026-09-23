@@ -511,6 +511,129 @@ class _CashSalesHistoryState extends State<_CashSalesHistory> {
   );
 }
 
+class _CashCloseReconciliationSummary extends StatelessWidget {
+  const _CashCloseReconciliationSummary({required this.summary});
+
+  final CashSessionSalesSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final total = summary.totalSold.toStringAsFixed(2);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: .45),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: .22),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.fact_check_outlined, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Resumen para el arqueo',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _CashCloseMetric(
+                  label: 'Ventas incluidas',
+                  value: '${summary.sales.length}',
+                ),
+              ),
+              Expanded(
+                child: _CashCloseMetric(
+                  label: 'Total vendido',
+                  value: 'S/ $total',
+                  alignEnd: true,
+                ),
+              ),
+            ],
+          ),
+          if (summary.paymentMethods.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Divider(height: 1),
+            ),
+            Text(
+              'Por método de pago',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 6),
+            ...summary.paymentMethods.map(
+              (payment) => Padding(
+                padding: const EdgeInsets.only(top: 5),
+                child: Row(
+                  children: [
+                    Icon(
+                      PaymentMethodStyle.icon(payment.paymentMethod),
+                      size: 18,
+                      color: PaymentMethodStyle.color(payment.paymentMethod),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(_cashPaymentLabel(payment.paymentMethod)),
+                    ),
+                    Text(
+                      'S/ ${payment.total.toStringAsFixed(2)}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CashCloseMetric extends StatelessWidget {
+  const _CashCloseMetric({
+    required this.label,
+    required this.value,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final String value;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: alignEnd
+        ? CrossAxisAlignment.end
+        : CrossAxisAlignment.start,
+    children: [
+      Text(label, style: Theme.of(context).textTheme.bodySmall),
+      const SizedBox(height: 2),
+      Text(
+        value,
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+      ),
+    ],
+  );
+}
+
 String _cashPaymentLabel(String method) => switch (method) {
   'CASH' => 'Efectivo',
   'YAPE' => 'Yape',
@@ -519,10 +642,27 @@ String _cashPaymentLabel(String method) => switch (method) {
   _ => method,
 };
 
-void openCloseCashSessionDialog(
+Future<void> openCloseCashSessionDialog(
   BuildContext parentContext,
   CashSession session,
-) {
+) async {
+  CashSessionSalesSummary? salesSummary;
+  final summaryResult = await getIt<GetCashSessionSalesSummaryUseCase>()(
+    session.id,
+  );
+  if (!parentContext.mounted) return;
+
+  summaryResult.fold(
+    (failure) => ScaffoldMessenger.of(parentContext).showSnackBar(
+      SnackBar(
+        content: Text(
+          'No se pudo cargar el detalle de ventas: ${failure.message}',
+        ),
+      ),
+    ),
+    (summary) => salesSummary = summary,
+  );
+
   final closingAmountController = TextEditingController();
 
   final expectedAmountController = TextEditingController(
@@ -535,7 +675,7 @@ void openCloseCashSessionDialog(
 
   final formKey = GlobalKey<FormState>();
 
-  showDialog(
+  await showDialog<void>(
     context: parentContext,
 
     builder: (_) {
@@ -553,6 +693,15 @@ void openCloseCashSessionDialog(
 
             setState(() {});
           }
+
+          final isBalanced = calculatedDifference.abs() < .005;
+          final isSurplus = calculatedDifference > 0;
+          final differenceColor = isBalanced
+              ? Colors.blue
+              : (isSurplus ? Colors.green : Colors.red);
+          final differenceLabel = isBalanced
+              ? 'Caja cuadrada'
+              : (isSurplus ? 'Sobrante detectado' : 'Faltante detectado');
 
           return Form(
             key: formKey,
@@ -596,6 +745,10 @@ void openCloseCashSessionDialog(
                 mainAxisSize: MainAxisSize.min,
 
                 children: [
+                  if (salesSummary != null) ...[
+                    _CashCloseReconciliationSummary(summary: salesSummary!),
+                    const SizedBox(height: 16),
+                  ],
                   XsNumberField(
                     controller: expectedAmountController,
 
@@ -630,23 +783,47 @@ void openCloseCashSessionDialog(
 
                   const SizedBox(height: 14),
 
-                  const SizedBox(height: 14),
-
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: calculatedDifference == 0
-                          ? Colors.blue.withValues(alpha: .10)
-                          : (calculatedDifference > 0
-                                    ? Colors.green
-                                    : Colors.red)
-                                .withValues(alpha: .10),
-                      borderRadius: BorderRadius.circular(10),
+                      color: differenceColor.withValues(alpha: .10),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: differenceColor.withValues(alpha: .28),
+                      ),
                     ),
-                    child: Text(
-                      'Diferencia calculada: S/ ${calculatedDifference.toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isBalanced
+                              ? Icons.check_circle_outline
+                              : Icons.warning_amber_rounded,
+                          color: differenceColor,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                differenceLabel,
+                                style: TextStyle(
+                                  color: differenceColor,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Diferencia: S/ ${calculatedDifference.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -655,11 +832,17 @@ void openCloseCashSessionDialog(
                   XsTextField(
                     controller: commentController,
 
-                    labelText: "Comentario de cierre",
+                    labelText: "Comentario de cierre (obligatorio)",
 
                     keyboardType: TextInputType.multiline,
 
                     prefixIcon: const Icon(Icons.description_outlined),
+
+                    autoValidate: true,
+
+                    validator: (value) => InputValidators.requiredField(
+                      'Indique un comentario para cerrar la caja',
+                    )(value),
                   ),
                 ],
               ),
@@ -669,4 +852,8 @@ void openCloseCashSessionDialog(
       );
     },
   );
+
+  closingAmountController.dispose();
+  expectedAmountController.dispose();
+  commentController.dispose();
 }

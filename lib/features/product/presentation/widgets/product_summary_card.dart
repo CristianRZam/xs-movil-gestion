@@ -1,18 +1,12 @@
 import 'package:flutter/material.dart';
 
-
 class ProductSummaryCard extends StatelessWidget {
-
-
   final String title;
   final String value;
   final IconData icon;
   final Color color;
 
-
-
   const ProductSummaryCard({
-
     super.key,
 
     required this.title,
@@ -22,86 +16,40 @@ class ProductSummaryCard extends StatelessWidget {
     required this.icon,
 
     required this.color,
-
   });
 
-
-
   @override
-  Widget build(BuildContext context){
-
-
+  Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.all(15),
 
-      padding:
-      const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.12),
 
-
-      decoration:
-      BoxDecoration(
-
-        color:
-        color.withOpacity(.12),
-
-
-        borderRadius:
-        BorderRadius.circular(20),
-
+        borderRadius: BorderRadius.circular(20),
       ),
 
+      child: Column(
+        children: [
+          Icon(icon, color: color),
 
-      child:Column(
-
-        children:[
-
-
-          Icon(
-            icon,
-            color:color,
-          ),
-
-
-          const SizedBox(height:8),
-
+          const SizedBox(height: 8),
 
           Text(
-
             value,
 
-            style:
-            TextStyle(
+            style: TextStyle(
+              fontSize: 22,
 
-              fontSize:22,
+              fontWeight: FontWeight.bold,
 
-              fontWeight:
-              FontWeight.bold,
-
-              color:
-              color,
-
+              color: color,
             ),
-
           ),
 
-
-
-          Text(
-            title,
-            style:
-            const TextStyle(
-              fontSize:12,
-            ),
-          )
-
-
+          Text(title, style: const TextStyle(fontSize: 12)),
         ],
-
-
       ),
-
     );
-
-
   }
-
 }

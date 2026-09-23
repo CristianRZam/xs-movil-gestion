@@ -6,13 +6,11 @@ import '../entities/product_request.dart';
 import '../repositories/product_repository.dart';
 
 class CreateProductUseCase {
-
   final ProductRepository repository;
 
   CreateProductUseCase(this.repository);
 
-  Future<Either<Failure, Product>> call(ProductRequest request,) {
+  Future<Either<Failure, Product>> call(ProductRequest request) {
     return repository.createProduct(request);
   }
-
 }

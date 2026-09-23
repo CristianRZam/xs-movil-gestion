@@ -1,7 +1,6 @@
 import '../../domain/entities/product_view_request.dart';
 
 class ProductViewRequestModel extends ProductViewRequest {
-
   const ProductViewRequestModel({
     super.code,
     super.name,
@@ -17,11 +16,7 @@ class ProductViewRequestModel extends ProductViewRequest {
     super.size,
   });
 
-
-  factory ProductViewRequestModel.fromEntity(
-      ProductViewRequest entity,
-      ) {
-
+  factory ProductViewRequestModel.fromEntity(ProductViewRequest entity) {
     return ProductViewRequestModel(
       code: entity.code,
       name: entity.name,
@@ -36,12 +31,9 @@ class ProductViewRequestModel extends ProductViewRequest {
       page: entity.page,
       size: entity.size,
     );
-
   }
 
-
   Map<String, dynamic> toJson() {
-
     return {
       'code': code,
       'name': name,
@@ -56,7 +48,5 @@ class ProductViewRequestModel extends ProductViewRequest {
       'page': page,
       'size': size,
     };
-
   }
-
 }

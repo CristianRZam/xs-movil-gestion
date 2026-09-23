@@ -18,7 +18,8 @@ class ProductViewResponseModel extends ProductViewResponse {
   factory ProductViewResponseModel.fromJson(Map<String, dynamic> json) {
     return ProductViewResponseModel(
       products: (json['products'] as List)
-          .map((e) => ProductModel.fromJson(e as Map<String, dynamic>)).toList(),
+          .map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
 
       totalProducts: json['totalProducts'] as int,
       activeProducts: json['activeProducts'] as int,
@@ -26,13 +27,16 @@ class ProductViewResponseModel extends ProductViewResponse {
       totalStock: json['totalStock'] as int,
 
       categories: (json['categories'] as List)
-          .map((e) => ParameterModel.fromJson(e as Map<String, dynamic>)).toList(),
+          .map((e) => ParameterModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
 
       unitMeasures: (json['unitMeasures'] as List)
-          .map((e) => ParameterModel.fromJson(e as Map<String, dynamic>)).toList(),
+          .map((e) => ParameterModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
 
       valuationMethods: (json['valuationMethods'] as List)
-          .map((e) => ParameterModel.fromJson(e as Map<String, dynamic>)).toList(),
+          .map((e) => ParameterModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

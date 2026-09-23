@@ -6,18 +6,20 @@ import 'package:app_movil_sistema/features/product/data/models/product_request_m
 import '../models/product_view_request_model.dart';
 import '../models/product_view_response_model.dart';
 
-
 abstract class ProductRemoteDataSource {
+  Future<ProductViewResponseModel> getProductView(
+    ProductViewRequestModel request,
+  );
 
-  Future<ProductViewResponseModel> getProductView(ProductViewRequestModel request,);
+  Future<ProductFormResponseModel> getProductForm(
+    ProductFormRequestModel request,
+  );
 
-  Future<ProductFormResponseModel> getProductForm(ProductFormRequestModel request,);
+  Future<ProductModel> createProduct(ProductRequestModel request);
 
-  Future<ProductModel> createProduct(ProductRequestModel request,);
-
-  Future<ProductModel> updateProduct(ProductRequestModel request,);
+  Future<ProductModel> updateProduct(ProductRequestModel request);
 
   Future<bool> deleteProduct(int id);
 
+  Future<bool> updateProductStatus(int id);
 }
-

@@ -6,15 +6,13 @@ import '../entities/product_form_response.dart';
 import '../repositories/product_repository.dart';
 
 class GetProductFormUseCase {
-
   final ProductRepository repository;
 
-  GetProductFormUseCase(
-      this.repository,
-      );
+  GetProductFormUseCase(this.repository);
 
-  Future<Either<Failure, ProductFormResponse>> call(ProductFormRequest request,) {
-    return repository.getProductForm(request,);
+  Future<Either<Failure, ProductFormResponse>> call(
+    ProductFormRequest request,
+  ) {
+    return repository.getProductForm(request);
   }
-
 }

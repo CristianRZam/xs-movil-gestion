@@ -9,7 +9,6 @@ part 'product_form_response_model.g.dart';
 
 @JsonSerializable(explicitToJson: true)
 class ProductFormResponseModel {
-
   final ProductModel? product;
 
   @JsonKey(defaultValue: <ProductImageModel>[])
@@ -32,13 +31,10 @@ class ProductFormResponseModel {
     required this.valuationMethods,
   });
 
-  factory ProductFormResponseModel.fromJson(
-      Map<String, dynamic> json,
-      ) =>
+  factory ProductFormResponseModel.fromJson(Map<String, dynamic> json) =>
       _$ProductFormResponseModelFromJson(json);
 
-  Map<String, dynamic> toJson() =>
-      _$ProductFormResponseModelToJson(this);
+  Map<String, dynamic> toJson() => _$ProductFormResponseModelToJson(this);
 
   ProductFormResponse toEntity() {
     return ProductFormResponse(
@@ -50,22 +46,14 @@ class ProductFormResponseModel {
     );
   }
 
-  factory ProductFormResponseModel.fromEntity(
-      ProductFormResponse entity,
-      ) {
+  factory ProductFormResponseModel.fromEntity(ProductFormResponse entity) {
     return ProductFormResponseModel(
       product: entity.product != null
           ? ProductModel.fromEntity(entity.product!)
           : null,
-      images: entity.images
-          .map(ProductImageModel.fromEntity)
-          .toList(),
-      categories: entity.categories
-          .map(ParameterModel.fromEntity)
-          .toList(),
-      unitMeasures: entity.unitMeasures
-          .map(ParameterModel.fromEntity)
-          .toList(),
+      images: entity.images.map(ProductImageModel.fromEntity).toList(),
+      categories: entity.categories.map(ParameterModel.fromEntity).toList(),
+      unitMeasures: entity.unitMeasures.map(ParameterModel.fromEntity).toList(),
       valuationMethods: entity.valuationMethods
           .map(ParameterModel.fromEntity)
           .toList(),

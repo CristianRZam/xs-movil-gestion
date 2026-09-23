@@ -1,5 +1,4 @@
 class ProductRequest {
-
   final int? id;
 
   final String code;
@@ -26,5 +25,4 @@ class ProductRequest {
     this.promoPrice,
     required this.baseCost,
   });
-
 }

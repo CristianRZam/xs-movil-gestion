@@ -72,78 +72,77 @@ class _ProductSelectorSheetState extends State<ProductSelectorSheet> {
             const SizedBox(height: 12),
             Expanded(
               child: ListView.separated(
-                      keyboardDismissBehavior:
-                          ScrollViewKeyboardDismissBehavior.onDrag,
-                      itemCount: (filteredProducts.isEmpty
-                              ? 1
-                              : filteredProducts.length) +
-                          (widget.hasMore ? 1 : 0),
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (_, index) {
-                        final resultCount = filteredProducts.isEmpty
-                            ? 1
-                            : filteredProducts.length;
-                        if (widget.hasMore && index == resultCount) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            child: Center(
-                              child: OutlinedButton.icon(
-                                onPressed: widget.isLoadingMore
-                                    ? null
-                                    : widget.onLoadMore,
-                                icon: widget.isLoadingMore
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Icon(Icons.expand_more_rounded),
-                                label: Text(
-                                  widget.isLoadingMore
-                                      ? 'Cargando...'
-                                      : 'Ver más productos',
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-                        if (filteredProducts.isEmpty && index == 0) {
-                          return const SizedBox(
-                            height: 220,
-                            child: _EmptySearchResult(),
-                          );
-                        }
-                        final product = filteredProducts[index];
-                        final hasStock = product.availableStock > 0;
-                        final price = product.promoPrice ?? product.basePrice;
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                itemCount:
+                    (filteredProducts.isEmpty ? 1 : filteredProducts.length) +
+                    (widget.hasMore ? 1 : 0),
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (_, index) {
+                  final resultCount = filteredProducts.isEmpty
+                      ? 1
+                      : filteredProducts.length;
+                  if (widget.hasMore && index == resultCount) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Center(
+                        child: OutlinedButton.icon(
+                          onPressed: widget.isLoadingMore
+                              ? null
+                              : widget.onLoadMore,
+                          icon: widget.isLoadingMore
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.expand_more_rounded),
+                          label: Text(
+                            widget.isLoadingMore
+                                ? 'Cargando...'
+                                : 'Ver más productos',
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  if (filteredProducts.isEmpty && index == 0) {
+                    return const SizedBox(
+                      height: 220,
+                      child: _EmptySearchResult(),
+                    );
+                  }
+                  final product = filteredProducts[index];
+                  final hasStock = product.availableStock > 0;
+                  final price = product.promoPrice ?? product.basePrice;
 
-                        return ListTile(
-                          enabled: hasStock,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 4,
-                          ),
-                          title: Text(
-                            product.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            '${product.code} · S/ ${price.toStringAsFixed(2)}\n'
-                            'Disponible: ${product.availableStock}',
-                          ),
-                          isThreeLine: true,
-                          trailing: hasStock
-                              ? const Icon(Icons.add_circle_outline_rounded)
-                              : const Text('Sin stock'),
-                          onTap: hasStock
-                              ? () => Navigator.of(context).pop(product)
-                              : null,
-                        );
-                      },
+                  return ListTile(
+                    enabled: hasStock,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 4,
                     ),
+                    title: Text(
+                      product.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${product.code} · S/ ${price.toStringAsFixed(2)}\n'
+                      'Disponible: ${product.availableStock}',
+                    ),
+                    isThreeLine: true,
+                    trailing: hasStock
+                        ? const Icon(Icons.add_circle_outline_rounded)
+                        : const Text('Sin stock'),
+                    onTap: hasStock
+                        ? () => Navigator.of(context).pop(product)
+                        : null,
+                  );
+                },
+              ),
             ),
           ],
         ),

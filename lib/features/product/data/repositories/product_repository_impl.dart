@@ -17,128 +17,72 @@ import '../../domain/repositories/product_repository.dart';
 import '../datasources/product_remote_datasource.dart';
 import '../models/product_view_request_model.dart';
 
-
 class ProductRepositoryImpl implements ProductRepository {
-
   final ProductRemoteDataSource remoteDataSource;
 
-  ProductRepositoryImpl(
-      this.remoteDataSource,
-      );
+  ProductRepositoryImpl(this.remoteDataSource);
 
   @override
-  Future<Either<Failure, ProductViewResponse>> getProductView(ProductViewRequest request,) async {
+  Future<Either<Failure, ProductViewResponse>> getProductView(
+    ProductViewRequest request,
+  ) async {
     try {
       final response = await remoteDataSource.getProductView(
-        ProductViewRequestModel.fromEntity(
-          request,
-        ),
+        ProductViewRequestModel.fromEntity(request),
       );
-      return Right(
-        response,
-      );
-
+      return Right(response);
     } on DioException catch (e) {
-
-      return Left(
-        FailureMapper.fromDioException(e),
-      );
-
+      return Left(FailureMapper.fromDioException(e));
     } catch (_) {
-
-      return Left(
-        UnexpectedFailure(),
-      );
-
+      return Left(UnexpectedFailure());
     }
   }
 
   @override
   Future<Either<Failure, ProductFormResponse>> getProductForm(
-      ProductFormRequest request,
-      ) async {
-
+    ProductFormRequest request,
+  ) async {
     try {
-
       final response = await remoteDataSource.getProductForm(
         ProductFormRequestModel.fromEntity(request),
       );
 
-      return Right(
-        response.toEntity(),
-      );
-
+      return Right(response.toEntity());
     } on DioException catch (e) {
-
-      return Left(
-        FailureMapper.fromDioException(e),
-      );
-
+      return Left(FailureMapper.fromDioException(e));
     } catch (_) {
-
-      return Left(
-        UnexpectedFailure(),
-      );
-
+      return Left(UnexpectedFailure());
     }
   }
 
   @override
-  Future<Either<Failure, Product>> createProduct(ProductRequest request,) async {
-
+  Future<Either<Failure, Product>> createProduct(ProductRequest request) async {
     try {
-
       final response = await remoteDataSource.createProduct(
         ProductRequestModel.fromEntity(request),
       );
 
-      return Right(
-        response.toEntity(),
-      );
-
+      return Right(response.toEntity());
     } on DioException catch (e) {
-
-      return Left(
-        FailureMapper.fromDioException(e),
-      );
-
+      return Left(FailureMapper.fromDioException(e));
     } catch (_) {
-
-      return Left(
-        UnexpectedFailure(),
-      );
-
+      return Left(UnexpectedFailure());
     }
-
   }
 
   @override
-  Future<Either<Failure, Product>> updateProduct(ProductRequest request,) async {
-
+  Future<Either<Failure, Product>> updateProduct(ProductRequest request) async {
     try {
-
       final response = await remoteDataSource.updateProduct(
         ProductRequestModel.fromEntity(request),
       );
 
-      return Right(
-        response.toEntity(),
-      );
-
+      return Right(response.toEntity());
     } on DioException catch (e) {
-
-      return Left(
-        FailureMapper.fromDioException(e),
-      );
-
+      return Left(FailureMapper.fromDioException(e));
     } catch (_) {
-
-      return Left(
-        UnexpectedFailure(),
-      );
-
+      return Left(UnexpectedFailure());
     }
-
   }
 
   @override
@@ -147,20 +91,21 @@ class ProductRepositoryImpl implements ProductRepository {
       final response = await remoteDataSource.deleteProduct(id);
 
       return Right(response);
-
     } on DioException catch (e) {
-
-      return Left(
-        FailureMapper.fromDioException(e),
-      );
-
+      return Left(FailureMapper.fromDioException(e));
     } catch (_) {
-
-      return Left(
-        UnexpectedFailure(),
-      );
-
+      return Left(UnexpectedFailure());
     }
   }
 
+  @override
+  Future<Either<Failure, bool>> updateProductStatus(int id) async {
+    try {
+      return Right(await remoteDataSource.updateProductStatus(id));
+    } on DioException catch (e) {
+      return Left(FailureMapper.fromDioException(e));
+    } catch (_) {
+      return Left(UnexpectedFailure());
+    }
+  }
 }

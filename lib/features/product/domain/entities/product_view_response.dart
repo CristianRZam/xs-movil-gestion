@@ -3,7 +3,6 @@ import 'package:app_movil_sistema/features/parameter/domain/entities/parameter.d
 import 'product.dart';
 
 class ProductViewResponse {
-
   final List<Product> products;
   final int totalProducts;
   final int activeProducts;
@@ -22,7 +21,5 @@ class ProductViewResponse {
     required this.categories,
     required this.unitMeasures,
     required this.valuationMethods,
-
   });
-
 }

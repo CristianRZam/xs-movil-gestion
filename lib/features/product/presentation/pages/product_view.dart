@@ -61,6 +61,25 @@ class ProductView extends StatelessWidget {
 
           child: BlocConsumer<ProductBloc, ProductState>(
             listener: (context, state) {
+              if (state.status == ProductStatus.failure &&
+                  state.errorMessage != null) {
+                showDialog<void>(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    icon: const Icon(Icons.error_outline_rounded),
+                    title: const Text('No se pudo completar la operación'),
+                    content: Text(state.errorMessage!),
+                    actions: [
+                      FilledButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        child: const Text('Entendido'),
+                      ),
+                    ],
+                  ),
+                );
+                context.read<ProductBloc>().add(const ClearProductError());
+              }
+
               if (state.formResponse != null) {
                 openProductDialog(context, state.formResponse!);
 
@@ -97,6 +116,26 @@ class ProductView extends StatelessWidget {
                       page: 0,
                       size: EnvConfig.productPageSize,
                     ),
+                  ),
+                );
+              }
+
+              if (state.statusUpdated == true) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Estado del producto actualizado'),
+                  ),
+                );
+                context.read<ProductBloc>().add(
+                  const ClearUpdatedProductStatus(),
+                );
+                context.read<ProductBloc>().add(
+                  FilterProductView(
+                    state.currentRequest?.copyWith(page: 0) ??
+                        ProductViewRequest(
+                          page: 0,
+                          size: EnvConfig.productPageSize,
+                        ),
                   ),
                 );
               }
@@ -377,6 +416,45 @@ class ProductView extends StatelessWidget {
                                       ProductFormRequest(id: product.id),
                                     ),
                                   );
+                                },
+                                onToggleStatus: () async {
+                                  final action = product.active
+                                      ? 'desactivar'
+                                      : 'activar';
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (dialogContext) => AlertDialog(
+                                      title: Text(
+                                        '${action[0].toUpperCase()}${action.substring(1)} producto',
+                                      ),
+                                      content: Text(
+                                        '¿Deseas $action "${product.name}"?',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(
+                                            dialogContext,
+                                          ).pop(false),
+                                          child: const Text('Cancelar'),
+                                        ),
+                                        FilledButton(
+                                          onPressed: () => Navigator.of(
+                                            dialogContext,
+                                          ).pop(true),
+                                          child: Text(
+                                            action == 'activar'
+                                                ? 'Activar'
+                                                : 'Desactivar',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirmed == true && context.mounted) {
+                                    context.read<ProductBloc>().add(
+                                      UpdateProductStatus(product.id),
+                                    );
+                                  }
                                 },
                                 onDelete: () async {
                                   final confirm = await showDialog<bool>(

@@ -3,7 +3,6 @@ import 'package:app_movil_sistema/features/productimage/domain/entities/product_
 import 'product.dart';
 
 class ProductFormResponse {
-
   final Product? product;
   final List<ProductImage> images;
   final List<Parameter> categories;
@@ -17,5 +16,4 @@ class ProductFormResponse {
     required this.unitMeasures,
     required this.valuationMethods,
   });
-
 }

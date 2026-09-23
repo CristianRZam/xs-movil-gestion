@@ -1,6 +1,4 @@
-
 class Product {
-
   final int id;
   final String code;
   final String name;
@@ -41,8 +39,6 @@ class Product {
     required this.deleted,
   });
 
-  int get availableStock => totalStock - reservedStock > 0
-      ? totalStock - reservedStock
-      : 0;
-
+  int get availableStock =>
+      totalStock - reservedStock > 0 ? totalStock - reservedStock : 0;
 }

@@ -10,7 +10,9 @@ class GetProductViewUseCase {
 
   GetProductViewUseCase(this.repository);
 
-  Future<Either<Failure, ProductViewResponse>> call(ProductViewRequest request,) {
+  Future<Either<Failure, ProductViewResponse>> call(
+    ProductViewRequest request,
+  ) {
     return repository.getProductView(request);
   }
 }

@@ -9,15 +9,19 @@ import '../../../../core/failures/failure.dart';
 import '../entities/product_view_response.dart';
 
 abstract class ProductRepository {
+  Future<Either<Failure, ProductViewResponse>> getProductView(
+    ProductViewRequest request,
+  );
 
-  Future<Either<Failure, ProductViewResponse>> getProductView( ProductViewRequest request,);
+  Future<Either<Failure, ProductFormResponse>> getProductForm(
+    ProductFormRequest request,
+  );
 
-  Future<Either<Failure, ProductFormResponse>> getProductForm(ProductFormRequest request,);
+  Future<Either<Failure, Product>> createProduct(ProductRequest request);
 
-  Future<Either<Failure, Product>> createProduct(ProductRequest request,);
-
-  Future<Either<Failure, Product>> updateProduct(ProductRequest request,);
+  Future<Either<Failure, Product>> updateProduct(ProductRequest request);
 
   Future<Either<Failure, bool>> deleteProduct(int id);
 
+  Future<Either<Failure, bool>> updateProductStatus(int id);
 }

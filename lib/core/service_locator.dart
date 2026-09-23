@@ -20,6 +20,7 @@ import 'package:app_movil_sistema/features/product/domain/usecases/create_produc
 import 'package:app_movil_sistema/features/product/domain/usecases/delete_product_usecase.dart';
 import 'package:app_movil_sistema/features/product/domain/usecases/get_product_form_usecase.dart';
 import 'package:app_movil_sistema/features/product/domain/usecases/update_product_usecase.dart';
+import 'package:app_movil_sistema/features/product/domain/usecases/update_product_status_usecase.dart';
 import 'package:get_it/get_it.dart';
 
 import 'package:app_movil_sistema/core/network/api_client.dart';
@@ -57,6 +58,11 @@ import 'package:app_movil_sistema/features/notification/data/repositories/notifi
 import 'package:app_movil_sistema/features/notification/domain/repositories/notification_repository.dart';
 import 'package:app_movil_sistema/features/notification/domain/usecases/notification_usecases.dart';
 import 'package:app_movil_sistema/features/notification/presentation/bloc/notification_cubit.dart';
+import 'package:app_movil_sistema/features/profile/data/datasources/impl/profile_remote_datasource_impl.dart';
+import 'package:app_movil_sistema/features/profile/data/datasources/profile_remote_datasource.dart';
+import 'package:app_movil_sistema/features/profile/data/repositories/profile_repository_impl.dart';
+import 'package:app_movil_sistema/features/profile/domain/repositories/profile_repository.dart';
+import 'package:app_movil_sistema/features/profile/domain/usecases/profile_usecases.dart';
 
 final getIt = GetIt.instance;
 
@@ -127,6 +133,10 @@ void setupLocator() {
 
   getIt.registerFactory<UpdateProductUseCase>(
     () => UpdateProductUseCase(getIt<ProductRepository>()),
+  );
+
+  getIt.registerFactory<UpdateProductStatusUseCase>(
+    () => UpdateProductStatusUseCase(getIt<ProductRepository>()),
   );
 
   getIt.registerFactory<DeleteProductUseCase>(
@@ -278,6 +288,22 @@ void setupLocator() {
   );
   getIt.registerFactory<MarkAllNotificationsAsReadUseCase>(
     () => MarkAllNotificationsAsReadUseCase(getIt<NotificationRepository>()),
+  );
+
+  // ============================
+  // PROFILE
+  // ============================
+  getIt.registerLazySingleton<ProfileRemoteDataSource>(
+    () => ProfileRemoteDataSourceImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<ProfileRepository>(
+    () => ProfileRepositoryImpl(getIt<ProfileRemoteDataSource>()),
+  );
+  getIt.registerFactory<GetProfileUseCase>(
+    () => GetProfileUseCase(getIt<ProfileRepository>()),
+  );
+  getIt.registerFactory<UpdateProfilePasswordUseCase>(
+    () => UpdateProfilePasswordUseCase(getIt<ProfileRepository>()),
   );
   getIt.registerLazySingleton<NotificationCubit>(
     () => NotificationCubit(
