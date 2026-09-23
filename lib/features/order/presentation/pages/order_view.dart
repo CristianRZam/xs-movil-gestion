@@ -23,8 +23,29 @@ class OrderView extends StatefulWidget {
 }
 
 class _OrderViewState extends State<OrderView> {
-  String _query = '';
   String _status = 'ALL';
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _searchOrders(OrderState state, {bool clear = false}) {
+    if (clear) {
+      _searchController.clear();
+    }
+    context.read<OrderBloc>().add(
+      LoadOrders(
+        filter: state.dateFilter,
+        fromDate: state.fromDate,
+        toDate: state.toDate,
+        orderStatus: state.orderStatus,
+        searchQuery: _searchController.text,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) => BlocConsumer<OrderBloc, OrderState>(
@@ -45,14 +66,7 @@ class _OrderViewState extends State<OrderView> {
       }
     },
     builder: (context, state) {
-      final orders = state.orders.where((order) {
-        final matchesQuery =
-            order.orderNumber.toLowerCase().contains(_query.toLowerCase()) ||
-            (order.tableNumber ?? '').toLowerCase().contains(
-              _query.toLowerCase(),
-            );
-        return matchesQuery && (_status == 'ALL' || order.status == _status);
-      }).toList();
+      final orders = state.orders;
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: const XsAppBar(title: 'Órdenes y ventas', backIcon: false),
@@ -67,7 +81,15 @@ class _OrderViewState extends State<OrderView> {
         body: SafeArea(
           child: RefreshIndicator(
             onRefresh: () async {
-              context.read<OrderBloc>().add(const LoadOrders());
+              context.read<OrderBloc>().add(
+                LoadOrders(
+                  filter: state.dateFilter,
+                  fromDate: state.fromDate,
+                  toDate: state.toDate,
+                  orderStatus: state.orderStatus,
+                  searchQuery: state.searchQuery,
+                ),
+              );
               context.read<OrderBloc>().add(const LoadOrderProducts());
               context.read<OrderBloc>().add(const CheckOpenCashSession());
             },
@@ -91,10 +113,26 @@ class _OrderViewState extends State<OrderView> {
                 ],
                 const SizedBox(height: 16),
                 TextField(
-                  onChanged: (value) => setState(() => _query = value),
-                  decoration: const InputDecoration(
+                  controller: _searchController,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => _searchOrders(state),
+                  decoration: InputDecoration(
                     labelText: 'Buscar por número o mesa',
-                    prefixIcon: Icon(Icons.search),
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Buscar órdenes',
+                          onPressed: () => _searchOrders(state),
+                          icon: const Icon(Icons.search_rounded),
+                        ),
+                        IconButton(
+                          tooltip: 'Limpiar búsqueda',
+                          onPressed: () => _searchOrders(state, clear: true),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -102,6 +140,8 @@ class _OrderViewState extends State<OrderView> {
                   selected: state.dateFilter,
                   fromDate: state.fromDate,
                   toDate: state.toDate,
+                  orderStatus: state.orderStatus,
+                  searchQuery: state.searchQuery,
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
@@ -130,8 +170,19 @@ class _OrderViewState extends State<OrderView> {
                       child: Text('Cancelada'),
                     ),
                   ],
-                  onChanged: (value) =>
-                      setState(() => _status = value ?? 'ALL'),
+                  onChanged: (value) {
+                    final selectedStatus = value ?? 'ALL';
+                    setState(() => _status = selectedStatus);
+                    context.read<OrderBloc>().add(
+                      LoadOrders(
+                        filter: state.dateFilter,
+                        fromDate: state.fromDate,
+                        toDate: state.toDate,
+                        orderStatus: selectedStatus,
+                        searchQuery: state.searchQuery,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 18),
                 if (orders.isEmpty)
@@ -190,11 +241,15 @@ class _OrderDateFilters extends StatelessWidget {
     required this.selected,
     required this.fromDate,
     required this.toDate,
+    required this.orderStatus,
+    required this.searchQuery,
   });
 
   final OrderDateFilter selected;
   final DateTime? fromDate;
   final DateTime? toDate;
+  final String orderStatus;
+  final String searchQuery;
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
@@ -248,7 +303,13 @@ class _OrderDateFilters extends StatelessWidget {
     }
     if (!context.mounted) return;
     context.read<OrderBloc>().add(
-      LoadOrders(filter: filter, fromDate: from, toDate: to),
+      LoadOrders(
+        filter: filter,
+        fromDate: from,
+        toDate: to,
+        orderStatus: orderStatus,
+        searchQuery: searchQuery,
+      ),
     );
   }
 }

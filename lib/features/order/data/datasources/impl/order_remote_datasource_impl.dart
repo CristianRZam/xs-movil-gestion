@@ -15,6 +15,8 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
     int size = 20,
     DateTime? from,
     DateTime? to,
+    String? status,
+    String? search,
   }) async {
     String date(DateTime d) =>
         '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -25,6 +27,8 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
         'size': size,
         if (from != null) 'fromDate': date(from),
         if (to != null) 'toDate': date(to),
+        if (status != null && status != 'ALL') 'status': status,
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
     );
     final api = ApiResponse<OrderPageModel>.fromJson(

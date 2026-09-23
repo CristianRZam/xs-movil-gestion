@@ -65,6 +65,8 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       size: EnvConfig.salesAndOrdersPageSize,
       from: event.fromDate,
       to: event.toDate,
+      status: event.orderStatus,
+      search: event.searchQuery,
     );
     result.fold(
       (failure) => emit(
@@ -83,6 +85,8 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
           dateFilter: event.filter,
           fromDate: event.fromDate,
           toDate: event.toDate,
+          orderStatus: event.orderStatus,
+          searchQuery: event.searchQuery,
         ),
       ),
     );
@@ -99,6 +103,8 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       size: EnvConfig.salesAndOrdersPageSize,
       from: state.fromDate,
       to: state.toDate,
+      status: state.orderStatus,
+      search: state.searchQuery,
     );
     result.fold(
       (failure) => emit(
@@ -312,6 +318,8 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       size: EnvConfig.salesAndOrdersPageSize,
       from: state.fromDate,
       to: state.toDate,
+      status: state.orderStatus,
+      search: state.searchQuery,
     );
     final productsResult = await getProductViewUseCase(
       ProductViewRequest(

@@ -20,6 +20,8 @@ class OrderState {
   final OrderDateFilter dateFilter;
   final DateTime? fromDate;
   final DateTime? toDate;
+  final String orderStatus;
+  final String searchQuery;
 
   const OrderState({
     this.status = OrderStatus.initial,
@@ -37,6 +39,8 @@ class OrderState {
     this.dateFilter = OrderDateFilter.all,
     this.fromDate,
     this.toDate,
+    this.orderStatus = 'ALL',
+    this.searchQuery = '',
   });
 
   bool get hasMoreProducts => products.length < totalProducts;
@@ -57,6 +61,8 @@ class OrderState {
     OrderDateFilter? dateFilter,
     Object? fromDate = _sentinel,
     Object? toDate = _sentinel,
+    String? orderStatus,
+    String? searchQuery,
   }) => OrderState(
     status: status ?? this.status,
     orders: orders ?? this.orders,
@@ -81,6 +87,8 @@ class OrderState {
         ? this.fromDate
         : fromDate as DateTime?,
     toDate: identical(toDate, _sentinel) ? this.toDate : toDate as DateTime?,
+    orderStatus: orderStatus ?? this.orderStatus,
+    searchQuery: searchQuery ?? this.searchQuery,
   );
   static const _sentinel = Object();
 }

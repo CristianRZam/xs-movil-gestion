@@ -49,6 +49,18 @@ class SaleRemoteDataSourceImpl implements SaleRemoteDataSource {
   }
 
   @override
+  Future<SaleModel> cancel(int saleId, String reason) async {
+    final response = await apiClient.dio.post('/sales/$saleId/cancel', data: {'reason': reason});
+    final api = ApiResponse<SaleModel>.fromJson(
+      response.data,
+      (json) => SaleModel.fromJson(json as Map<String, dynamic>),
+    );
+    _success(api.success, api.message, response);
+    if (api.data == null) throw Exception('No se recibió la venta anulada');
+    return api.data!;
+  }
+
+  @override
   Future<CashSessionSalesSummary> getCashSessionSummary(int id) async {
     final response = await apiClient.dio.get('/sales/cash-session/$id');
     final api = ApiResponse<CashSessionSalesSummary>.fromJson(response.data, (

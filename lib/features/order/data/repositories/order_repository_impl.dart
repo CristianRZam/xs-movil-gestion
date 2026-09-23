@@ -18,12 +18,16 @@ class OrderRepositoryImpl implements OrderRepository {
     int size = 20,
     DateTime? from,
     DateTime? to,
+    String? status,
+    String? search,
   }) => _handle(
     () async => (await remoteDataSource.getAll(
       page: page,
       size: size,
       from: from,
       to: to,
+      status: status,
+      search: search,
     )).toEntity(),
   );
   @override

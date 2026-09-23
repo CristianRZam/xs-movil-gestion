@@ -7,6 +7,8 @@ abstract class OrderRemoteDataSource {
     int size = 20,
     DateTime? from,
     DateTime? to,
+    String? status,
+    String? search,
   });
   Future<OrderModel> create(OrderModel order);
   Future<OrderModel> update(int id, OrderModel order);

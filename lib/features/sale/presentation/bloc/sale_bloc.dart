@@ -18,6 +18,8 @@ class SaleState {
   final bool? cashOpen;
   final String? error;
   final bool saved;
+  final bool cancelled;
+  final bool cancellationRestoredOrder;
   final int totalProducts;
   final bool isLoadingMoreProducts;
   final int salesPage;
@@ -34,6 +36,8 @@ class SaleState {
     this.cashOpen,
     this.error,
     this.saved = false,
+    this.cancelled = false,
+    this.cancellationRestoredOrder = false,
     this.totalProducts = 0,
     this.isLoadingMoreProducts = false,
     this.salesPage = 0,
@@ -53,6 +57,8 @@ class SaleState {
     Object? cashOpen = _sentinel,
     Object? error = _sentinel,
     bool? saved,
+    bool? cancelled,
+    bool? cancellationRestoredOrder,
     int? totalProducts,
     bool? isLoadingMoreProducts,
     int? salesPage,
@@ -70,6 +76,9 @@ class SaleState {
         : cashOpen as bool?,
     error: identical(error, _sentinel) ? this.error : error as String?,
     saved: saved ?? this.saved,
+    cancelled: cancelled ?? this.cancelled,
+    cancellationRestoredOrder:
+        cancellationRestoredOrder ?? this.cancellationRestoredOrder,
     totalProducts: totalProducts ?? this.totalProducts,
     isLoadingMoreProducts: isLoadingMoreProducts ?? this.isLoadingMoreProducts,
     salesPage: salesPage ?? this.salesPage,
@@ -114,25 +123,46 @@ class SaveSale {
   final Sale sale;
 }
 
+class CancelSale {
+  const CancelSale(this.saleId, this.reason, {required this.restoredOrder});
+  final int saleId;
+  final String reason;
+  final bool restoredOrder;
+}
+
 class ClearSaleMessage {
   const ClearSaleMessage();
 }
 
 class SaleBloc extends Bloc<Object, SaleState> {
-  SaleBloc(this.getSales, this.createSale, this.getProducts, this.existsCash)
-    : super(const SaleState()) {
+  SaleBloc(
+    this.getSales,
+    this.createSale,
+    this.cancelSale,
+    this.getProducts,
+    this.existsCash,
+  ) : super(const SaleState()) {
     on<LoadSales>(_load);
     on<LoadMoreSales>(_loadMoreSales);
     on<LoadMoreSaleProducts>(_loadMoreProducts);
     on<SearchSaleProducts>(_searchProducts);
     on<SaveSale>(_save);
+    on<CancelSale>(_cancel);
     on<ClearSaleMessage>(
-      (_, emit) => emit(state.copyWith(error: null, saved: false)),
+      (_, emit) => emit(
+        state.copyWith(
+          error: null,
+          saved: false,
+          cancelled: false,
+          cancellationRestoredOrder: false,
+        ),
+      ),
     );
   }
 
   final GetSalesUseCase getSales;
   final CreateSaleUseCase createSale;
+  final CancelSaleUseCase cancelSale;
   final GetProductViewUseCase getProducts;
   final ExistsOpenCashSessionUseCase existsCash;
 
@@ -267,6 +297,31 @@ class SaleBloc extends Bloc<Object, SaleState> {
       ),
       (_) {
         emit(state.copyWith(saved: true));
+        add(
+          LoadSales(
+            filter: state.dateFilter,
+            fromDate: state.fromDate,
+            toDate: state.toDate,
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _cancel(CancelSale event, Emitter<SaleState> emit) async {
+    emit(state.copyWith(status: SaleStatus.loading, error: null));
+    final result = await cancelSale(event.saleId, event.reason);
+    result.fold(
+      (failure) => emit(
+        state.copyWith(status: SaleStatus.failure, error: failure.message),
+      ),
+      (_) {
+        emit(
+          state.copyWith(
+            cancelled: true,
+            cancellationRestoredOrder: event.restoredOrder,
+          ),
+        );
         add(
           LoadSales(
             filter: state.dateFilter,

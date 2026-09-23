@@ -22,6 +22,13 @@ class CreateSaleUseCase {
   Future<Either<Failure, Sale>> call(Sale sale) => repository.create(sale);
 }
 
+class CancelSaleUseCase {
+  final SaleRepository repository;
+  CancelSaleUseCase(this.repository);
+  Future<Either<Failure, Sale>> call(int saleId, String reason) =>
+      repository.cancel(saleId, reason);
+}
+
 class GetCashSessionSalesSummaryUseCase {
   final SaleRepository repository;
   GetCashSessionSalesSummaryUseCase(this.repository);

@@ -9,6 +9,8 @@ abstract class OrderRepository {
     int size = 20,
     DateTime? from,
     DateTime? to,
+    String? status,
+    String? search,
   });
   Future<Either<Failure, Order>> create(Order order);
   Future<Either<Failure, Order>> update(int id, Order order);

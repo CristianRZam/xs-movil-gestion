@@ -10,5 +10,6 @@ abstract class SaleRemoteDataSource {
     DateTime? to,
   });
   Future<SaleModel> create(SaleModel sale);
+  Future<SaleModel> cancel(int saleId, String reason);
   Future<CashSessionSalesSummary> getCashSessionSummary(int id);
 }

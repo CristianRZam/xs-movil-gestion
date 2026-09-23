@@ -12,7 +12,16 @@ class GetOrdersUseCase {
     int size = 20,
     DateTime? from,
     DateTime? to,
-  }) => repository.getAll(page: page, size: size, from: from, to: to);
+    String? status,
+    String? search,
+  }) => repository.getAll(
+    page: page,
+    size: size,
+    from: from,
+    to: to,
+    status: status,
+    search: search,
+  );
 }
 
 class CreateOrderUseCase {

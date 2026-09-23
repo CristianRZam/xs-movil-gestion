@@ -33,6 +33,10 @@ class Sale {
   final String? status;
   final int? createdBy;
   final String? createdByName;
+  final String? cancellationReason;
+  final int? cancelledBy;
+  final String? cancelledByName;
+  final DateTime? cancelledAt;
   final List<SaleItem> items;
   final List<SalePayment> payments;
   const Sale({
@@ -43,6 +47,10 @@ class Sale {
     this.status,
     this.createdBy,
     this.createdByName,
+    this.cancellationReason,
+    this.cancelledBy,
+    this.cancelledByName,
+    this.cancelledAt,
     required this.items,
     required this.payments,
   });

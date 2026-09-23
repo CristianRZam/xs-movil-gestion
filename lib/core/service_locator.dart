@@ -235,6 +235,9 @@ void setupLocator() {
   getIt.registerFactory<CreateSaleUseCase>(
     () => CreateSaleUseCase(getIt<SaleRepository>()),
   );
+  getIt.registerFactory<CancelSaleUseCase>(
+    () => CancelSaleUseCase(getIt<SaleRepository>()),
+  );
   getIt.registerFactory<GetCashSessionSalesSummaryUseCase>(
     () => GetCashSessionSalesSummaryUseCase(getIt<SaleRepository>()),
   );

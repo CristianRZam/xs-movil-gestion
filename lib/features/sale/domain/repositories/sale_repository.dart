@@ -12,6 +12,7 @@ abstract class SaleRepository {
     DateTime? to,
   });
   Future<Either<Failure, Sale>> create(Sale sale);
+  Future<Either<Failure, Sale>> cancel(int saleId, String reason);
   Future<Either<Failure, CashSessionSalesSummary>> getCashSessionSummary(
     int cashSessionId,
   );

@@ -1,3 +1,5 @@
+import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/order/domain/entities/order.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
 import 'package:app_movil_sistema/features/product/presentation/widgets/product_selector_sheet.dart';
@@ -15,6 +17,10 @@ class SaleView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => BlocConsumer<SaleBloc, SaleState>(
+    listenWhen: (previous, current) =>
+        (previous.error != current.error && current.error != null) ||
+        (!previous.saved && current.saved) ||
+        (!previous.cancelled && current.cancelled),
     listener: (context, state) {
       if (state.error != null) {
         ScaffoldMessenger.of(
@@ -26,6 +32,19 @@ class SaleView extends StatelessWidget {
         Navigator.of(context, rootNavigator: true).maybePop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Venta registrada correctamente')),
+        );
+        context.read<SaleBloc>().add(const ClearSaleMessage());
+      }
+      if (state.cancelled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              state.cancellationRestoredOrder
+                  ? 'Venta anulada. El stock fue restaurado y la orden quedó lista para cobrar o cancelar.'
+                  : 'Venta anulada y stock restaurado correctamente.',
+            ),
+            duration: const Duration(seconds: 5),
+          ),
         );
         context.read<SaleBloc>().add(const ClearSaleMessage());
       }
@@ -77,7 +96,13 @@ class SaleView extends StatelessWidget {
           ...state.sales.map(
             (sale) => Card(
               child: ListTile(
-                title: Text(sale.saleNumber),
+                title: Row(
+                  children: [
+                    Expanded(child: Text(sale.saleNumber)),
+                    const SizedBox(width: 8),
+                    _SaleStatusBadge(status: sale.status),
+                  ],
+                ),
                 subtitle: Text(
                   '${sale.payments.map((p) => p.paymentMethod).join(' + ')} · '
                   '${sale.items.length} producto(s)',
@@ -186,7 +211,7 @@ void _showSaleDetail(BuildContext context, Sale sale, List<Product> products) {
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => SafeArea(
+    builder: (sheetContext) => SafeArea(
       child: DraggableScrollableSheet(
         expand: false,
         initialChildSize: .65,
@@ -205,6 +230,10 @@ void _showSaleDetail(BuildContext context, Sale sale, List<Product> products) {
             Text(
               'Registrada por: ${sale.createdByName ?? 'Usuario no disponible'}',
             ),
+            if (sale.cancellationReason != null) ...[
+              const SizedBox(height: 12),
+              _SaleCancellationCard(sale: sale),
+            ],
             const Divider(height: 28),
             const Text(
               'Productos consumidos',
@@ -247,11 +276,208 @@ void _showSaleDetail(BuildContext context, Sale sale, List<Product> products) {
                 ),
               ),
             ),
+            if (sale.id != null &&
+                sale.status == 'COMPLETED' &&
+                getIt<AccessControl>().allows(AppCapability.cancelSales)) ...[
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(sheetContext).colorScheme.error,
+                  foregroundColor: Theme.of(sheetContext).colorScheme.onError,
+                ),
+                icon: const Icon(Icons.cancel_outlined),
+                label: const Text('Anular venta'),
+                onPressed: () async {
+                  final reason = await _requestCancellationReason(
+                    sheetContext,
+                    sale.saleNumber,
+                  );
+                  if (reason == null || !context.mounted) return;
+                  Navigator.of(sheetContext).pop();
+                  context.read<SaleBloc>().add(
+                    CancelSale(
+                      sale.id!,
+                      reason,
+                      restoredOrder: sale.orderId != null,
+                    ),
+                  );
+                },
+              ),
+            ],
           ],
         ),
       ),
     ),
   );
+}
+
+class _SaleStatusBadge extends StatelessWidget {
+  const _SaleStatusBadge({this.status});
+
+  final String? status;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isCancelled = status == 'CANCELLED';
+    final isCompleted = status == null || status == 'COMPLETED';
+    final foreground = isCancelled
+        ? (theme.brightness == Brightness.dark
+              ? const Color(0xFFFFB4AB)
+              : const Color(0xFFB42318))
+        : (isCompleted
+              ? (theme.brightness == Brightness.dark
+                    ? const Color(0xFF9FF5C7)
+                    : const Color(0xFF087443))
+              : theme.colorScheme.onSurfaceVariant);
+    final background = isCancelled
+        ? (theme.brightness == Brightness.dark
+              ? const Color(0xFF3B1E22)
+              : const Color(0xFFFFF4F4))
+        : (isCompleted
+              ? (theme.brightness == Brightness.dark
+                    ? const Color(0xFF173B2B)
+                    : const Color(0xFFEAF8F0))
+              : theme.colorScheme.surfaceContainerHighest);
+    final label = isCancelled
+        ? 'Anulada'
+        : (isCompleted ? 'Completada' : status!);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: foreground,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+Future<String?> _requestCancellationReason(
+  BuildContext context,
+  String saleNumber,
+) async {
+  final formKey = GlobalKey<FormState>();
+  var reason = '';
+  final value = await showDialog<String>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Anular venta'),
+      content: Form(
+        key: formKey,
+        child: TextFormField(
+          initialValue: reason,
+          autofocus: true,
+          maxLength: 500,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: 'Motivo de anulación',
+            hintText: 'Indica por qué se anula $saleNumber',
+          ),
+          validator: (text) => text == null || text.trim().isEmpty
+              ? 'El motivo es obligatorio.'
+              : null,
+          onChanged: (value) => reason = value,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: const Text('Volver'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(dialogContext).colorScheme.error,
+            foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+          ),
+          onPressed: () {
+            if (formKey.currentState?.validate() ?? false) {
+              Navigator.of(dialogContext).pop(reason.trim());
+            }
+          },
+          child: const Text('Confirmar anulación'),
+        ),
+      ],
+    ),
+  );
+  return value;
+}
+
+class _SaleCancellationCard extends StatelessWidget {
+  const _SaleCancellationCard({required this.sale});
+
+  final Sale sale;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final background = isDark
+        ? const Color(0xFF3B1E22)
+        : const Color(0xFFFFF4F4);
+    final accent = isDark ? const Color(0xFFFFB4AB) : const Color(0xFFB42318);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withValues(alpha: .35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: .14),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.cancel_outlined, color: accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Venta anulada',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  'Motivo: ${sale.cancellationReason}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                if (sale.cancelledByName != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    'Anulada por: ${sale.cancelledByName}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 String _paymentLabel(String method) => switch (method) {

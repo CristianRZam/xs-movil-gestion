@@ -9,6 +9,10 @@ class SaleModel extends Sale {
     super.status,
     super.createdBy,
     super.createdByName,
+    super.cancellationReason,
+    super.cancelledBy,
+    super.cancelledByName,
+    super.cancelledAt,
     required super.items,
     required super.payments,
   });
@@ -20,6 +24,10 @@ class SaleModel extends Sale {
     status: json['status'] as String?,
     createdBy: _int(json['createdBy']),
     createdByName: json['createdByName'] as String?,
+    cancellationReason: json['cancellationReason'] as String?,
+    cancelledBy: _int(json['cancelledBy']),
+    cancelledByName: json['cancelledByName'] as String?,
+    cancelledAt: _date(json['cancelledAt']),
     items: (json['items'] as List<dynamic>? ?? []).map((e) {
       final v = e as Map<String, dynamic>;
       return SaleItem(
@@ -47,6 +55,10 @@ class SaleModel extends Sale {
     status: sale.status,
     createdBy: sale.createdBy,
     createdByName: sale.createdByName,
+    cancellationReason: sale.cancellationReason,
+    cancelledBy: sale.cancelledBy,
+    cancelledByName: sale.cancelledByName,
+    cancelledAt: sale.cancelledAt,
     items: sale.items,
     payments: sale.payments,
   );
@@ -80,3 +92,5 @@ int? _int(dynamic value) =>
     value is num ? value.toInt() : int.tryParse('$value');
 double _double(dynamic value) =>
     value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+
+DateTime? _date(dynamic value) => value == null ? null : DateTime.tryParse('$value');

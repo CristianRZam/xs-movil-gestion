@@ -30,6 +30,9 @@ class SaleRepositoryImpl implements SaleRepository {
   Future<Either<Failure, Sale>> create(Sale sale) =>
       _handle(() => remote.create(SaleModel.fromEntity(sale)));
   @override
+  Future<Either<Failure, Sale>> cancel(int saleId, String reason) =>
+      _handle(() => remote.cancel(saleId, reason));
+  @override
   Future<Either<Failure, CashSessionSalesSummary>> getCashSessionSummary(
     int id,
   ) => _handle(() => remote.getCashSessionSummary(id));

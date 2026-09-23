@@ -16,13 +16,23 @@ class LoadOrders extends OrderEvent {
   final OrderDateFilter filter;
   final DateTime? fromDate;
   final DateTime? toDate;
+  final String orderStatus;
+  final String searchQuery;
   const LoadOrders({
     this.filter = OrderDateFilter.all,
     this.fromDate,
     this.toDate,
+    this.orderStatus = 'ALL',
+    this.searchQuery = '',
   });
   @override
-  List<Object?> get props => [filter, fromDate, toDate];
+  List<Object?> get props => [
+    filter,
+    fromDate,
+    toDate,
+    orderStatus,
+    searchQuery,
+  ];
 }
 
 class LoadMoreOrders extends OrderEvent {

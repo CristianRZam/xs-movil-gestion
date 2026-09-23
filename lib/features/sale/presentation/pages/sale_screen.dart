@@ -19,6 +19,7 @@ class SaleScreen extends StatelessWidget {
       create: (_) => SaleBloc(
         getIt<GetSalesUseCase>(),
         getIt<CreateSaleUseCase>(),
+        getIt<CancelSaleUseCase>(),
         getIt<GetProductViewUseCase>(),
         getIt<ExistsOpenCashSessionUseCase>(),
       )..add(const LoadSales()),
