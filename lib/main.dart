@@ -4,6 +4,7 @@ import 'core/storage/token_storage.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/splash_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -14,6 +15,10 @@ import 'routes/routes.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   setupLocator();
   getIt<AccessControl>().updateToken(await getIt<TokenStorage>().getToken());
   getIt<SessionCoordinator>();
