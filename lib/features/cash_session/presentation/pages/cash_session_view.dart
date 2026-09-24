@@ -487,22 +487,81 @@ class _CashSalesHistoryState extends State<_CashSalesHistory> {
                 '${sale.createdByName ?? 'Usuario no disponible'} · ${sale.payments.map((p) => _cashPaymentLabel(p.paymentMethod)).join(' + ')}',
               ),
               trailing: Text('S/ ${sale.total.toStringAsFixed(2)}'),
-              children: sale.items
-                  .map(
-                    (item) => ListTile(
-                      dense: true,
-                      contentPadding: const EdgeInsets.only(left: 16, right: 8),
-                      leading: const Icon(Icons.inventory_2_outlined),
-                      title: Text(
-                        item.productName ?? 'Producto #${item.productId}',
+              children: [
+                ...sale.items
+                    .map(
+                      (item) => ListTile(
+                        dense: true,
+                        contentPadding: const EdgeInsets.only(
+                          left: 16,
+                          right: 8,
+                        ),
+                        leading: const Icon(Icons.inventory_2_outlined),
+                        title: Text(
+                          item.productName ?? 'Producto #${item.productId}',
+                        ),
+                        subtitle: Text(
+                          '${item.quantity.toInt()} × S/ ${item.unitPrice.toStringAsFixed(2)}',
+                        ),
+                        trailing: Text(
+                          'S/ ${item.subtotal.toStringAsFixed(2)}',
+                        ),
                       ),
-                      subtitle: Text(
-                        '${item.quantity.toInt()} × S/ ${item.unitPrice.toStringAsFixed(2)}',
-                      ),
-                      trailing: Text('S/ ${item.subtotal.toStringAsFixed(2)}'),
                     ),
-                  )
-                  .toList(),
+                if (sale.discount > 0)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Descuento aplicado',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          '-S/ ${sale.discount.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                const Divider(),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 4),
+                  child: Text(
+                    'Pagos de esta venta',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                ...sale.payments.map(
+                  (payment) => ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.only(left: 16, right: 8),
+                    leading: Icon(
+                      PaymentMethodStyle.icon(payment.paymentMethod),
+                      color: PaymentMethodStyle.color(payment.paymentMethod),
+                    ),
+                    title: Text(_cashPaymentLabel(payment.paymentMethod)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Monto aplicado: S/ ${payment.amount.toStringAsFixed(2)}'),
+                        if (payment.receivedAmount != null)
+                          Text('Recibido: S/ ${payment.receivedAmount!.toStringAsFixed(2)}'),
+                        if (payment.changeAmount != null && payment.changeAmount! > 0)
+                          Text('Vuelto: S/ ${payment.changeAmount!.toStringAsFixed(2)}'),
+                      ],
+                    ),
+                    trailing: Text(
+                      'S/ ${payment.amount.toStringAsFixed(2)}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

@@ -17,10 +17,14 @@ class SaleItem {
 class SalePayment {
   final String paymentMethod;
   final double amount;
+  final double? receivedAmount;
+  final double? changeAmount;
   final String? reference;
   const SalePayment({
     required this.paymentMethod,
     required this.amount,
+    this.receivedAmount,
+    this.changeAmount,
     this.reference,
   });
 }

@@ -8,6 +8,7 @@ import 'package:app_movil_sistema/features/sale/presentation/bloc/sale_bloc.dart
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SaleView extends StatelessWidget {
@@ -259,12 +260,38 @@ void _showSaleDetail(BuildContext context, Sale sale, List<Product> products) {
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.payments_outlined),
                 title: Text(_paymentLabel(payment.paymentMethod)),
-                subtitle: payment.reference == null
-                    ? null
-                    : Text('Referencia: ${payment.reference}'),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (payment.reference != null)
+                      Text('Referencia: ${payment.reference}'),
+                    if (payment.receivedAmount != null)
+                      Text(
+                        'Recibido: S/ ${payment.receivedAmount!.toStringAsFixed(2)}',
+                      ),
+                    if (payment.changeAmount != null &&
+                        payment.changeAmount! > 0)
+                      Text(
+                        'Vuelto: S/ ${payment.changeAmount!.toStringAsFixed(2)}',
+                      ),
+                  ],
+                ),
                 trailing: Text('S/ ${payment.amount.toStringAsFixed(2)}'),
               ),
             ),
+            if (sale.discount > 0) ...[
+              const Divider(height: 28),
+              _SaleAmountRow(
+                label: 'Subtotal',
+                amount: sale.total + sale.discount,
+              ),
+              const SizedBox(height: 6),
+              _SaleAmountRow(
+                label: 'Descuento aplicado',
+                amount: -sale.discount,
+                highlighted: true,
+              ),
+            ],
             const Divider(height: 28),
             Align(
               alignment: Alignment.centerRight,
@@ -410,6 +437,33 @@ Future<String?> _requestCancellationReason(
   return value;
 }
 
+class _SaleAmountRow extends StatelessWidget {
+  const _SaleAmountRow({
+    required this.label,
+    required this.amount,
+    this.highlighted = false,
+  });
+
+  final String label;
+  final double amount;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = highlighted ? Theme.of(context).colorScheme.primary : null;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+        Text(
+          '${amount < 0 ? '-' : ''}S/ ${amount.abs().toStringAsFixed(2)}',
+          style: TextStyle(color: color, fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
+  }
+}
+
 class _SaleCancellationCard extends StatelessWidget {
   const _SaleCancellationCard({required this.sale});
 
@@ -518,6 +572,7 @@ class _SaleFormState extends State<_SaleForm> {
   final _items = <SaleItem>[];
   final _payments = <_PaymentDraft>[];
   final _productsById = <int, Product>{};
+  final _discount = TextEditingController();
 
   @override
   void initState() {
@@ -540,8 +595,10 @@ class _SaleFormState extends State<_SaleForm> {
     }
   }
 
-  double get _total =>
+  double get _subtotal =>
       _items.fold<double>(0, (sum, item) => sum + item.subtotal);
+  double get _discountAmount => double.tryParse(_discount.text) ?? 0;
+  double get _total => (_subtotal - _discountAmount).clamp(0, double.infinity);
   double get _paid => _payments.fold<double>(
     0,
     (sum, payment) => sum + (double.tryParse(payment.amount.text) ?? 0),
@@ -552,6 +609,7 @@ class _SaleFormState extends State<_SaleForm> {
     for (final payment in _payments) {
       payment.dispose();
     }
+    _discount.dispose();
     super.dispose();
   }
 
@@ -600,7 +658,27 @@ class _SaleFormState extends State<_SaleForm> {
                 ),
                 const SizedBox(height: 16),
               ],
-              _PaymentSummary(total: _total, paid: _paid),
+              TextFormField(
+                controller: _discount,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Descuento (S/)',
+                  prefixIcon: Icon(Icons.sell_outlined),
+                ),
+                validator: (value) => _discountAmount > _subtotal
+                    ? 'El descuento no puede superar el subtotal'
+                    : null,
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 12),
+              _PaymentSummary(
+                subtotal: _subtotal,
+                discount: _discountAmount,
+                total: _total,
+                paid: _paid,
+              ),
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -776,12 +854,16 @@ class _SaleFormState extends State<_SaleForm> {
       // El backend asigna el número según la fecha y hora del servidor.
       saleNumber: '',
       orderId: widget.order?.id,
+      discount: _discountAmount,
       items: _items,
       payments: _payments
           .map(
             (payment) => SalePayment(
               paymentMethod: payment.method,
               amount: double.parse(payment.amount.text),
+              receivedAmount: payment.method == 'CASH'
+                  ? double.tryParse(payment.received.text)
+                  : null,
               reference: payment.reference.text.trim().isEmpty
                   ? null
                   : payment.reference.text.trim(),
@@ -797,17 +879,26 @@ class _PaymentDraft {
   String method = 'CASH';
   final amount = TextEditingController();
   final reference = TextEditingController();
+  final received = TextEditingController();
 
   void dispose() {
     amount.dispose();
     reference.dispose();
+    received.dispose();
   }
 }
 
 class _PaymentSummary extends StatelessWidget {
+  final double subtotal;
+  final double discount;
   final double total;
   final double paid;
-  const _PaymentSummary({required this.total, required this.paid});
+  const _PaymentSummary({
+    required this.subtotal,
+    required this.discount,
+    required this.total,
+    required this.paid,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -845,6 +936,13 @@ class _PaymentSummary extends StatelessWidget {
               color: Colors.white,
               fontSize: 30,
               fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            'Subtotal S/ ${subtotal.toStringAsFixed(2)}${discount > 0 ? '  ·  Descuento -S/ ${discount.toStringAsFixed(2)}' : ''}',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: .85),
+              fontSize: 12,
             ),
           ),
           const SizedBox(height: 12),
@@ -926,11 +1024,38 @@ class _PaymentRow extends StatelessWidget {
       final amount = TextFormField(
         controller: draft.amount,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: const InputDecoration(labelText: 'Monto'),
+        decoration: const InputDecoration(
+          labelText: 'Monto aplicado',
+          helperText: 'Parte de la venta cubierta con este método',
+        ),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+        ],
         validator: (value) =>
             (double.tryParse(value ?? '') ?? 0) <= 0 ? 'Monto inválido' : null,
         onChanged: (_) => onChanged(),
       );
+      final received = draft.method == 'CASH'
+          ? TextFormField(
+              controller: draft.received,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Efectivo entregado',
+                helperText: 'El vuelto se calcula automáticamente',
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
+              validator: (value) {
+                final paid = double.tryParse(value ?? '') ?? 0;
+                final applied = double.tryParse(draft.amount.text) ?? 0;
+                return paid < applied ? 'Debe cubrir el monto aplicado' : null;
+              },
+              onChanged: (_) => onChanged(),
+            )
+          : null;
       final remove = removable
           ? IconButton(
               icon: const Icon(Icons.remove_circle_outline),
@@ -954,6 +1079,18 @@ class _PaymentRow extends StatelessWidget {
                     if (remove != null) remove,
                   ],
                 ),
+                if (received != null) ...[
+                  const SizedBox(height: 8),
+                  received,
+                  if ((double.tryParse(draft.received.text) ?? 0) >=
+                      (double.tryParse(draft.amount.text) ?? 0))
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Vuelto: S/ ${((double.tryParse(draft.received.text) ?? 0) - (double.tryParse(draft.amount.text) ?? 0)).toStringAsFixed(2)}',
+                      ),
+                    ),
+                ],
               ],
             ),
           ),
@@ -970,6 +1107,10 @@ class _PaymentRow extends StatelessWidget {
               Expanded(child: selector),
               const SizedBox(width: 8),
               Expanded(child: amount),
+              if (received != null) ...[
+                const SizedBox(width: 8),
+                Expanded(child: received),
+              ],
               if (remove != null) remove,
             ],
           ),

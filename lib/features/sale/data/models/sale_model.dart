@@ -43,6 +43,10 @@ class SaleModel extends Sale {
       return SalePayment(
         paymentMethod: v['paymentMethod'] as String? ?? '',
         amount: _double(v['amount']),
+        receivedAmount: v['receivedAmount'] == null
+            ? null
+            : _double(v['receivedAmount']),
+        changeAmount: v['changeAmount'] == null ? null : _double(v['changeAmount']),
         reference: v['reference'] as String?,
       );
     }).toList(),
@@ -81,6 +85,7 @@ class SaleModel extends Sale {
           (p) => {
             'paymentMethod': p.paymentMethod,
             'amount': p.amount,
+            if (p.receivedAmount != null) 'receivedAmount': p.receivedAmount,
             'reference': p.reference,
           },
         )
