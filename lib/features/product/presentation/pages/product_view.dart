@@ -354,7 +354,7 @@ class _ProductViewState extends State<ProductView> {
                 endDrawer: const XsDrawer(),
 
                 floatingActionButton:
-                    !getIt<AccessControl>().allows(AppCapability.manageProducts)
+                    !getIt<AccessControl>().allows(AppCapability.createProducts)
                     ? null
                     : FloatingActionButton.extended(
                         backgroundColor: AppColors.primary,

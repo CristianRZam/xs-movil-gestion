@@ -1,5 +1,6 @@
 import 'package:app_movil_sistema/core/network/api_client.dart';
 import 'package:app_movil_sistema/core/network/api_response.dart';
+import 'package:app_movil_sistema/core/config/env_config.dart';
 import 'package:app_movil_sistema/features/cash_session/data/datasources/cash_session_remote_datasource.dart';
 import 'package:app_movil_sistema/features/cash_session/data/models/cash_session_close_request_model.dart';
 import 'package:app_movil_sistema/features/cash_session/data/models/cash_session_model.dart';
@@ -138,13 +139,22 @@ class CashSessionRemoteDataSourceImpl
   @override
   Future<List<CashSessionModel>> getHistory() async {
 
-    final response = await apiClient.dio.get('/cash-session/history',);
+    final response = await apiClient.dio.get(
+      '/cash-session/history',
+      queryParameters: {
+        'page': 0,
+        'size': EnvConfig.cashSessionHistoryPageSize,
+      },
+    );
 
     final apiResponse =
     ApiResponse<List<CashSessionModel>>.fromJson(
       response.data,
           (json) {
-        final list = json as List;
+        // El backend devuelve PageResponseDTO: items, totalElements, page,
+        // size y hasMore. La pantalla actual consume la primera página.
+        final page = json as Map<String, dynamic>;
+        final list = page['items'] as List<dynamic>? ?? const [];
 
         return list
             .map(

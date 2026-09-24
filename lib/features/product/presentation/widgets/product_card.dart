@@ -261,7 +261,7 @@ class ProductCard extends StatelessWidget {
                     ),
                   ),
 
-                if (getIt<AccessControl>().allows(AppCapability.manageProducts))
+                if (getIt<AccessControl>().allows(AppCapability.deleteProducts))
                   const PopupMenuItem(
                     enabled: false,
                     height: 1,
@@ -269,7 +269,7 @@ class ProductCard extends StatelessWidget {
                     child: Divider(thickness: 0.5, color: Color(0xFFF2F2F2)),
                   ),
 
-                if (getIt<AccessControl>().allows(AppCapability.manageProducts))
+                if (getIt<AccessControl>().allows(AppCapability.deleteProducts))
                   const PopupMenuItem(
                     value: 'delete',
                     child: ListTile(

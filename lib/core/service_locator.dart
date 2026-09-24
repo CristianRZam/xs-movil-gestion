@@ -73,11 +73,31 @@ import 'package:app_movil_sistema/features/user/data/datasources/user_remote_dat
 import 'package:app_movil_sistema/features/user/data/repositories/user_repository_impl.dart';
 import 'package:app_movil_sistema/features/user/domain/repositories/user_repository.dart';
 import 'package:app_movil_sistema/features/user/domain/usecases/user_usecases.dart';
+import 'package:app_movil_sistema/features/role/data/datasources/impl/role_remote_datasource_impl.dart';
+import 'package:app_movil_sistema/features/role/data/datasources/role_remote_datasource.dart';
+import 'package:app_movil_sistema/features/role/data/repositories/role_repository_impl.dart';
+import 'package:app_movil_sistema/features/role/domain/repositories/role_repository.dart';
+import 'package:app_movil_sistema/features/role/domain/usecases/role_usecases.dart';
 
 final getIt = GetIt.instance;
 
 void setupLocator() {
-  getIt.registerLazySingleton<AccessControl>(() => AccessControl());
+  getIt.registerLazySingleton<AccessControl>(
+    () => AccessControl(
+      mode: AuthorizationMode.permissions,
+      permissionRequirements: const {
+        AppCapability.dashboard: {'VIEW_DASHBOARD'},
+        AppCapability.viewProducts: {'VIEW_PRODUCT'},
+        AppCapability.manageProducts: {'EDIT_PRODUCT'},
+        AppCapability.createProducts: {'CREATE_PRODUCT'},
+        AppCapability.deleteProducts: {'DELETE_PRODUCT'},
+        AppCapability.manageCategories: {'VIEW_PARAMETER'},
+        AppCapability.manageUsers: {'VIEW_USER'},
+        AppCapability.manageRoles: {'VIEW_ROLE', 'VIEW_PERMISSION'},
+        AppCapability.assignRolePermissions: {'ASSIGN_PERMISSION'},
+      },
+    ),
+  );
   // ============================
   // Servicios base
   // ============================
@@ -351,6 +371,21 @@ void setupLocator() {
   );
   getIt.registerFactory<UpdateUserStatusUseCase>(
     () => UpdateUserStatusUseCase(getIt<UserRepository>()),
+  );
+  getIt.registerLazySingleton<RoleRemoteDataSource>(
+    () => RoleRemoteDataSourceImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<RoleRepository>(
+    () => RoleRepositoryImpl(getIt<RoleRemoteDataSource>()),
+  );
+  getIt.registerFactory<GetRolesUseCase>(
+    () => GetRolesUseCase(getIt<RoleRepository>()),
+  );
+  getIt.registerFactory<GetRolePermissionsUseCase>(
+    () => GetRolePermissionsUseCase(getIt<RoleRepository>()),
+  );
+  getIt.registerFactory<UpdateRolePermissionsUseCase>(
+    () => UpdateRolePermissionsUseCase(getIt<RoleRepository>()),
   );
   getIt.registerLazySingleton<NotificationCubit>(
     () => NotificationCubit(

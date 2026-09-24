@@ -1,4 +1,5 @@
 import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/session/session_coordinator.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-dash-line.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-text.dart';
@@ -77,39 +78,42 @@ class XsDrawer extends StatelessWidget {
                     },
                   ),
 
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: DashedLine(
-                      dashWidth: 6,
-                      dashSpace: 5,
-                      height: 1,
-                      color: Colors.grey,
+                  if (getIt<AccessControl>().allows(AppCapability.viewProducts))
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: DashedLine(
+                        dashWidth: 6,
+                        dashSpace: 5,
+                        height: 1,
+                        color: Colors.grey,
+                      ),
                     ),
-                  ),
 
-                  _DrawerItem(
-                    icon: Icons.inventory_2_rounded,
-                    title: 'Productos',
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
+                  if (getIt<AccessControl>().allows(AppCapability.viewProducts))
+                    _DrawerItem(
+                      icon: Icons.inventory_2_rounded,
+                      title: 'Productos',
+                      isDarkMode: isDarkMode,
+                      onTap: () {
+                        Navigator.pop(context);
 
-                      Navigator.pushReplacementNamed(
-                        context,
-                        AppRoutes.product,
-                      );
-                    },
-                  ),
-
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: DashedLine(
-                      dashWidth: 6,
-                      dashSpace: 5,
-                      height: 1,
-                      color: Colors.grey,
+                        Navigator.pushReplacementNamed(
+                          context,
+                          AppRoutes.product,
+                        );
+                      },
                     ),
-                  ),
+
+                  if (getIt<AccessControl>().allows(AppCapability.viewProducts))
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: DashedLine(
+                        dashWidth: 6,
+                        dashSpace: 5,
+                        height: 1,
+                        color: Colors.grey,
+                      ),
+                    ),
 
                   _DrawerItem(
                     icon: Icons.shopping_cart_rounded,
@@ -257,25 +261,78 @@ class XsDrawer extends StatelessWidget {
                         );
                       },
                     ),
+                  if (getIt<AccessControl>().allows(AppCapability.manageRoles))
+                    _DrawerItem(
+                      icon: Icons.admin_panel_settings_rounded,
+                      title: 'Roles y permisos',
+                      isDarkMode: isDarkMode,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushReplacementNamed(context, AppRoutes.roles);
+                      },
+                    ),
                 ],
               ),
             ),
           ),
 
-          // Pie con logo
+          // Acciones finales del panel
           Container(
             color: isDarkMode ? AppColors.dark : AppColors.primary,
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            alignment: Alignment.center,
-            child: const Text(
-              '© empresa',
-              style: TextStyle(color: Colors.white, fontSize: 18),
+            padding: const EdgeInsets.fromLTRB(48, 12, 18, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _confirmSignOut(context),
+                    icon: const Icon(Icons.logout_rounded),
+                    label: const Text('Cerrar sesión'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white54),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '© empresa',
+                  style: TextStyle(color: Colors.white, fontSize: 18),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+Future<void> _confirmSignOut(BuildContext context) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      icon: const Icon(Icons.logout_rounded, color: Colors.red),
+      title: const Text('¿Cerrar sesión?'),
+      content: const Text(
+        'Tendrás que ingresar nuevamente para acceder al sistema.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Cerrar sesión'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true && context.mounted) {
+    await getIt<SessionCoordinator>().signOut();
   }
 }
 

@@ -5,9 +5,14 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 /// Stable capabilities shared by navigation, widgets and API operations.
 enum AppCapability {
   operate,
+  viewProducts,
   manageProducts,
+  createProducts,
+  deleteProducts,
   manageCategories,
   manageUsers,
+  manageRoles,
+  assignRolePermissions,
   manageInventory,
   inventoryCount,
   reports,
@@ -41,8 +46,9 @@ class AccessControl extends ChangeNotifier {
   bool allows(AppCapability capability) {
     if (!isAuthenticated || _roles.isEmpty) return false;
     if (_roles.contains('SUPER_ADMIN')) return true;
+    if (capability == AppCapability.operate) return true;
     if (mode == AuthorizationMode.roles) {
-      return capability == AppCapability.operate;
+      return false;
     }
     final required = permissionRequirements[capability];
     return required != null &&

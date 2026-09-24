@@ -912,6 +912,10 @@ Future<void> openCloseCashSessionDialog(
     },
   );
 
+  // El Future de showDialog termina al solicitar el cierre, pero los campos
+  // aún pueden reconstruirse durante la animación de salida del diálogo.
+  // Esperamos a que la ruta desaparezca antes de liberar sus controladores.
+  await Future<void>.delayed(const Duration(milliseconds: 300));
   closingAmountController.dispose();
   expectedAmountController.dispose();
   commentController.dispose();
