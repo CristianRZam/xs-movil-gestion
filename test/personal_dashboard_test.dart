@@ -84,7 +84,11 @@ void main() {
   late TokenStorage storage;
 
   setUp(() {
-    access = AccessControl();
+    access = AccessControl(
+      permissionRequirements: const {
+        AppCapability.dashboard: {'VIEW_DASHBOARD'},
+      },
+    );
     storage = TokenStorage(access);
     getIt.registerSingleton<AccessControl>(access);
     getIt.registerSingleton<TokenStorage>(storage);
@@ -98,17 +102,16 @@ void main() {
   });
 
   test(
-    'personal response is consumed without sending an owner or scope',
+    'dashboard response is consumed without sending an owner or scope',
     () async {
-      await storage.saveToken(token(claims(['EMPLOYEE'])));
+      await storage.saveToken(token(claims(['VIEW_DASHBOARD'])));
       final client = ApiClient();
-      final adapter = DashboardAdapter('PERSONAL');
+      final adapter = DashboardAdapter(null);
       client.dio.httpClientAdapter = adapter;
       addTearDown(() => client.dio.close());
 
       final summary = await DashboardRemoteDataSourceImpl(client).getSummary();
 
-      expect(summary.isPersonal, isTrue);
       expect(summary.todaySales, 150.5);
       expect(summary.todaySalesCount, 2);
       expect(summary.averageSale, 75.25);
@@ -122,32 +125,29 @@ void main() {
   );
 
   test(
-    'old response without scope is rejected rather than exposing global data',
+    'dashboard response does not depend on a scope field',
     () async {
-      await storage.saveToken(token(claims(['EMPLOYEE'])));
+      await storage.saveToken(token(claims(['VIEW_DASHBOARD'])));
       final client = ApiClient();
       client.dio.httpClientAdapter = DashboardAdapter(null);
       addTearDown(() => client.dio.close());
 
-      await expectLater(
-        DashboardRemoteDataSourceImpl(client).getSummary(),
-        throwsA(isA<FormatException>()),
-      );
+      final summary = await DashboardRemoteDataSourceImpl(client).getSummary();
+      expect(summary.todaySales, 150.5);
     },
   );
 
   for (final brightness in Brightness.values) {
-    testWidgets('personal empty day fits a small screen in $brightness', (
+    testWidgets('dashboard fits a small screen in $brightness', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(320, 640);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      access.updateToken(token(claims(['EMPLOYEE'])));
+      access.updateToken(token(claims(['VIEW_DASHBOARD'])));
       final repository = SummaryRepository(
         DashboardSummary(
-          isPersonal: true,
           summaryDate: DateTime(2026, 9, 22),
           todaySales: 0,
           todayOrders: 0,
@@ -168,13 +168,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Mi resumen de hoy'), findsOneWidget);
-      expect(find.text('Mis ventas de hoy'), findsOneWidget);
-      expect(
-        find.text('Todavía no has registrado ventas hoy.'),
-        findsOneWidget,
-      );
-      expect(find.text('Resumen de tu negocio'), findsNothing);
+      expect(find.text('Resumen de tu negocio'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       await tester.tap(find.byTooltip('Actualizar'));
@@ -184,29 +178,32 @@ void main() {
     });
   }
 
-  testWidgets('operational user never renders an unexpected global response', (
+  testWidgets('user without dashboard permission sees the access message', (
     tester,
   ) async {
-    access.updateToken(token(claims(['EMPLOYEE'])));
-    getIt.registerSingleton<GetDashboardSummaryUseCase>(
-      GetDashboardSummaryUseCase(
-        SummaryRepository(
-          const DashboardSummary(
-            todaySales: 999999,
-            todayOrders: 999,
-            weeklySales: [],
-            topProducts: [],
-            paymentMethods: [],
-          ),
-        ),
+    access.updateToken(token(claims(['VIEW_PRODUCT'])));
+    final repository = SummaryRepository(
+      const DashboardSummary(
+        todaySales: 999999,
+        todayOrders: 999,
+        weeklySales: [],
+        topProducts: [],
+        paymentMethods: [],
       ),
+    );
+    getIt.registerSingleton<GetDashboardSummaryUseCase>(
+      GetDashboardSummaryUseCase(repository),
     );
     await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
     await tester.pumpAndSettle();
 
-    expect(find.text('No se pudo cargar tu resumen'), findsOneWidget);
+    expect(
+      find.text('No tienes permiso para visualizar el dashboard.'),
+      findsOneWidget,
+    );
     expect(find.text('Resumen de tu negocio'), findsNothing);
     expect(find.textContaining('999999'), findsNothing);
+    expect(repository.calls, 0);
     access.clear();
   });
 }

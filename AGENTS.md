@@ -310,6 +310,8 @@ Los errores técnicos no deben mostrarse directamente al usuario.
 
 La UI debe mostrar mensajes comprensibles.
 
+Cuando una API rechace una operación con HTTP `403`, debe mostrarse el mensaje global reutilizable “Acción no autorizada” mediante `AuthorizationFeedbackService`, también para movimientos de inventario. No se debe depender de mensajes locales de cada pantalla ni mostrar detalles internos; `ApiClient` es el punto central para esta respuesta transversal.
+
 ---
 
 # EITHER

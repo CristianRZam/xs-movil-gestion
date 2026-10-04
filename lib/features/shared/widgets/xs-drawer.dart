@@ -13,6 +13,37 @@ class XsDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final access = getIt<AccessControl>();
+    final canProducts = access.allows(AppCapability.viewProducts);
+    final canOrders = access.allows(AppCapability.viewOrders);
+    final canSales = access.allows(AppCapability.viewSales);
+    final canCashSession = access.allows(AppCapability.viewCashSession);
+    final canReports = access.allows(AppCapability.reports);
+    final canInventoryCount = access.allows(AppCapability.viewInventoryCount);
+    final canCategories = access.allows(AppCapability.manageCategories);
+    final canUsers = access.allows(AppCapability.manageUsers);
+    final canRoles = access.allows(AppCapability.manageRoles);
+    final hasAfterProducts = canOrders ||
+        canSales ||
+        canCashSession ||
+        canReports ||
+        canInventoryCount ||
+        canCategories ||
+        canUsers ||
+        canRoles;
+    final hasAfterOrdersOrSales = canCashSession ||
+        canReports ||
+        canInventoryCount ||
+        canCategories ||
+        canUsers ||
+        canRoles;
+    final hasAfterCashSession = canReports ||
+        canInventoryCount ||
+        canCategories ||
+        canUsers ||
+        canRoles;
+    final hasAfterReports =
+        canInventoryCount || canCategories || canUsers || canRoles;
 
     return Container(
       width: MediaQuery.of(context).size.width,
@@ -78,7 +109,7 @@ class XsDrawer extends StatelessWidget {
                     },
                   ),
 
-                  if (getIt<AccessControl>().allows(AppCapability.viewProducts))
+                  if (canProducts || hasAfterProducts)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: DashedLine(
@@ -104,7 +135,7 @@ class XsDrawer extends StatelessWidget {
                       },
                     ),
 
-                  if (getIt<AccessControl>().allows(AppCapability.viewProducts))
+                  if (canProducts && hasAfterProducts)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: DashedLine(
@@ -115,37 +146,41 @@ class XsDrawer extends StatelessWidget {
                       ),
                     ),
 
-                  _DrawerItem(
-                    icon: Icons.shopping_cart_rounded,
-                    title: 'Órdenes',
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, AppRoutes.orders);
-                    },
-                  ),
-
-                  _DrawerItem(
-                    icon: Icons.receipt_long_rounded,
-                    title: 'Ventas',
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, AppRoutes.sales);
-                    },
-                  ),
-
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: DashedLine(
-                      dashWidth: 6,
-                      dashSpace: 5,
-                      height: 1,
-                      color: Colors.grey,
+                  if (getIt<AccessControl>().allows(AppCapability.viewOrders))
+                    _DrawerItem(
+                      icon: Icons.shopping_cart_rounded,
+                      title: 'Órdenes',
+                      isDarkMode: isDarkMode,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushReplacementNamed(context, AppRoutes.orders);
+                      },
                     ),
-                  ),
 
-                  _DrawerItem(
+                  if (getIt<AccessControl>().allows(AppCapability.viewSales))
+                    _DrawerItem(
+                      icon: Icons.receipt_long_rounded,
+                      title: 'Ventas',
+                      isDarkMode: isDarkMode,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushReplacementNamed(context, AppRoutes.sales);
+                      },
+                    ),
+
+                  if ((canOrders || canSales) && hasAfterOrdersOrSales)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: DashedLine(
+                        dashWidth: 6,
+                        dashSpace: 5,
+                        height: 1,
+                        color: Colors.grey,
+                      ),
+                    ),
+
+                  if (getIt<AccessControl>().allows(AppCapability.viewCashSession))
+                    _DrawerItem(
                     icon: Icons.point_of_sale_rounded,
                     title: 'Caja',
                     isDarkMode: isDarkMode,
@@ -159,15 +194,16 @@ class XsDrawer extends StatelessWidget {
                     },
                   ),
 
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: DashedLine(
-                      dashWidth: 6,
-                      dashSpace: 5,
-                      height: 1,
-                      color: Colors.grey,
+                  if (canCashSession && hasAfterCashSession)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: DashedLine(
+                        dashWidth: 6,
+                        dashSpace: 5,
+                        height: 1,
+                        color: Colors.grey,
+                      ),
                     ),
-                  ),
 
                   if (getIt<AccessControl>().allows(AppCapability.reports))
                     _DrawerItem(
@@ -183,18 +219,19 @@ class XsDrawer extends StatelessWidget {
                       },
                     ),
 
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: DashedLine(
-                      dashWidth: 6,
-                      dashSpace: 5,
-                      height: 1,
-                      color: Colors.grey,
+                  if (canReports && hasAfterReports)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: DashedLine(
+                        dashWidth: 6,
+                        dashSpace: 5,
+                        height: 1,
+                        color: Colors.grey,
+                      ),
                     ),
-                  ),
 
                   if (getIt<AccessControl>().allows(
-                    AppCapability.inventoryCount,
+                    AppCapability.viewInventoryCount,
                   ))
                     _DrawerItem(
                       icon: Icons.inventory_rounded,
@@ -298,7 +335,7 @@ class XsDrawer extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  '© empresa',
+                  "© D'Primera",
                   style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
               ],

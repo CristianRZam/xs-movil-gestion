@@ -1,4 +1,5 @@
 import 'package:app_movil_sistema/core/storage/token_storage.dart';
+import 'package:app_movil_sistema/core/authorization/access_control.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/sale/domain/entities/cash_session_sales_summary.dart';
 import 'package:app_movil_sistema/features/sale/domain/usecases/sale_usecases.dart';
@@ -30,6 +31,15 @@ class CashSessionView extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final tokenStorage = getIt<TokenStorage>();
+    final access = getIt<AccessControl>();
+    final canOpenCashSession = access.allows(AppCapability.openCashSession);
+    final canCloseCashSession = access.allows(AppCapability.closeCashSession);
+    final canViewCashSessionHistory = access.allows(
+      AppCapability.viewCashSessionHistory,
+    );
+    final canViewCashSessionSales = access.allows(
+      AppCapability.viewCashSessionSales,
+    );
 
     return FutureBuilder<String?>(
       future: tokenStorage.getToken(),
@@ -172,64 +182,60 @@ class CashSessionView extends StatelessWidget {
 
                           const SizedBox(height: 22),
 
-                          OutlinedButton.icon(
-                            onPressed: () =>
-                                _openCashSalesHistory(context, session.id),
-                            icon: const Icon(Icons.receipt_long_outlined),
-                            label: const Text('Ver ventas de esta caja'),
-                          ),
+                          if (canViewCashSessionSales) ...[
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  _openCashSalesHistory(context, session.id),
+                              icon: const Icon(Icons.receipt_long_outlined),
+                              label: const Text('Ver ventas de esta caja'),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
 
-                          const SizedBox(height: 12),
-
-                          SizedBox(
-                            width: double.infinity,
-
-                            child: FilledButton.icon(
-                              onPressed: () {
-                                openCloseCashSessionDialog(context, session);
-                              },
-
-                              icon: const Icon(Icons.lock_rounded),
-
-                              label: const Text("Cerrar caja"),
-
-                              style: FilledButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
+                          if (canCloseCashSession)
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: () {
+                                  openCloseCashSessionDialog(context, session);
+                                },
+                                icon: const Icon(Icons.lock_rounded),
+                                label: const Text("Cerrar caja"),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
                         ] else ...[
                           _ClosedCashCard(
+                            canOpen: canOpenCashSession,
                             onOpen: () {
                               openOpenCashSessionDialog(context);
                             },
                           ),
                         ],
 
-                        const SizedBox(height: 22),
-
-                        SizedBox(
-                          width: double.infinity,
-
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              context.read<CashSessionBloc>().add(
-                                const LoadCashSessionHistory(),
-                              );
-                            },
-
-                            icon: const Icon(Icons.history_rounded),
-
-                            label: const Text("Historial de cajas"),
-
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 15),
+                        if (canViewCashSessionHistory) ...[
+                          const SizedBox(height: 22),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                context.read<CashSessionBloc>().add(
+                                  const LoadCashSessionHistory(),
+                                );
+                              },
+                              icon: const Icon(Icons.history_rounded),
+                              label: const Text("Historial de cajas"),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 15),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -244,9 +250,10 @@ class CashSessionView extends StatelessWidget {
 }
 
 class _ClosedCashCard extends StatelessWidget {
+  final bool canOpen;
   final VoidCallback onOpen;
 
-  const _ClosedCashCard({required this.onOpen});
+  const _ClosedCashCard({required this.canOpen, required this.onOpen});
 
   @override
   Widget build(BuildContext context) {
@@ -296,24 +303,21 @@ class _ClosedCashCard extends StatelessWidget {
             style: theme.textTheme.bodyMedium,
           ),
 
-          const SizedBox(height: 22),
-
-          SizedBox(
-            width: double.infinity,
-
-            child: FilledButton.icon(
-              onPressed: onOpen,
-
-              icon: const Icon(Icons.lock_open_rounded),
-
-              label: const Text("Abrir caja"),
-
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(vertical: 15),
+          if (canOpen) ...[
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onOpen,
+                icon: const Icon(Icons.lock_open_rounded),
+                label: const Text("Abrir caja"),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -410,6 +414,9 @@ void openOpenCashSessionDialog(BuildContext parentContext) {
 }
 
 Future<void> _openCashSalesHistory(BuildContext context, int sessionId) async {
+  if (!getIt<AccessControl>().allows(AppCapability.viewCashSessionSales)) {
+    return;
+  }
   final result = await getIt<GetCashSessionSalesSummaryUseCase>()(sessionId);
   if (!context.mounted) return;
 
@@ -706,21 +713,23 @@ Future<void> openCloseCashSessionDialog(
   CashSession session,
 ) async {
   CashSessionSalesSummary? salesSummary;
-  final summaryResult = await getIt<GetCashSessionSalesSummaryUseCase>()(
-    session.id,
-  );
-  if (!parentContext.mounted) return;
+  if (getIt<AccessControl>().allows(AppCapability.viewCashSessionSales)) {
+    final summaryResult = await getIt<GetCashSessionSalesSummaryUseCase>()(
+      session.id,
+    );
+    if (!parentContext.mounted) return;
 
-  summaryResult.fold(
-    (failure) => ScaffoldMessenger.of(parentContext).showSnackBar(
-      SnackBar(
-        content: Text(
-          'No se pudo cargar el detalle de ventas: ${failure.message}',
+    summaryResult.fold(
+      (failure) => ScaffoldMessenger.of(parentContext).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se pudo cargar el detalle de ventas: ${failure.message}',
+          ),
         ),
       ),
-    ),
-    (summary) => salesSummary = summary,
-  );
+      (summary) => salesSummary = summary,
+    );
+  }
 
   final closingAmountController = TextEditingController();
 

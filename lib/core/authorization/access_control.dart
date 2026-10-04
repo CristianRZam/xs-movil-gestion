@@ -6,14 +6,35 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 enum AppCapability {
   operate,
   viewProducts,
+  viewProductMovements,
   manageProducts,
   createProducts,
   deleteProducts,
+  createProductInventoryEntry,
+  createProductWaste,
+  adjustProductInventory,
+  viewCashSession,
+  openCashSession,
+  closeCashSession,
+  viewCashSessionHistory,
+  viewCashSessionSales,
+  viewInventoryCount,
+  createInventoryCount,
+  reviewInventoryCount,
+  closeInventoryCount,
+  viewInventoryCountHistory,
+  viewOrders,
+  createOrders,
+  editOrders,
+  updateOrderStatus,
+  viewSales,
+  createSales,
+  // Conservada para compatibilidad de pruebas y flujos aún no migrados.
+  manageInventory,
   manageCategories,
   manageUsers,
   manageRoles,
   assignRolePermissions,
-  manageInventory,
   inventoryCount,
   reports,
   dashboard,
@@ -22,20 +43,13 @@ enum AppCapability {
   cancelSales,
 }
 
-enum AuthorizationMode { roles, permissions }
-
 /// JWT claims only drive client UX. The API must enforce authorization itself.
 class AccessControl extends ChangeNotifier {
-  AccessControl({
-    this.mode = AuthorizationMode.roles,
-    this.permissionRequirements = const {},
-  });
+  AccessControl({this.permissionRequirements = const {}});
 
-  final AuthorizationMode mode;
-  // Populate with the backend's permission codes when enabling permission mode.
-  // Unmapped capabilities are denied in that mode; all listed codes are required.
+  /// Roles are profile metadata outside this service; permissions are the only
+  /// access source used for navigation, widgets and API requests.
   final Map<AppCapability, Set<String>> permissionRequirements;
-  Set<String> _roles = {};
   Set<String> _permissions = {};
   DateTime? _expiresAt;
   Timer? _expiryTimer;
@@ -43,22 +57,28 @@ class AccessControl extends ChangeNotifier {
   bool get isAuthenticated =>
       _expiresAt != null && DateTime.now().isBefore(_expiresAt!);
 
+  bool hasPermission(String permission) =>
+      isAuthenticated && _permissions.contains(permission);
+
+  bool hasAllPermissions(Iterable<String> permissions) =>
+      isAuthenticated &&
+      permissions.isNotEmpty &&
+      permissions.every(_permissions.contains);
+
+  bool hasAnyPermission(Iterable<String> permissions) =>
+      isAuthenticated && permissions.any(_permissions.contains);
+
   bool allows(AppCapability capability) {
-    if (!isAuthenticated || _roles.isEmpty) return false;
-    if (_roles.contains('SUPER_ADMIN')) return true;
+    if (!isAuthenticated || _permissions.isEmpty) return false;
     if (capability == AppCapability.operate) return true;
-    if (mode == AuthorizationMode.roles) {
-      return false;
-    }
     final required = permissionRequirements[capability];
-    return required != null &&
-        required.isNotEmpty &&
-        required.every(_permissions.contains);
+    // Capacidades aún no vinculadas a un permiso del backend quedan libres
+    // durante la implementación progresiva de la matriz de permisos.
+    return required == null || required.isEmpty || hasAllPermissions(required);
   }
 
   void updateToken(String? token) {
     _expiryTimer?.cancel();
-    _roles = {};
     _permissions = {};
     _expiresAt = null;
     try {
@@ -69,7 +89,6 @@ class AccessControl extends ChangeNotifier {
           (expiry * 1000).toInt(),
         );
         if (expiresAt.isAfter(DateTime.now())) {
-          _roles = _strings(claims['roles']);
           _permissions = _strings(claims['permissions']);
           _expiresAt = expiresAt;
           _expiryTimer = Timer(expiresAt.difference(DateTime.now()), clear);

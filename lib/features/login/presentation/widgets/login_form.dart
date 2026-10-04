@@ -6,6 +6,7 @@ import 'package:app_movil_sistema/features/login/presentation/bloc/login_bloc.da
 import 'package:app_movil_sistema/features/login/presentation/bloc/login_event.dart';
 import 'package:app_movil_sistema/features/login/presentation/bloc/login_state.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-button.dart';
+import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -50,13 +51,13 @@ class _LoginFormState extends State<LoginForm> {
               buildWhen: (p, c) => p.email != c.email,
               builder: (context, state) {
                 return XsTextField(
-                  labelText: "Correo electrónico",
-                  prefixIcon: const Icon(Icons.email_outlined),
+                  labelText: "Usuario o correo electrónico",
+                  prefixIcon: const Icon(Icons.person_outline),
                   borderColor: AppColors.grey,
-                  keyboardType: TextInputType.emailAddress,
                   validator: (value) => composeValidators([
-                    InputValidators.requiredField('Ingrese su correo'),
-                    InputValidators.email(),
+                    InputValidators.requiredField(
+                      'Ingrese su usuario o correo electrónico',
+                    ),
                   ], value),
                   onChanged: (value) =>
                       context.read<LoginBloc>().add(LoginEmailChanged(value)),
@@ -96,7 +97,13 @@ class _LoginFormState extends State<LoginForm> {
             ),
             const SizedBox(height: 20),
             TextButton(
-              onPressed: () {},
+              onPressed: () => FlashMessage.show(
+                context,
+                type: FlashMessageType.info,
+                title: 'Función no activa',
+                message: 'Próximamente estará disponible.',
+                position: FlashMessagePosition.top,
+              ),
               child: Text(
                 '¿Olvidaste tu contraseña?',
                 style: TextStyle(color: isDark

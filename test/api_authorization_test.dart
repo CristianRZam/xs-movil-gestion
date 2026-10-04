@@ -56,33 +56,26 @@ void main() {
   });
 
   test(
-    'inventory mutation is rejected before transport for operational roles',
+    'the server remains the authority for inventory mutations',
     () async {
-      await storage.saveToken(token(claims(['CASHIER'])));
-      await expectLater(
-        client.dio.post('/inventory-movement/create', data: {}),
-        throwsA(
-          isA<DioException>().having(
-            (e) => e.response?.statusCode,
-            'status',
-            403,
-          ),
-        ),
-      );
-      expect(adapter.requests, isEmpty);
-      await client.dio.post('/product/init', data: {});
+      await storage.saveToken(token(claims(['VIEW_PRODUCT'])));
+      await client.dio.post('/inventory-movement/create', data: {});
       expect(adapter.requests, hasLength(1));
+      await client.dio.post('/product/init', data: {});
+      expect(adapter.requests, hasLength(2));
       expect(
-        adapter.requests.single.headers['Authorization'],
+        adapter.requests.first.headers['Authorization'],
         startsWith('Bearer '),
       );
     },
   );
 
   test(
-    'administrator can mutate inventory; logout prevents subsequent requests',
+    'an authenticated user can send a request and logout prevents subsequent requests',
     () async {
-      await storage.saveToken(token(claims(['SUPER_ADMIN'])));
+      await storage.saveToken(
+        token(claims(['CREATE_PRODUCT_INVENTORY_ENTRY'])),
+      );
       await client.dio.post('/inventory-movement/create', data: {});
       expect(adapter.requests, hasLength(1));
       await storage.deleteToken();

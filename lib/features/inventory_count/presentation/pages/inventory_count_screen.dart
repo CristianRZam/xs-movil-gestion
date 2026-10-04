@@ -1,5 +1,7 @@
+import 'package:app_movil_sistema/core/authorization/access_control.dart';
 import 'package:app_movil_sistema/core/network/api_client.dart';
 import 'package:app_movil_sistema/core/network/api_response.dart';
+import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:app_movil_sistema/features/inventory_count/presentation/inventory_count_autofill.dart';
@@ -25,6 +27,9 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
   DateTime? _openedAt;
   String _stage = 'EMPTY'; // EMPTY, COUNTING, REVIEW, CLOSED
   bool _loading = false;
+
+  bool _allows(AppCapability capability) =>
+      getIt<AccessControl>().allows(capability);
 
   @override
   void initState() {
@@ -53,20 +58,23 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
     }, silent: true);
   }
 
-  Future<void> _start() => _request(() async {
-    for (final controller in _controllers.values) {
-      controller.dispose();
-    }
-    _controllers.clear();
-    _adjustments.clear();
-    _reasons.clear();
-    _suggestedCounts.clear();
-    _items = [];
-    final session = await _post('/inventory-counts', {});
-    _sessionId = (session as Map<String, dynamic>)['id'] as int;
-    _stage = 'COUNTING';
-    await _loadDetail();
-  });
+  Future<void> _start() {
+    if (!_allows(AppCapability.createInventoryCount)) return Future.value();
+    return _request(() async {
+      for (final controller in _controllers.values) {
+        controller.dispose();
+      }
+      _controllers.clear();
+      _adjustments.clear();
+      _reasons.clear();
+      _suggestedCounts.clear();
+      _items = [];
+      final session = await _post('/inventory-counts', {});
+      _sessionId = (session as Map<String, dynamic>)['id'] as int;
+      _stage = 'COUNTING';
+      await _loadDetail();
+    });
+  }
 
   Future<void> _loadDetail() async {
     final data =
@@ -131,53 +139,60 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
     return suggestions.length;
   }
 
-  Future<void> _review() => _request(() async {
-    await _loadDetail();
-    final filled = _fillBlankCountsWithCurrentStock();
-    final rows = _rows();
-    if (rows.isEmpty) {
-      throw Exception('Registra el conteo físico de al menos un producto.');
-    }
-    await _put('/inventory-counts/$_sessionId/review', {'items': rows});
-    _stage = 'REVIEW';
-    await _loadDetail();
-    _showFeedback(
-      filled > 0
-          ? 'Se completaron $filled campos vacíos y se validó el conteo.'
-          : 'Conteo validado. Revisa las diferencias antes de cerrar.',
-    );
-  });
+  Future<void> _review() {
+    if (!_allows(AppCapability.reviewInventoryCount)) return Future.value();
+    return _request(() async {
+      await _loadDetail();
+      final filled = _fillBlankCountsWithCurrentStock();
+      final rows = _rows();
+      if (rows.isEmpty) {
+        throw Exception('Registra el conteo físico de al menos un producto.');
+      }
+      await _put('/inventory-counts/$_sessionId/review', {'items': rows});
+      _stage = 'REVIEW';
+      await _loadDetail();
+      _showFeedback(
+        filled > 0
+            ? 'Se completaron $filled campos vacíos y se validó el conteo.'
+            : 'Conteo validado. Revisa las diferencias antes de cerrar.',
+      );
+    });
+  }
 
-  Future<void> _close() => _request(() async {
-    final rows = _rows();
-    for (final row in rows) {
-      if (row['applyAdjustment'] == true &&
-          ((row['reason'] as String?)?.trim().isEmpty ?? true)) {
-        throw Exception('Indica el motivo para cada ajuste.');
+  Future<void> _close() {
+    if (!_allows(AppCapability.closeInventoryCount)) return Future.value();
+    return _request(() async {
+      final rows = _rows();
+      for (final row in rows) {
+        if (row['applyAdjustment'] == true &&
+            ((row['reason'] as String?)?.trim().isEmpty ?? true)) {
+          throw Exception('Indica el motivo para cada ajuste.');
+        }
       }
-    }
-    final result =
-        await _put('/inventory-counts/$_sessionId/close', {'items': rows})
-            as Map<String, dynamic>;
-    _stage = result['status'] == 'CLOSED' ? 'EMPTY' : 'REVIEW';
-    if (_stage == 'EMPTY') {
-      for (final controller in _controllers.values) {
-        controller.dispose();
+      final result =
+          await _put('/inventory-counts/$_sessionId/close', {'items': rows})
+              as Map<String, dynamic>;
+      _stage = result['status'] == 'CLOSED' ? 'EMPTY' : 'REVIEW';
+      if (_stage == 'EMPTY') {
+        for (final controller in _controllers.values) {
+          controller.dispose();
+        }
+        _controllers.clear();
+        _adjustments.clear();
+        _reasons.clear();
+        _suggestedCounts.clear();
+        _items = [];
+        _sessionId = null;
+        _showFeedback('Conteo finalizado y guardado en el historial.');
+      } else {
+        _sessionId = result['id'] as int;
       }
-      _controllers.clear();
-      _adjustments.clear();
-      _reasons.clear();
-      _suggestedCounts.clear();
-      _items = [];
-      _sessionId = null;
-      _showFeedback('Conteo finalizado y guardado en el historial.');
-    } else {
-      _sessionId = result['id'] as int;
-    }
-    if (mounted) setState(() {});
-  });
+      if (mounted) setState(() {});
+    });
+  }
 
   Future<void> _confirmClose() async {
+    if (!_allows(AppCapability.closeInventoryCount)) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -202,6 +217,7 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
   }
 
   void _editCounts() {
+    if (!_allows(AppCapability.reviewInventoryCount)) return;
     setState(() {
       _stage = 'COUNTING';
       _adjustments.clear();
@@ -238,7 +254,14 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
   }
 
   dynamic _data(Response response) {
-    final api = ApiResponse<dynamic>.fromJson(response.data, (v) => v);
+    final payload = response.data;
+    if (payload is! Map) {
+      throw Exception('La respuesta del servidor no tiene un formato válido.');
+    }
+    final api = ApiResponse<dynamic>.fromJson(
+      Map<String, dynamic>.from(payload),
+      (v) => v,
+    );
     if (!api.success) throw Exception(api.message);
     return api.data;
   }
@@ -251,15 +274,24 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
     try {
       await action();
     } on DioException catch (e) {
-      _message(
-        (e.response?.data as Map?)?['message']?.toString() ??
-            'No se pudo procesar el conteo.',
-      );
+      _message(_dioErrorMessage(e));
     } catch (e) {
       if (!silent) _message(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted && !silent) setState(() => _loading = false);
     }
+  }
+
+  String _dioErrorMessage(DioException error) {
+    final data = error.response?.data;
+    if (data is Map) {
+      final message = data['message'];
+      if (message != null && message.toString().trim().isNotEmpty) {
+        return message.toString();
+      }
+    }
+    if (data is String && data.trim().isNotEmpty) return data;
+    return 'No se pudo procesar el conteo.';
   }
 
   void _message(String text) {
@@ -329,6 +361,7 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
   }
 
   Future<void> _showHistory() async {
+    if (!_allows(AppCapability.viewInventoryCountHistory)) return;
     await _request(() async {
       final history = await _get('/inventory-counts') as List<dynamic>;
       if (!mounted) return;
@@ -374,6 +407,7 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
   }
 
   Future<void> _showHistoryDetail(BuildContext context, int id) async {
+    if (!_allows(AppCapability.viewInventoryCountHistory)) return;
     final data = await _get('/inventory-counts/$id') as Map<String, dynamic>;
     final rows = data['items'] as List<dynamic>;
     if (!mounted) return;
@@ -434,10 +468,11 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
       title: 'Conteo diario',
       backIcon: false,
       actions: [
-        IconButton(
-          onPressed: _loading ? null : _showHistory,
-          icon: const Icon(Icons.history_rounded),
-        ),
+        if (_allows(AppCapability.viewInventoryCountHistory))
+          IconButton(
+            onPressed: _loading ? null : _showHistory,
+            icon: const Icon(Icons.history_rounded),
+          ),
       ],
     ),
     endDrawer: const XsDrawer(),
@@ -458,7 +493,9 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
     if (_stage == 'EMPTY')
       return Center(
         child: FilledButton.icon(
-          onPressed: _loading ? null : _start,
+          onPressed: _loading || !_allows(AppCapability.createInventoryCount)
+              ? null
+              : _start,
           icon: const Icon(Icons.play_arrow),
           label: const Text('Iniciar conteo'),
         ),
@@ -499,7 +536,8 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              if (_stage == 'REVIEW')
+              if (_stage == 'REVIEW' &&
+                  _allows(AppCapability.reviewInventoryCount))
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -508,25 +546,31 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
                     label: const Text('Editar conteos'),
                   ),
                 ),
-              if (_stage == 'REVIEW') const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _loading
-                      ? null
-                      : (_stage == 'COUNTING' ? _review : _confirmClose),
-                  icon: Icon(
-                    _stage == 'COUNTING'
-                        ? Icons.rule_rounded
-                        : Icons.task_alt_rounded,
-                  ),
-                  label: Text(
-                    _stage == 'COUNTING'
-                        ? 'Validar conteo'
-                        : 'Validar y finalizar conteo',
+              if (_stage == 'REVIEW' &&
+                  _allows(AppCapability.reviewInventoryCount))
+                const SizedBox(height: 10),
+              if ((_stage == 'COUNTING' &&
+                      _allows(AppCapability.reviewInventoryCount)) ||
+                  (_stage == 'REVIEW' &&
+                      _allows(AppCapability.closeInventoryCount)))
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _loading
+                        ? null
+                        : (_stage == 'COUNTING' ? _review : _confirmClose),
+                    icon: Icon(
+                      _stage == 'COUNTING'
+                          ? Icons.rule_rounded
+                          : Icons.task_alt_rounded,
+                    ),
+                    label: Text(
+                      _stage == 'COUNTING'
+                          ? 'Validar conteo'
+                          : 'Validar y finalizar conteo',
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -559,11 +603,13 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Ver movimientos',
-                  onPressed: _loading ? null : () => _showProductMovements(row),
-                  icon: const Icon(Icons.swap_horiz_rounded),
-                ),
+                if (_allows(AppCapability.viewProductMovements))
+                  IconButton(
+                    tooltip: 'Ver movimientos',
+                    onPressed:
+                        _loading ? null : () => _showProductMovements(row),
+                    icon: const Icon(Icons.swap_horiz_rounded),
+                  ),
               ],
             ),
             Text('Inicial: ${item['openingStock']} und.'),
@@ -574,7 +620,8 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
               ),
             TextField(
               controller: _controllers[id],
-              enabled: _stage == 'COUNTING',
+              enabled: _stage == 'COUNTING' &&
+                  _allows(AppCapability.reviewInventoryCount),
               keyboardType: TextInputType.number,
               onChanged: (_) {
                 if (_suggestedCounts.contains(id) && mounted) {
@@ -604,14 +651,16 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
                 ),
                 backgroundColor: color.withOpacity(.12),
               ),
-              if (status != 'MATCHED')
+              if (status != 'MATCHED' &&
+                  _allows(AppCapability.closeInventoryCount))
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Aplicar ajuste'),
                   value: _adjustments[id] ?? false,
                   onChanged: (v) => setState(() => _adjustments[id] = v),
                 ),
-              if (_adjustments[id] ?? false)
+              if ((_adjustments[id] ?? false) &&
+                  _allows(AppCapability.closeInventoryCount))
                 TextField(
                   onChanged: (v) => _reasons[id] = v,
                   decoration: const InputDecoration(

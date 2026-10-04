@@ -1,5 +1,4 @@
 class DashboardSummary {
-  final bool isPersonal;
   final DateTime? summaryDate;
   final int todaySalesCount;
   final double averageSale;
@@ -10,7 +9,6 @@ class DashboardSummary {
   final List<PaymentMethodUsage> paymentMethods;
 
   const DashboardSummary({
-    this.isPersonal = false,
     this.summaryDate,
     this.todaySalesCount = 0,
     this.averageSale = 0,

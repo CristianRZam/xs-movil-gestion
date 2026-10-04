@@ -76,7 +76,7 @@ class LoginScreen extends StatelessWidget {
                           flex: 3,
                           child: Center(
                             child: Image.asset(
-                              'assets/images/icono_sin_fondo.webp',
+                              'assets/images/main_logo.png',
                               width: 220,
                               fit: BoxFit.contain,
                             ),

@@ -2,7 +2,6 @@ import 'package:app_movil_sistema/core/authorization/access_control.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:app_movil_sistema/features/dashboard/domain/usecases/get_dashboard_summary_usecase.dart';
-import 'package:app_movil_sistema/features/home/presentation/widgets/personal_dashboard.dart';
 import 'package:app_movil_sistema/features/home/presentation/widgets/owner_dashboard.dart';
 import 'package:app_movil_sistema/features/home/presentation/widgets/dashboard_sale_analityc.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
@@ -28,14 +27,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<DashboardSummary?> _loadDashboard() async {
+    if (!getIt<AccessControl>().allows(AppCapability.dashboard)) {
+      return null;
+    }
     final result = await getIt<GetDashboardSummaryUseCase>()();
-    return result.fold((_) => null, (summary) {
-      if (!summary.isPersonal &&
-          !getIt<AccessControl>().allows(AppCapability.dashboard)) {
-        return null;
-      }
-      return summary;
-    });
+    return result.fold((_) => null, (summary) => summary);
   }
 
   Future<void> _refresh() async {
@@ -57,7 +53,9 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
         appBar: const XsAppBar(title: 'Inicio', backIcon: false),
         endDrawer: const XsDrawer(),
-        body: FutureBuilder<DashboardSummary?>(
+        body: !getIt<AccessControl>().allows(AppCapability.dashboard)
+            ? const _DashboardAccessDenied()
+            : FutureBuilder<DashboardSummary?>(
           future: _dashboardFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -97,9 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            summary.isPersonal
-                                ? 'Mi resumen de hoy'
-                                : 'Resumen de tu negocio',
+                            'Resumen de tu negocio',
                             style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
@@ -112,13 +108,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    if (summary.isPersonal)
-                      PersonalDashboard(summary: summary, onRefresh: _refresh)
-                    else ...[
-                      OwnerDashboard(summary: summary),
-                      const SizedBox(height: 16),
-                      DashboardSaleAnalytic(summary: summary),
-                    ],
+                    OwnerDashboard(summary: summary),
+                    const SizedBox(height: 16),
+                    DashboardSaleAnalytic(summary: summary),
                   ],
                 ),
               ),
@@ -126,6 +118,27 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
         bottomNavigationBar: const XsBottomBar(),
+      ),
+    );
+  }
+}
+
+class _DashboardAccessDenied extends StatelessWidget {
+  const _DashboardAccessDenied();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline_rounded, size: 48),
+            SizedBox(height: 12),
+            Text('No tienes permiso para visualizar el dashboard.'),
+          ],
+        ),
       ),
     );
   }

@@ -189,7 +189,7 @@ class ProductCard extends StatelessWidget {
               },
               itemBuilder: (_) => [
                 if (getIt<AccessControl>().allows(
-                  AppCapability.manageInventory,
+                  AppCapability.createProductInventoryEntry,
                 ))
                   const PopupMenuItem(
                     value: 'entry',
@@ -201,7 +201,7 @@ class ProductCard extends StatelessWidget {
                   ),
 
                 if (getIt<AccessControl>().allows(
-                  AppCapability.manageInventory,
+                  AppCapability.createProductWaste,
                 ))
                   const PopupMenuItem(
                     value: 'waste',
@@ -213,7 +213,7 @@ class ProductCard extends StatelessWidget {
                   ),
 
                 if (getIt<AccessControl>().allows(
-                  AppCapability.manageInventory,
+                  AppCapability.adjustProductInventory,
                 ))
                   const PopupMenuItem(
                     value: 'adjustment',
@@ -224,14 +224,17 @@ class ProductCard extends StatelessWidget {
                     ),
                   ),
 
-                PopupMenuItem(
-                  value: 'movement',
-                  child: ListTile(
-                    leading: Icon(Icons.swap_horiz),
-                    title: Text('Movimientos'),
-                    contentPadding: EdgeInsets.zero,
+                if (getIt<AccessControl>().allows(
+                  AppCapability.viewProductMovements,
+                ))
+                  const PopupMenuItem(
+                    value: 'movement',
+                    child: ListTile(
+                      leading: Icon(Icons.swap_horiz),
+                      title: Text('Movimientos'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
-                ),
 
                 if (getIt<AccessControl>().allows(AppCapability.manageProducts))
                   const PopupMenuItem(

@@ -11,14 +11,33 @@ class ApiAccessPolicy {
     final resource = segments.first;
     if (resource == 'reports') return AppCapability.reports;
     if (resource == 'notifications') return AppCapability.notifications;
-    // The backend selects GLOBAL or PERSONAL from the authenticated user.
     if (resource == 'dashboard' &&
         segments.length == 1 &&
         method.toUpperCase() == 'GET') {
-      return AppCapability.operate;
+      return AppCapability.dashboard;
     }
     if (resource == 'dashboard') return AppCapability.dashboard;
-    if (resource == 'inventory-counts') return AppCapability.inventoryCount;
+    if (resource == 'inventory-counts') {
+      final verb = method.toUpperCase();
+      if (verb == 'POST' && segments.length == 1) {
+        return AppCapability.createInventoryCount;
+      }
+      if (verb == 'PUT' && segments.length >= 3 && segments[2] == 'review') {
+        return AppCapability.reviewInventoryCount;
+      }
+      if (verb == 'PUT' && segments.length >= 3 && segments[2] == 'close') {
+        return AppCapability.closeInventoryCount;
+      }
+      if (verb == 'GET' &&
+          segments.length >= 2 &&
+          segments[1] == 'current') {
+        return AppCapability.viewInventoryCount;
+      }
+      if (verb == 'GET' && segments.length == 1) {
+        return AppCapability.viewInventoryCountHistory;
+      }
+      return AppCapability.viewInventoryCount;
+    }
     if (resource == 'parameter') return AppCapability.manageCategories;
     if (resource == 'user') return AppCapability.manageUsers;
     if (resource == 'role') return AppCapability.manageRoles;
@@ -29,9 +48,7 @@ class ApiAccessPolicy {
     }
     if (resource == 'product') {
       final verb = method.toUpperCase();
-      if (segments.length == 2 &&
-          segments[1] == 'init' &&
-          verb == 'POST') {
+      if (segments.length == 2 && segments[1] == 'init' && verb == 'POST') {
         return AppCapability.viewProducts;
       }
       if (segments.length == 2 && segments[1] == 'create') {
@@ -50,11 +67,58 @@ class ApiAccessPolicy {
         return AppCapability.createProducts;
       }
     }
-    if (resource == 'inventory-movement' && method.toUpperCase() != 'GET') {
-      return AppCapability.manageInventory;
+    if (resource == 'inventory-movement') {
+      if (method.toUpperCase() == 'GET' &&
+          segments.length >= 2 &&
+          segments[1] == 'product') {
+        return AppCapability.viewProductMovements;
+      }
+      return AppCapability.operate;
     }
-    if (resource == 'orders' && method.toUpperCase() == 'DELETE') {
-      return AppCapability.deleteOrders;
+    if (resource == 'cash-session') {
+      final verb = method.toUpperCase();
+      if (verb == 'GET' &&
+          segments.length >= 2 &&
+          segments[1] == 'exists-open') {
+        return AppCapability.operate;
+      }
+      if (verb == 'POST' && segments.length >= 2 && segments[1] == 'open') {
+        return AppCapability.openCashSession;
+      }
+      if (verb == 'PUT' && segments.length >= 2 && segments[1] == 'close') {
+        return AppCapability.closeCashSession;
+      }
+      if (verb == 'GET' && segments.length >= 2 && segments[1] == 'history') {
+        return AppCapability.viewCashSessionHistory;
+      }
+      return AppCapability.viewCashSession;
+    }
+    if (resource == 'sales' &&
+        segments.length >= 2 &&
+        segments[1] == 'cash-session') {
+      return AppCapability.viewCashSessionSales;
+    }
+    if (resource == 'sales') {
+      final verb = method.toUpperCase();
+      if (verb == 'GET') return AppCapability.viewSales;
+      if (verb == 'POST' && segments.length >= 3 && segments[2] == 'cancel') {
+        return AppCapability.cancelSales;
+      }
+      if (verb == 'POST' && segments.length == 1) {
+        return AppCapability.createSales;
+      }
+    }
+    if (resource == 'orders') {
+      final verb = method.toUpperCase();
+      if (verb == 'GET') return AppCapability.viewOrders;
+      if (verb == 'POST' && segments.length == 1) {
+        return AppCapability.createOrders;
+      }
+      if (verb == 'PUT' && segments.length >= 3 && segments[2] == 'status') {
+        return AppCapability.updateOrderStatus;
+      }
+      if (verb == 'PUT') return AppCapability.editOrders;
+      if (verb == 'DELETE') return AppCapability.deleteOrders;
     }
     return AppCapability.operate;
   }

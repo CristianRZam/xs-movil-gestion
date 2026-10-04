@@ -26,6 +26,11 @@ class _OrderViewState extends State<OrderView> {
   String _status = 'ALL';
   final _searchController = TextEditingController();
 
+  bool get _canCreateOrder =>
+      getIt<AccessControl>().allows(AppCapability.createOrders);
+  bool get _canEditOrder =>
+      getIt<AccessControl>().allows(AppCapability.editOrders);
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -71,13 +76,15 @@ class _OrderViewState extends State<OrderView> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: const XsAppBar(title: 'Órdenes y ventas', backIcon: false),
         endDrawer: const XsDrawer(),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: state.isCashSessionOpen == true
-              ? () => _openOrderForm(context)
-              : null,
-          icon: const Icon(Icons.add),
-          label: const Text('Nueva orden'),
-        ),
+        floatingActionButton: _canCreateOrder
+            ? FloatingActionButton.extended(
+                onPressed: state.isCashSessionOpen == true
+                    ? () => _openOrderForm(context)
+                    : null,
+                icon: const Icon(Icons.add),
+                label: const Text('Nueva orden'),
+              )
+            : null,
         body: SafeArea(
           child: RefreshIndicator(
             onRefresh: () async {
@@ -90,13 +97,17 @@ class _OrderViewState extends State<OrderView> {
                   searchQuery: state.searchQuery,
                 ),
               );
-              context.read<OrderBloc>().add(const LoadOrderProducts());
-              context.read<OrderBloc>().add(const CheckOpenCashSession());
+              if (_canCreateOrder || _canEditOrder) {
+                context.read<OrderBloc>().add(const LoadOrderProducts());
+              }
+              if (_canCreateOrder) {
+                context.read<OrderBloc>().add(const CheckOpenCashSession());
+              }
             },
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 90),
               children: [
-                if (state.isCashSessionOpen != true) ...[
+                if (_canCreateOrder && state.isCashSessionOpen != true) ...[
                   _CashSessionRequiredCard(
                     isChecking: state.isCashSessionOpen == null,
                     onOpenCashSession: () =>
@@ -502,18 +513,20 @@ void _showOrderDetail(
           ),
           const SizedBox(height: 20),
           if (order.status == 'PENDING') ...[
-            FilledButton.icon(
-              onPressed: () async {
-                final wasSaved = await _openOrderForm(context, order: order);
-                final sheetNavigator = Navigator.of(sheetContext);
-                if (wasSaved == true && sheetNavigator.mounted) {
-                  sheetNavigator.pop();
-                }
-              },
-              icon: const Icon(Icons.edit),
-              label: const Text('Editar orden'),
-            ),
-            const SizedBox(height: 10),
+            if (getIt<AccessControl>().allows(AppCapability.editOrders)) ...[
+              FilledButton.icon(
+                onPressed: () async {
+                  final wasSaved = await _openOrderForm(context, order: order);
+                  final sheetNavigator = Navigator.of(sheetContext);
+                  if (wasSaved == true && sheetNavigator.mounted) {
+                    sheetNavigator.pop();
+                  }
+                },
+                icon: const Icon(Icons.edit),
+                label: const Text('Editar orden'),
+              ),
+              const SizedBox(height: 10),
+            ],
             if (getIt<AccessControl>().allows(AppCapability.deleteOrders))
               OutlinedButton.icon(
                 onPressed: () => _confirmDelete(context, order),
@@ -521,7 +534,8 @@ void _showOrderDetail(
                 label: const Text('Eliminar orden'),
               ),
           ],
-          if (_nextStatus(order.status) != null) ...[
+          if (_nextStatus(order.status) != null &&
+              getIt<AccessControl>().allows(AppCapability.updateOrderStatus)) ...[
             const SizedBox(height: 10),
             FilledButton.icon(
               onPressed: () => context.read<OrderBloc>().add(
@@ -533,7 +547,10 @@ void _showOrderDetail(
               ),
             ),
           ],
-          if (order.status != 'COMPLETED' && order.status != 'CANCELLED') ...[
+          if (order.status != 'COMPLETED' &&
+              order.status != 'CANCELLED' &&
+              getIt<AccessControl>().allows(AppCapability.viewSales) &&
+              getIt<AccessControl>().allows(AppCapability.createSales)) ...[
             const SizedBox(height: 10),
             FilledButton.icon(
               onPressed: () {
@@ -552,7 +569,9 @@ void _showOrderDetail(
               label: const Text('Cobrar orden'),
             ),
           ],
-          if (order.status != 'COMPLETED' && order.status != 'CANCELLED') ...[
+          if (order.status != 'COMPLETED' &&
+              order.status != 'CANCELLED' &&
+              getIt<AccessControl>().allows(AppCapability.updateOrderStatus)) ...[
             const SizedBox(height: 10),
             TextButton(
               onPressed: () => _confirmCancel(context, order),
@@ -565,57 +584,67 @@ void _showOrderDetail(
   );
 }
 
-void _confirmDelete(BuildContext context, Order order) => showDialog<void>(
-  context: context,
-  builder: (dialogContext) => AlertDialog(
-    title: const Text('Eliminar orden'),
-    content: Text(
-      '¿Eliminar ${order.orderNumber}? Esta acción solo es válida para órdenes pendientes.',
+void _confirmDelete(BuildContext context, Order order) {
+  if (!getIt<AccessControl>().allows(AppCapability.deleteOrders)) return;
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Eliminar orden'),
+      content: Text(
+        '¿Eliminar ${order.orderNumber}? Esta acción solo es válida para órdenes pendientes.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(dialogContext);
+            context.read<OrderBloc>().add(DeleteOrder(order.id!));
+          },
+          child: const Text('Eliminar'),
+        ),
+      ],
     ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(dialogContext),
-        child: const Text('Cancelar'),
-      ),
-      FilledButton(
-        onPressed: () {
-          Navigator.pop(dialogContext);
-          context.read<OrderBloc>().add(DeleteOrder(order.id!));
-        },
-        child: const Text('Eliminar'),
-      ),
-    ],
-  ),
-);
+  );
+}
 
-void _confirmCancel(BuildContext context, Order order) => showDialog<void>(
-  context: context,
-  builder: (dialogContext) => AlertDialog(
-    icon: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-    title: const Text('¿Cancelar orden?'),
-    content: Text(
-      'Se liberará el stock reservado de ${order.orderNumber}. Esta acción no se puede deshacer.',
+void _confirmCancel(BuildContext context, Order order) {
+  if (!getIt<AccessControl>().allows(AppCapability.updateOrderStatus)) return;
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      icon: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+      title: const Text('¿Cancelar orden?'),
+      content: Text(
+        'Se liberará el stock reservado de ${order.orderNumber}. Esta acción no se puede deshacer.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Volver'),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(dialogContext);
+            context.read<OrderBloc>().add(
+              ChangeOrderStatus(order.id!, 'CANCELLED'),
+            );
+          },
+          style: FilledButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text('Sí, cancelar'),
+        ),
+      ],
     ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(dialogContext),
-        child: const Text('Volver'),
-      ),
-      FilledButton(
-        onPressed: () {
-          Navigator.pop(dialogContext);
-          context.read<OrderBloc>().add(
-            ChangeOrderStatus(order.id!, 'CANCELLED'),
-          );
-        },
-        style: FilledButton.styleFrom(backgroundColor: Colors.red),
-        child: const Text('Sí, cancelar'),
-      ),
-    ],
-  ),
-);
+  );
+}
 
 Future<bool?> _openOrderForm(BuildContext context, {Order? order}) async {
+  final required = order == null
+      ? AppCapability.createOrders
+      : AppCapability.editOrders;
+  if (!getIt<AccessControl>().allows(required)) return null;
   final bloc = context.read<OrderBloc>();
   final navigator = Navigator.of(context, rootNavigator: true);
   final completer = Completer<List<Product>>();
@@ -858,6 +887,10 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
   }
 
   void _submit() {
+    final required = widget.order == null
+        ? AppCapability.createOrders
+        : AppCapability.editOrders;
+    if (!getIt<AccessControl>().allows(required)) return;
     if (!(key.currentState?.validate() ?? false)) return;
     if (items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

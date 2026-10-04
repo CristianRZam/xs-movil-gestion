@@ -89,11 +89,7 @@ class _RoleView extends StatelessWidget {
                         vertical: 8,
                       ),
                       leading: CircleAvatar(
-                        child: Icon(
-                          role.name == 'SUPER_ADMIN'
-                              ? Icons.admin_panel_settings_outlined
-                              : Icons.badge_outlined,
-                        ),
+                        child: const Icon(Icons.badge_outlined),
                       ),
                       title: Text(
                         role.name,

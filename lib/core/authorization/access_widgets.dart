@@ -52,7 +52,7 @@ class AccessGuard extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     access.isAuthenticated
-                        ? 'Tu rol no tiene acceso a esta pantalla.'
+                        ? 'No tienes los permisos necesarios para esta pantalla.'
                         : 'Tu sesión no está disponible. Inicia sesión nuevamente.',
                   ),
                   const SizedBox(height: 16),

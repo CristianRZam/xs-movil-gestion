@@ -43,15 +43,15 @@ class AppRoutes {
       builder: (_) => ProductScreen(),
     ),
     cashSession: (context) => AccessGuard(
-      capability: AppCapability.operate,
+      capability: AppCapability.viewCashSession,
       builder: (_) => CashSessionScreen(),
     ),
     orders: (context) => AccessGuard(
-      capability: AppCapability.operate,
+      capability: AppCapability.viewOrders,
       builder: (_) => const OrderScreen(),
     ),
     sales: (context) => AccessGuard(
-      capability: AppCapability.operate,
+      capability: AppCapability.viewSales,
       builder: (_) => const SaleScreen(),
     ),
     reports: (context) => AccessGuard(
@@ -63,7 +63,7 @@ class AppRoutes {
       builder: (_) => const ProfileScreen(),
     ),
     inventoryCount: (context) => AccessGuard(
-      capability: AppCapability.inventoryCount,
+      capability: AppCapability.viewInventoryCount,
       builder: (_) => const InventoryCountScreen(),
     ),
     notifications: (context) => AccessGuard(

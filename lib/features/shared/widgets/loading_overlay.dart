@@ -61,7 +61,7 @@ class _LoadingOverlayState extends State<LoadingOverlay> {
                           ),
                           ClipOval(
                             child: Image.asset(
-                              'assets/images/icono_sin_fondo.webp',
+                              'assets/images/main_logo.png',
                               width: 62,
                               height: 62,
                               fit: BoxFit.contain,

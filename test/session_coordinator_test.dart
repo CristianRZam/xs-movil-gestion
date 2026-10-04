@@ -30,7 +30,7 @@ void main() {
     final expiresAt = DateTime.now().add(const Duration(seconds: 2));
     await storage.saveToken(
       token({
-        ...claims(['SUPER_ADMIN']),
+        ...claims(['VIEW_PRODUCT']),
         'exp': expiresAt.millisecondsSinceEpoch ~/ 1000,
       }),
     );

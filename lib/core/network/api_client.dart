@@ -1,4 +1,4 @@
-import 'package:app_movil_sistema/core/authorization/api_access_policy.dart';
+import 'package:app_movil_sistema/core/authorization/authorization_feedback_service.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/core/config/env_config.dart';
 import 'package:app_movil_sistema/core/session/session_coordinator.dart';
@@ -69,25 +69,6 @@ class ApiClient {
             );
           }
 
-          if (!access.allows(
-            ApiAccessPolicy.requiredFor(options.path, options.method),
-          )) {
-            return handler.reject(
-              DioException(
-                requestOptions: options,
-                type: DioExceptionType.badResponse,
-                response: Response(
-                  requestOptions: options,
-                  statusCode: 403,
-                  data: {
-                    'code': 403,
-                    'message': 'No tienes acceso a esta operación.',
-                  },
-                ),
-              ),
-            );
-          }
-
           // Adjuntar token si es válido
           options.headers['Authorization'] = 'Bearer $token';
           handler.next(options);
@@ -96,6 +77,8 @@ class ApiClient {
           final requiresAuth = e.requestOptions.extra['requiresAuth'] ?? true;
           if (requiresAuth && e.response?.statusCode == 401) {
             await _endSession();
+          } else if (requiresAuth && e.response?.statusCode == 403) {
+            _showUnauthorizedAction();
           }
           handler.reject(e);
         },
@@ -109,5 +92,11 @@ class ApiClient {
       return;
     }
     await tokenStorage.deleteToken();
+  }
+
+  void _showUnauthorizedAction() {
+    if (getIt.isRegistered<AuthorizationFeedbackService>()) {
+      getIt<AuthorizationFeedbackService>().showUnauthorizedAction();
+    }
   }
 }

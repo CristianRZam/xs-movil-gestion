@@ -13,12 +13,7 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
     final response = await apiClient.dio.get('/dashboard');
     final api = ApiResponse<DashboardSummary>.fromJson(response.data, (json) {
       final value = json as Map<String, dynamic>;
-      final scope = value['scope'];
-      if (scope != 'GLOBAL' && scope != 'PERSONAL') {
-        throw const FormatException('Missing dashboard scope');
-      }
       return DashboardSummary(
-        isPersonal: scope == 'PERSONAL',
         summaryDate: value['summaryDate'] == null
             ? null
             : DateTime.parse(value['summaryDate'] as String),

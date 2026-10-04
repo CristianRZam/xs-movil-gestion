@@ -16,6 +16,9 @@ class SaleView extends StatelessWidget {
 
   const SaleView({super.key, this.order});
 
+  bool get _canCreateSale =>
+      getIt<AccessControl>().allows(AppCapability.createSales);
+
   @override
   Widget build(BuildContext context) => BlocConsumer<SaleBloc, SaleState>(
     listenWhen: (previous, current) =>
@@ -57,7 +60,7 @@ class SaleView extends StatelessWidget {
       ),
       endDrawer: const XsDrawer(),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: state.cashOpen == true
+        onPressed: _canCreateSale && state.cashOpen == true
             ? () => _openSaleForm(context, state.products, order: order)
             : null,
         icon: const Icon(Icons.point_of_sale),
@@ -547,6 +550,7 @@ void _openSaleForm(
   List<Product> products, {
   Order? order,
 }) {
+  if (!getIt<AccessControl>().allows(AppCapability.createSales)) return;
   showDialog<void>(
     context: context,
     barrierDismissible: false,

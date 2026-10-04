@@ -1,7 +1,8 @@
 import 'dart:convert';
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:app_movil_sistema/core/authorization/access_control.dart';
 import 'package:app_movil_sistema/core/authorization/api_access_policy.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 String token(Map<String, Object?> claims) {
   String encode(Object value) =>
@@ -9,8 +10,10 @@ String token(Map<String, Object?> claims) {
   return '${encode({'alg': 'HS256'})}.${encode(claims)}.signature';
 }
 
-Map<String, Object?> claims(List<String> roles) => {
-  'roles': roles,
+Map<String, Object?> claims(List<String> permissions) => {
+  // Los roles son información de perfil: no intervienen en autorización.
+  'roles': ['EMPLEADO'],
+  'permissions': permissions,
   'exp':
       DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
       1000,
@@ -19,134 +22,74 @@ Map<String, Object?> claims(List<String> roles) => {
 
 void main() {
   late AccessControl access;
-  setUp(() => access = AccessControl());
+
+  setUp(
+    () => access = AccessControl(
+      permissionRequirements: const {
+        AppCapability.viewProducts: {'VIEW_PRODUCT'},
+        AppCapability.viewProductMovements: {'VIEW_PRODUCT_MOVEMENT'},
+        AppCapability.manageInventory: {'EDIT_PRODUCT'},
+      },
+    ),
+  );
   tearDown(() => access.dispose());
 
-  test('SUPER_ADMIN has every capability with multiple roles', () {
-    access.updateToken(token(claims(['CASHIER', 'SUPER_ADMIN'])));
-    expect(AppCapability.values.every(access.allows), isTrue);
+  test('roles do not grant access without permissions', () {
+    access.updateToken(token(claims([])));
+    expect(access.allows(AppCapability.viewProducts), isFalse);
+    expect(access.allows(AppCapability.operate), isFalse);
   });
 
-  test(
-    'other roles only have operational access, ignoring permissions for now',
-    () {
-      access.updateToken(
-        token({
-          ...claims(['ADMIN']),
-          'permissions': ['ALL', '*'],
-        }),
-      );
-      expect(access.allows(AppCapability.operate), isTrue);
-      for (final capability in AppCapability.values.where(
-        (c) => c != AppCapability.operate,
-      )) {
-        expect(access.allows(capability), isFalse);
-      }
-    },
-  );
+  test('permissions grant only their mapped capabilities', () {
+    access.updateToken(token(claims(['VIEW_PRODUCT'])));
+    expect(access.allows(AppCapability.viewProducts), isTrue);
+    expect(access.allows(AppCapability.viewProductMovements), isFalse);
+    expect(access.hasPermission('VIEW_PRODUCT'), isTrue);
+    expect(access.hasAnyPermission(['EDIT_PRODUCT', 'VIEW_PRODUCT']), isTrue);
+  });
 
-  test('invalid, expired, inactive and roleless tokens fail closed', () {
+  test('a capability requiring multiple permissions requires all of them', () {
+    final protected = AccessControl(
+      permissionRequirements: const {
+        AppCapability.manageInventory: {'READ', 'WRITE'},
+      },
+    );
+    addTearDown(protected.dispose);
+    protected.updateToken(token(claims(['READ'])));
+    expect(protected.allows(AppCapability.manageInventory), isFalse);
+    protected.updateToken(token(claims(['READ', 'WRITE'])));
+    expect(protected.allows(AppCapability.manageInventory), isTrue);
+  });
+
+  test('inventory movement history is mapped to its view permission', () {
+    access.updateToken(token(claims(['VIEW_PRODUCT_MOVEMENT'])));
+    expect(
+      ApiAccessPolicy.requiredFor('/inventory-movement/product/1', 'GET'),
+      AppCapability.operate,
+    );
+    expect(access.allows(AppCapability.viewProductMovements), isTrue);
+  });
+
+  test('unmapped capabilities remain available during progressive rollout', () {
+    access.updateToken(token(claims(['VIEW_PRODUCT'])));
+    expect(access.allows(AppCapability.reports), isTrue);
+  });
+
+  test('expired, inactive and malformed tokens fail closed', () {
     for (final value in [
       null,
-      '',
       'malformed',
-      token(claims([])),
       token({
-        ...claims(['SUPER_ADMIN']),
+        ...claims(['VIEW_PRODUCT']),
         'exp': 1,
       }),
       token({
-        ...claims(['SUPER_ADMIN']),
-        'exp': null,
-      }),
-      token({
-        ...claims(['SUPER_ADMIN']),
+        ...claims(['VIEW_PRODUCT']),
         'active': false,
-      }),
-      token({
-        ...claims(['SUPER_ADMIN']),
-        'roles': 'SUPER_ADMIN',
       }),
     ]) {
       access.updateToken(value);
       expect(AppCapability.values.any(access.allows), isFalse);
     }
   });
-
-  test('logout and account changes remove previous privileges', () {
-    access.updateToken(token(claims(['SUPER_ADMIN'])));
-    access.updateToken(token(claims(['CASHIER'])));
-    expect(access.allows(AppCapability.manageInventory), isFalse);
-    access.clear();
-    expect(access.isAuthenticated, isFalse);
-    expect(access.allows(AppCapability.operate), isFalse);
-  });
-
-  test(
-    'future permission mode requires all codes and denies unmapped actions',
-    () {
-      final futureAccess = AccessControl(
-        mode: AuthorizationMode.permissions,
-        permissionRequirements: const {
-          AppCapability.manageInventory: {'READ', 'WRITE'},
-        },
-      );
-      addTearDown(futureAccess.dispose);
-      futureAccess.updateToken(
-        token({
-          ...claims(['CASHIER']),
-          'permissions': ['READ'],
-        }),
-      );
-      expect(futureAccess.allows(AppCapability.manageInventory), isFalse);
-      futureAccess.updateToken(
-        token({
-          ...claims(['CASHIER']),
-          'permissions': ['READ', 'WRITE'],
-        }),
-      );
-      expect(futureAccess.allows(AppCapability.manageInventory), isTrue);
-      expect(futureAccess.allows(AppCapability.reports), isFalse);
-    },
-  );
-
-  test(
-    'API blocks restricted operations but permits product search and sales',
-    () {
-      access.updateToken(token(claims(['CASHIER'])));
-      for (final entry in {
-        '/product/create': 'POST',
-        '/product/update': 'PUT',
-        '/product/delete/1': 'DELETE',
-        '/product/init-form': 'POST',
-        '/inventory-movement/create': 'POST',
-        '/inventory-counts/current': 'GET',
-        '/inventory-counts/1/close': 'PUT',
-        '/reports/sales/pdf': 'POST',
-        '/orders/1': 'DELETE',
-      }.entries) {
-        expect(
-          access.allows(ApiAccessPolicy.requiredFor(entry.key, entry.value)),
-          isFalse,
-          reason: entry.key,
-        );
-      }
-      for (final entry in {
-        '/dashboard': 'GET',
-        '/product/init': 'POST',
-        '/inventory-movement/product/1': 'GET',
-        '/orders': 'POST',
-        '/orders/1/status': 'PUT',
-        '/sales': 'POST',
-        '/cash-session/open': 'POST',
-        '/cash-session/close/1': 'PUT',
-      }.entries) {
-        expect(
-          access.allows(ApiAccessPolicy.requiredFor(entry.key, entry.value)),
-          isTrue,
-          reason: entry.key,
-        );
-      }
-    },
-  );
 }

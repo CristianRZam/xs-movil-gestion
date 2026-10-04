@@ -1,4 +1,5 @@
 import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/authorization/authorization_feedback_service.dart';
 import 'package:app_movil_sistema/core/session/session_coordinator.dart';
 import 'package:app_movil_sistema/features/cash_session/data/datasources/cash_session_remote_datasource.dart';
 import 'package:app_movil_sistema/features/cash_session/data/datasources/impl/cash_session_remote_datasource_impl.dart';
@@ -84,13 +85,40 @@ final getIt = GetIt.instance;
 void setupLocator() {
   getIt.registerLazySingleton<AccessControl>(
     () => AccessControl(
-      mode: AuthorizationMode.permissions,
       permissionRequirements: const {
         AppCapability.dashboard: {'VIEW_DASHBOARD'},
         AppCapability.viewProducts: {'VIEW_PRODUCT'},
+        AppCapability.viewProductMovements: {'VIEW_PRODUCT_MOVEMENT'},
         AppCapability.manageProducts: {'EDIT_PRODUCT'},
         AppCapability.createProducts: {'CREATE_PRODUCT'},
         AppCapability.deleteProducts: {'DELETE_PRODUCT'},
+        AppCapability.createProductInventoryEntry: {
+          'CREATE_PRODUCT_INVENTORY_ENTRY',
+        },
+        AppCapability.createProductWaste: {'CREATE_PRODUCT_WASTE'},
+        AppCapability.adjustProductInventory: {'ADJUST_PRODUCT_INVENTORY'},
+        AppCapability.viewCashSession: {'VIEW_CASH_SESSION'},
+        AppCapability.openCashSession: {'OPEN_CASH_SESSION'},
+        AppCapability.closeCashSession: {'CLOSE_CASH_SESSION'},
+        AppCapability.viewCashSessionHistory: {'VIEW_CASH_SESSION_HISTORY'},
+        AppCapability.viewCashSessionSales: {'VIEW_CASH_SESSION_SALES'},
+        AppCapability.viewInventoryCount: {'VIEW_INVENTORY_COUNT'},
+        AppCapability.createInventoryCount: {'CREATE_INVENTORY_COUNT'},
+        AppCapability.reviewInventoryCount: {'REVIEW_INVENTORY_COUNT'},
+        AppCapability.closeInventoryCount: {'CLOSE_INVENTORY_COUNT'},
+        AppCapability.viewInventoryCountHistory: {
+          'VIEW_INVENTORY_COUNT_HISTORY',
+        },
+        AppCapability.viewOrders: {'VIEW_ORDER'},
+        AppCapability.createOrders: {'CREATE_ORDER'},
+        AppCapability.editOrders: {'EDIT_ORDER'},
+        AppCapability.updateOrderStatus: {'UPDATE_ORDER_STATUS'},
+        AppCapability.deleteOrders: {'DELETE_ORDER'},
+        AppCapability.viewSales: {'VIEW_SALE'},
+        AppCapability.createSales: {'CREATE_SALE'},
+        AppCapability.cancelSales: {'CANCEL_SALE'},
+        AppCapability.reports: {'VIEW_REPORT'},
+        AppCapability.notifications: {'VIEW_NOTIFICATION'},
         AppCapability.manageCategories: {'VIEW_PARAMETER'},
         AppCapability.manageUsers: {'VIEW_USER'},
         AppCapability.manageRoles: {'VIEW_ROLE', 'VIEW_PERMISSION'},
@@ -110,6 +138,9 @@ void setupLocator() {
 
   getIt.registerLazySingleton<SessionCoordinator>(
     () => SessionCoordinator(getIt<AccessControl>(), getIt<TokenStorage>()),
+  );
+  getIt.registerLazySingleton<AuthorizationFeedbackService>(
+    () => AuthorizationFeedbackService(getIt<SessionCoordinator>()),
   );
 
   // ============================
