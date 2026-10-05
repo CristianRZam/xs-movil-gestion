@@ -763,6 +763,7 @@ class _SaleFormState extends State<_SaleForm> {
   Widget _itemTile(MapEntry<int, SaleItem> entry) {
     final item = entry.value;
     final product = _product(item.productId);
+    final isDirectSale = widget.order == null;
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(top: 6),
@@ -771,25 +772,91 @@ class _SaleFormState extends State<_SaleForm> {
           product?.name ?? 'Producto #${item.productId}',
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Text(
+        subtitle: isDirectSale
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product == null
+                        ? 'Disponible: 0 unidad(es)'
+                        : 'Stock: ${product.totalStock} | Reservado: ${product.reservedStock} | Disponible: ${product.availableStock}',
+                  ),
+                  if (product != null) ...[
+                    const SizedBox(height: 4),
+                    _SalePriceVariationHint(
+                      referencePrice: product.promoPrice ?? product.basePrice,
+                      selectedPrice: item.unitPrice,
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SaleNumberInput(
+                          label: 'Cantidad',
+                          initial: item.quantity,
+                          maximum: product?.availableStock.toDouble(),
+                          wholeNumber: true,
+                          onChanged: (quantity) => _replaceItem(
+                            entry.key,
+                            SaleItem(
+                              productId: item.productId,
+                              productName: item.productName,
+                              quantity: quantity,
+                              unitPrice: item.unitPrice,
+                              discount: item.discount,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _SaleNumberInput(
+                          label: 'Precio',
+                          initial: item.unitPrice,
+                          onChanged: (price) => _replaceItem(
+                            entry.key,
+                            SaleItem(
+                              productId: item.productId,
+                              productName: item.productName,
+                              quantity: item.quantity,
+                              unitPrice: price,
+                              discount: item.discount,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'Subtotal: S/ ${item.subtotal.toStringAsFixed(2)}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              )
+            : Text(
           '${item.quantity.toInt()} × S/ ${item.unitPrice.toStringAsFixed(2)}',
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'S/ ${item.subtotal.toStringAsFixed(2)}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            if (widget.order == null)
-              IconButton(
+        trailing: isDirectSale
+            ? IconButton(
+                tooltip: 'Quitar producto',
                 icon: const Icon(Icons.close),
                 onPressed: () => setState(() => _items.removeAt(entry.key)),
+              )
+            : Text(
+                'S/ ${item.subtotal.toStringAsFixed(2)}',
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
-          ],
-        ),
       ),
     );
+  }
+
+  void _replaceItem(int index, SaleItem item) {
+    setState(() => _items[index] = item);
   }
 
   Product? _product(int id) {
@@ -820,18 +887,37 @@ class _SaleFormState extends State<_SaleForm> {
       ),
     );
     if (product == null) return;
+    if (product.availableStock <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El producto no tiene stock disponible.')),
+      );
+      return;
+    }
+    final existingIndex = _items.indexWhere(
+      (item) => item.productId == product.id,
+    );
+    if (existingIndex >= 0 &&
+        _items[existingIndex].quantity >= product.availableStock) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Solo hay ${product.availableStock} unidad(es) disponible(s).',
+          ),
+        ),
+      );
+      return;
+    }
     setState(() {
       _productsById[product.id] = product;
-      final index = _items.indexWhere((item) => item.productId == product.id);
-      if (index >= 0) {
-        final old = _items[index];
-        if (old.quantity < product.availableStock) {
-          _items[index] = SaleItem(
-            productId: old.productId,
-            quantity: old.quantity + 1,
-            unitPrice: old.unitPrice,
-          );
-        }
+      if (existingIndex >= 0) {
+        final old = _items[existingIndex];
+        _items[existingIndex] = SaleItem(
+          productId: old.productId,
+          productName: old.productName,
+          quantity: old.quantity + 1,
+          unitPrice: old.unitPrice,
+          discount: old.discount,
+        );
       } else {
         _items.add(
           SaleItem(
@@ -846,6 +932,23 @@ class _SaleFormState extends State<_SaleForm> {
 
   void _save() {
     if (!(_formKey.currentState?.validate() ?? false) || _items.isEmpty) return;
+    if (widget.order == null) {
+      for (final item in _items) {
+        final product = _product(item.productId);
+        if (item.quantity % 1 != 0 ||
+            product == null ||
+            item.quantity > product.availableStock) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'La cantidad de ${product?.name ?? 'este producto'} supera el stock disponible.',
+              ),
+            ),
+          );
+          return;
+        }
+      }
+    }
     if ((_paid - _total).abs() >= .01) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -877,6 +980,87 @@ class _SaleFormState extends State<_SaleForm> {
     );
     context.read<SaleBloc>().add(SaveSale(sale));
   }
+}
+
+class _SalePriceVariationHint extends StatelessWidget {
+  const _SalePriceVariationHint({
+    required this.referencePrice,
+    required this.selectedPrice,
+  });
+
+  final double referencePrice;
+  final double selectedPrice;
+
+  @override
+  Widget build(BuildContext context) {
+    final difference = selectedPrice - referencePrice;
+    final theme = Theme.of(context);
+    if (difference.abs() < .005) {
+      return Text(
+        'Precio vigente: S/ ${referencePrice.toStringAsFixed(2)}',
+        style: theme.textTheme.bodySmall,
+      );
+    }
+
+    final isIncrease = difference > 0;
+    final color = isIncrease ? Colors.orange.shade800 : Colors.green.shade700;
+    final prefix = isIncrease ? '+' : '-';
+    return Text(
+      'Precio vigente: S/ ${referencePrice.toStringAsFixed(2)} / $prefix S/ ${difference.abs().toStringAsFixed(2)}',
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: color,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+}
+
+class _SaleNumberInput extends StatelessWidget {
+  const _SaleNumberInput({
+    required this.label,
+    required this.initial,
+    required this.onChanged,
+    this.maximum,
+    this.wholeNumber = false,
+  });
+
+  final String label;
+  final double initial;
+  final double? maximum;
+  final bool wholeNumber;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) => TextFormField(
+    initialValue: wholeNumber
+        ? initial.toInt().toString()
+        : initial.toStringAsFixed(2),
+    keyboardType: TextInputType.numberWithOptions(decimal: !wholeNumber),
+    inputFormatters: wholeNumber
+        ? [FilteringTextInputFormatter.digitsOnly]
+        : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+    autovalidateMode: AutovalidateMode.onUserInteraction,
+    decoration: InputDecoration(labelText: label, isDense: true),
+    validator: (value) {
+      final number = double.tryParse(value ?? '');
+      if (number == null || number <= 0) {
+        return 'Ingrese un valor mayor que cero';
+      }
+      if (wholeNumber && number % 1 != 0) return 'Ingrese un nÃºmero entero';
+      if (maximum != null && number > maximum!) {
+        return 'MÃ¡ximo: ${maximum!.toInt()}';
+      }
+      return null;
+    },
+    onChanged: (value) {
+      final number = double.tryParse(value);
+      if (number != null &&
+          number > 0 &&
+          (!wholeNumber || number % 1 == 0)) {
+        onChanged(number);
+      }
+    },
+  );
 }
 
 class _PaymentDraft {

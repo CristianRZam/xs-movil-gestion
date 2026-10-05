@@ -131,7 +131,7 @@ class _ProductSelectorSheetState extends State<ProductSelectorSheet> {
                     ),
                     subtitle: Text(
                       '${product.code} · S/ ${price.toStringAsFixed(2)}\n'
-                      'Disponible: ${product.availableStock}',
+                      'Stock: ${product.totalStock} | Reservado: ${product.reservedStock} | Disponible: ${product.availableStock}',
                     ),
                     isThreeLine: true,
                     trailing: hasStock

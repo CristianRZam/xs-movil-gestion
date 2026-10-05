@@ -14,6 +14,7 @@ import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:app_movil_sistema/routes/routes.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class OrderView extends StatefulWidget {
@@ -792,6 +793,14 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
                     availableProducts,
                     entry.value.productId,
                   ),
+                  referencePrice: _productCurrentPrice(
+                    availableProducts,
+                    entry.value.productId,
+                  ),
+                  product: _productById(
+                    availableProducts,
+                    entry.value.productId,
+                  ),
                   availableQuantity: _maximumQuantityForProduct(
                     entry.value.productId,
                   ),
@@ -940,9 +949,25 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
   }
 }
 
+double? _productCurrentPrice(List<Product> products, int id) {
+  for (final product in products) {
+    if (product.id == id) return product.promoPrice ?? product.basePrice;
+  }
+  return null;
+}
+
+Product? _productById(List<Product> products, int id) {
+  for (final product in products) {
+    if (product.id == id) return product;
+  }
+  return null;
+}
+
 class _EditableItem extends StatelessWidget {
   final OrderItem item;
   final String productName;
+  final double? referencePrice;
+  final Product? product;
   final int availableQuantity;
   final ValueChanged<OrderItem> onChanged;
   final VoidCallback onDelete;
@@ -950,6 +975,8 @@ class _EditableItem extends StatelessWidget {
   const _EditableItem({
     required this.item,
     required this.productName,
+    required this.referencePrice,
+    required this.product,
     required this.availableQuantity,
     required this.onChanged,
     required this.onDelete,
@@ -969,7 +996,9 @@ class _EditableItem extends StatelessWidget {
             ],
           ),
           Text(
-            'Disponible: $availableQuantity',
+            product == null
+                ? 'Disponible: $availableQuantity'
+                : 'Stock: ${product!.totalStock} | Reservado: ${product!.reservedStock} | Disponible: ${product!.availableStock}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           Row(
@@ -1009,6 +1038,13 @@ class _EditableItem extends StatelessWidget {
               ),
             ],
           ),
+          if (referencePrice != null) ...[
+            const SizedBox(height: 4),
+            _PriceVariationHint(
+              referencePrice: referencePrice!,
+              selectedPrice: item.unitPrice,
+            ),
+          ],
           TextFormField(
             initialValue: item.notes,
             maxLines: 2,
@@ -1052,8 +1088,11 @@ class _NumberInput extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) => TextFormField(
-    initialValue: initial.toString(),
+    initialValue: wholeNumber ? initial.toInt().toString() : initial.toStringAsFixed(2),
     keyboardType: TextInputType.numberWithOptions(decimal: !wholeNumber),
+    inputFormatters: wholeNumber
+        ? [FilteringTextInputFormatter.digitsOnly]
+        : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
     autovalidateMode: AutovalidateMode.onUserInteraction,
     decoration: InputDecoration(labelText: label, isDense: true),
     validator: (value) {
@@ -1067,9 +1106,46 @@ class _NumberInput extends StatelessWidget {
     },
     onChanged: (v) {
       final number = double.tryParse(v);
-      if (number != null && number > 0) onChanged(number);
+      if (number != null &&
+          number > 0 &&
+          (!wholeNumber || number % 1 == 0)) {
+        onChanged(number);
+      }
     },
   );
+}
+
+class _PriceVariationHint extends StatelessWidget {
+  const _PriceVariationHint({
+    required this.referencePrice,
+    required this.selectedPrice,
+  });
+
+  final double referencePrice;
+  final double selectedPrice;
+
+  @override
+  Widget build(BuildContext context) {
+    final difference = selectedPrice - referencePrice;
+    final theme = Theme.of(context);
+    if (difference.abs() < .005) {
+      return Text(
+        'Precio vigente: S/ ${referencePrice.toStringAsFixed(2)}',
+        style: theme.textTheme.bodySmall,
+      );
+    }
+
+    final isIncrease = difference > 0;
+    final color = isIncrease ? Colors.orange.shade800 : Colors.green.shade700;
+    final prefix = isIncrease ? '+' : '-';
+    return Text(
+      'Precio vigente: S/ ${referencePrice.toStringAsFixed(2)} · $prefix S/ ${difference.abs().toStringAsFixed(2)}',
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: color,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
 }
 
 String _productName(List<Product> products, int id) {
