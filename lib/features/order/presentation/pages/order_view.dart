@@ -513,8 +513,8 @@ void _showOrderDetail(
             ),
           ),
           const SizedBox(height: 20),
-          if (order.status == 'PENDING') ...[
-            if (getIt<AccessControl>().allows(AppCapability.editOrders)) ...[
+          if (_canEditActiveOrder(order.status) &&
+              getIt<AccessControl>().allows(AppCapability.editOrders)) ...[
               FilledButton.icon(
                 onPressed: () async {
                   final wasSaved = await _openOrderForm(context, order: order);
@@ -528,13 +528,13 @@ void _showOrderDetail(
               ),
               const SizedBox(height: 10),
             ],
-            if (getIt<AccessControl>().allows(AppCapability.deleteOrders))
-              OutlinedButton.icon(
-                onPressed: () => _confirmDelete(context, order),
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('Eliminar orden'),
-              ),
-          ],
+          if (order.status == 'PENDING' &&
+              getIt<AccessControl>().allows(AppCapability.deleteOrders))
+            OutlinedButton.icon(
+              onPressed: () => _confirmDelete(context, order),
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Eliminar orden'),
+            ),
           if (_nextStatus(order.status) != null &&
               getIt<AccessControl>().allows(AppCapability.updateOrderStatus)) ...[
             const SizedBox(height: 10),
@@ -1180,6 +1180,8 @@ String _statusLabel(String status) => switch (status) {
   'CANCELLED' => 'CANCELADA',
   _ => status,
 };
+bool _canEditActiveOrder(String? status) =>
+    status == 'PENDING' || status == 'PREPARING' || status == 'READY';
 Color _statusColor(String? status) => switch (status) {
   'PENDING' => Colors.orange,
   'PREPARING' => Colors.blue,
