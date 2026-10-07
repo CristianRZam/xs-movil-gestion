@@ -540,6 +540,7 @@ class _SaleCancellationCard extends StatelessWidget {
 String _paymentLabel(String method) => switch (method) {
   'CASH' => 'Efectivo',
   'YAPE' => 'Yape',
+  'PLIN' => 'Plin',
   'CARD' => 'Tarjeta',
   'TRANSFER' => 'Transferencia',
   _ => method,
@@ -1201,6 +1202,7 @@ class _PaymentRow extends StatelessWidget {
         items: const [
           DropdownMenuItem(value: 'CASH', child: Text('Efectivo')),
           DropdownMenuItem(value: 'YAPE', child: Text('Yape')),
+          DropdownMenuItem(value: 'PLIN', child: Text('Plin')),
           DropdownMenuItem(value: 'CARD', child: Text('Tarjeta')),
           DropdownMenuItem(value: 'TRANSFER', child: Text('Transferencia')),
         ],

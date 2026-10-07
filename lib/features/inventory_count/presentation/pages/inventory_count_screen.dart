@@ -532,9 +532,12 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
             itemBuilder: (_, i) => _card(_items[i] as Map<String, dynamic>),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+        SafeArea(
+          top: false,
+          minimum: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
             children: [
               if (_stage == 'REVIEW' &&
                   _allows(AppCapability.reviewInventoryCount))
@@ -572,6 +575,7 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
                   ),
                 ),
             ],
+            ),
           ),
         ),
       ],

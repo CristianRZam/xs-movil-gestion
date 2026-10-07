@@ -703,6 +703,7 @@ class _CashCloseMetric extends StatelessWidget {
 String _cashPaymentLabel(String method) => switch (method) {
   'CASH' => 'Efectivo',
   'YAPE' => 'Yape',
+  'PLIN' => 'Plin',
   'CARD' => 'Tarjeta',
   'TRANSFER' => 'Transferencia',
   _ => method,

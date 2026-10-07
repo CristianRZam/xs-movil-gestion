@@ -843,6 +843,7 @@ Map<String, dynamic> _metadata(String? rawMetadata) {
 
 String _paymentMethodLabel(String method) => switch (method) {
   'YAPE' => 'Yape',
+  'PLIN' => 'Plin',
   'CARD' => 'Tarjeta',
   'TRANSFER' => 'Transferencia',
   _ => method,
