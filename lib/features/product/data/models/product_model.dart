@@ -22,12 +22,35 @@ class ProductModel extends Product {
     required super.baseCost,
     required super.totalStock,
     required super.reservedStock,
+    super.mainImageUrl,
     required super.active,
     required super.deleted,
   });
 
-  factory ProductModel.fromJson(Map<String, dynamic> json) =>
-      _$ProductModelFromJson(json);
+  factory ProductModel.fromJson(Map<String, dynamic> json) {
+    final product = _$ProductModelFromJson(json);
+    return ProductModel(
+      id: product.id,
+      code: product.code,
+      name: product.name,
+      description: product.description,
+      categoryId: product.categoryId,
+      nameCategory: product.nameCategory,
+      unitMeasureId: product.unitMeasureId,
+      nameUnitMeasure: product.nameUnitMeasure,
+      valuationMethodId: product.valuationMethodId,
+      nameValuationMethod: product.nameValuationMethod,
+      manageVariants: product.manageVariants,
+      basePrice: product.basePrice,
+      promoPrice: product.promoPrice,
+      baseCost: product.baseCost,
+      totalStock: product.totalStock,
+      reservedStock: product.reservedStock,
+      mainImageUrl: json['mainImageUrl'] as String?,
+      active: product.active,
+      deleted: product.deleted,
+    );
+  }
 
   Map<String, dynamic> toJson() => _$ProductModelToJson(this);
 
@@ -49,6 +72,7 @@ class ProductModel extends Product {
       baseCost: entity.baseCost,
       totalStock: entity.totalStock,
       reservedStock: entity.reservedStock,
+      mainImageUrl: entity.mainImageUrl,
       active: entity.active,
       deleted: entity.deleted,
     );
@@ -72,6 +96,7 @@ class ProductModel extends Product {
       baseCost: baseCost,
       totalStock: totalStock,
       reservedStock: reservedStock,
+      mainImageUrl: mainImageUrl,
       active: active,
       deleted: deleted,
     );

@@ -2,7 +2,7 @@ import 'package:dartz/dartz.dart';
 
 import '../../../../core/failures/failure.dart';
 import '../entities/product.dart';
-import '../entities/product_request.dart';
+import '../entities/product_save_request.dart';
 import '../repositories/product_repository.dart';
 
 class UpdateProductUseCase {
@@ -10,7 +10,7 @@ class UpdateProductUseCase {
 
   UpdateProductUseCase(this.repository);
 
-  Future<Either<Failure, Product>> call(ProductRequest request) {
+  Future<Either<Failure, Product>> call(ProductSaveRequest request) {
     return repository.updateProduct(request);
   }
 }

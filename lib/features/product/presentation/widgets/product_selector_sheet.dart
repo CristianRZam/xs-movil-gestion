@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:app_movil_sistema/core/config/env_config.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
 import 'package:flutter/material.dart';
 
@@ -124,6 +125,7 @@ class _ProductSelectorSheetState extends State<ProductSelectorSheet> {
                       horizontal: 4,
                       vertical: 4,
                     ),
+                    leading: _ProductThumbnail(imageUrl: product.mainImageUrl),
                     title: Text(
                       product.name,
                       maxLines: 1,
@@ -158,6 +160,40 @@ class _ProductSelectorSheetState extends State<ProductSelectorSheet> {
       widget.onSearchChanged?.call(query);
     });
   }
+}
+
+class _ProductThumbnail extends StatelessWidget {
+  const _ProductThumbnail({this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage = imageUrl?.trim().isNotEmpty == true;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox.square(
+        dimension: 52,
+        child: hasImage
+            ? Image.network(
+                EnvConfig.resolveBackendFileUrl(imageUrl!.trim()),
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => _fallback(colorScheme),
+              )
+            : _fallback(colorScheme),
+      ),
+    );
+  }
+
+  Widget _fallback(ColorScheme colorScheme) => ColoredBox(
+    color: colorScheme.surfaceContainerHighest,
+    child: Icon(
+      Icons.inventory_2_outlined,
+      color: colorScheme.onSurfaceVariant,
+    ),
+  );
 }
 
 class _EmptySearchResult extends StatelessWidget {

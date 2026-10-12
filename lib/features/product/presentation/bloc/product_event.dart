@@ -1,6 +1,6 @@
 import 'package:app_movil_sistema/features/inventory_movement/domain/entities/inventory_movement_create_request.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_form_request.dart';
-import 'package:app_movil_sistema/features/product/domain/entities/product_request.dart';
+import 'package:app_movil_sistema/features/product/domain/entities/product_save_request.dart';
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/product_view_request.dart';
 
@@ -51,7 +51,7 @@ class ClearProductError extends ProductEvent {
 }
 
 class CreateProduct extends ProductEvent {
-  final ProductRequest request;
+  final ProductSaveRequest request;
 
   const CreateProduct(this.request);
 
@@ -60,7 +60,7 @@ class CreateProduct extends ProductEvent {
 }
 
 class UpdateProduct extends ProductEvent {
-  final ProductRequest request;
+  final ProductSaveRequest request;
 
   const UpdateProduct(this.request);
 

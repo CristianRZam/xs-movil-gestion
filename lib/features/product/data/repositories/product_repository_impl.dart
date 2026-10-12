@@ -1,9 +1,9 @@
 import 'package:app_movil_sistema/features/product/data/models/product_form_request_model.dart';
-import 'package:app_movil_sistema/features/product/data/models/product_request_model.dart';
+import 'package:app_movil_sistema/features/product/data/models/product_save_request_model.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_form_request.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_form_response.dart';
-import 'package:app_movil_sistema/features/product/domain/entities/product_request.dart';
+import 'package:app_movil_sistema/features/product/domain/entities/product_save_request.dart';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 
@@ -56,10 +56,12 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   @override
-  Future<Either<Failure, Product>> createProduct(ProductRequest request) async {
+  Future<Either<Failure, Product>> createProduct(
+    ProductSaveRequest request,
+  ) async {
     try {
       final response = await remoteDataSource.createProduct(
-        ProductRequestModel.fromEntity(request),
+        ProductSaveRequestModel.fromEntity(request),
       );
 
       return Right(response.toEntity());
@@ -71,10 +73,12 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   @override
-  Future<Either<Failure, Product>> updateProduct(ProductRequest request) async {
+  Future<Either<Failure, Product>> updateProduct(
+    ProductSaveRequest request,
+  ) async {
     try {
       final response = await remoteDataSource.updateProduct(
-        ProductRequestModel.fromEntity(request),
+        ProductSaveRequestModel.fromEntity(request),
       );
 
       return Right(response.toEntity());

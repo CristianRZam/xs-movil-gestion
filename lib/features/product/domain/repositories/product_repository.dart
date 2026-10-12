@@ -1,7 +1,7 @@
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_form_request.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_form_response.dart';
-import 'package:app_movil_sistema/features/product/domain/entities/product_request.dart';
+import 'package:app_movil_sistema/features/product/domain/entities/product_save_request.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_view_request.dart';
 import 'package:dartz/dartz.dart';
 
@@ -17,9 +17,9 @@ abstract class ProductRepository {
     ProductFormRequest request,
   );
 
-  Future<Either<Failure, Product>> createProduct(ProductRequest request);
+  Future<Either<Failure, Product>> createProduct(ProductSaveRequest request);
 
-  Future<Either<Failure, Product>> updateProduct(ProductRequest request);
+  Future<Either<Failure, Product>> updateProduct(ProductSaveRequest request);
 
   Future<Either<Failure, bool>> deleteProduct(int id);
 

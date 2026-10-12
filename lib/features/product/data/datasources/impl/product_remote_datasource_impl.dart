@@ -1,10 +1,12 @@
+import 'dart:convert';
+
 import 'package:app_movil_sistema/core/network/api_client.dart';
 import 'package:app_movil_sistema/core/network/api_response.dart';
 import 'package:app_movil_sistema/features/product/data/datasources/product_remote_datasource.dart';
 import 'package:app_movil_sistema/features/product/data/models/product_form_request_model.dart';
 import 'package:app_movil_sistema/features/product/data/models/product_form_response_model.dart';
 import 'package:app_movil_sistema/features/product/data/models/product_model.dart';
-import 'package:app_movil_sistema/features/product/data/models/product_request_model.dart';
+import 'package:app_movil_sistema/features/product/data/models/product_save_request_model.dart';
 import 'package:app_movil_sistema/features/product/data/models/product_view_request_model.dart';
 import 'package:app_movil_sistema/features/product/data/models/product_view_response_model.dart';
 import 'package:dio/dio.dart';
@@ -69,13 +71,8 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
   }
 
   @override
-  Future<ProductModel> createProduct(ProductRequestModel request) async {
-    final formData = FormData.fromMap({
-      'product': MultipartFile.fromString(
-        request.toJsonString(),
-        contentType: DioMediaType('application', 'json'),
-      ),
-    });
+  Future<ProductModel> createProduct(ProductSaveRequestModel request) async {
+    final formData = await _buildFormData(request);
 
     final response = await apiClient.dio.post(
       '/product/create',
@@ -99,13 +96,8 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
   }
 
   @override
-  Future<ProductModel> updateProduct(ProductRequestModel request) async {
-    final formData = FormData.fromMap({
-      'product': MultipartFile.fromString(
-        request.toJsonString(),
-        contentType: DioMediaType('application', 'json'),
-      ),
-    });
+  Future<ProductModel> updateProduct(ProductSaveRequestModel request) async {
+    final formData = await _buildFormData(request, includeImagesToKeep: true);
 
     final response = await apiClient.dio.put('/product/update', data: formData);
 
@@ -123,6 +115,64 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     }
 
     return apiResponse.data!;
+  }
+
+  Future<FormData> _buildFormData(
+    ProductSaveRequestModel request, {
+    bool includeImagesToKeep = false,
+  }) async {
+    final formData = FormData.fromMap({
+      'product': MultipartFile.fromString(
+        request.product.toJsonString(),
+        contentType: DioMediaType('application', 'json'),
+      ),
+    });
+
+    for (final image in request.newImages) {
+      formData.files.add(
+        MapEntry(
+          'images',
+          await MultipartFile.fromFile(image.path, filename: image.fileName),
+        ),
+      );
+    }
+
+    if (includeImagesToKeep) {
+      final imagesToKeepJson = request.imagesToKeep
+          .map(
+            (image) => {
+              'id': image.id,
+              'imageUrl': image.imageUrl,
+              'altText': image.altText,
+              'isMain': image.isMain,
+              'orderNumber': image.orderNumber,
+            },
+          )
+          .toList();
+      formData.files.add(
+        MapEntry(
+          'imagesToKeep',
+          MultipartFile.fromString(
+            jsonEncode(imagesToKeepJson),
+            contentType: DioMediaType('application', 'json'),
+          ),
+        ),
+      );
+    }
+
+    if (request.mainImageKey != null) {
+      formData.files.add(
+        MapEntry(
+          'mainImageKey',
+          MultipartFile.fromString(
+            jsonEncode(request.mainImageKey),
+            contentType: DioMediaType('application', 'json'),
+          ),
+        ),
+      );
+    }
+
+    return formData;
   }
 
   @override

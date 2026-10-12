@@ -11,6 +11,8 @@ import 'package:app_movil_sistema/features/product/domain/entities/product.dart'
 import 'package:app_movil_sistema/features/product/domain/entities/product_form_request.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_form_response.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_request.dart';
+import 'package:app_movil_sistema/features/product/domain/entities/product_save_request.dart';
+import 'package:app_movil_sistema/features/productimage/domain/entities/product_image.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_view_request.dart';
 import 'package:app_movil_sistema/features/product/presentation/bloc/product_bloc.dart';
 import 'package:app_movil_sistema/features/product/presentation/bloc/product_event.dart';
@@ -23,6 +25,7 @@ import 'package:app_movil_sistema/features/parameter/domain/entities/parameter.d
 import 'package:app_movil_sistema/features/product/presentation/widgets/product_card.dart';
 import 'package:app_movil_sistema/features/product/presentation/widgets/product_search.dart';
 import 'package:app_movil_sistema/features/product/presentation/widgets/product_summary_card.dart';
+import 'package:app_movil_sistema/features/product/presentation/widgets/xs_product_image_picker.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:flutter/material.dart';
@@ -116,23 +119,20 @@ class _ProductViewState extends State<ProductView> {
                       ChoiceChip(
                         label: const Text('Todos'),
                         selected: selectedStatus == null,
-                        onSelected: (_) => setSheetState(
-                          () => selectedStatus = null,
-                        ),
+                        onSelected: (_) =>
+                            setSheetState(() => selectedStatus = null),
                       ),
                       ChoiceChip(
                         label: const Text('Activos'),
                         selected: selectedStatus == true,
-                        onSelected: (_) => setSheetState(
-                          () => selectedStatus = true,
-                        ),
+                        onSelected: (_) =>
+                            setSheetState(() => selectedStatus = true),
                       ),
                       ChoiceChip(
                         label: const Text('Inactivos'),
                         selected: selectedStatus == false,
-                        onSelected: (_) => setSheetState(
-                          () => selectedStatus = false,
-                        ),
+                        onSelected: (_) =>
+                            setSheetState(() => selectedStatus = false),
                       ),
                     ],
                   ),
@@ -681,6 +681,11 @@ void openProductDialog(
   final descriptionController = TextEditingController(
     text: product?.description ?? "",
   );
+  var imageSelection = ProductImageSelection(
+    existingImages: List.of(response.images),
+    newImages: const [],
+    mainImageKey: _initialMainImageKey(response.images),
+  );
 
   showDialog(
     context: parentContext,
@@ -719,7 +724,15 @@ void openProductDialog(
                     baseCost: 0,
                   );
 
-                  parentContext.read<ProductBloc>().add(CreateProduct(request));
+                  parentContext.read<ProductBloc>().add(
+                    CreateProduct(
+                      ProductSaveRequest(
+                        product: request,
+                        newImages: imageSelection.newImages,
+                        mainImageKey: imageSelection.mainImageKey,
+                      ),
+                    ),
+                  );
                 } else {
                   final request = ProductRequest(
                     id: product.id,
@@ -738,7 +751,16 @@ void openProductDialog(
                     basePrice: double.parse(priceController.text),
                   );
 
-                  parentContext.read<ProductBloc>().add(UpdateProduct(request));
+                  parentContext.read<ProductBloc>().add(
+                    UpdateProduct(
+                      ProductSaveRequest(
+                        product: request,
+                        newImages: imageSelection.newImages,
+                        imagesToKeep: imageSelection.existingImages,
+                        mainImageKey: imageSelection.mainImageKey,
+                      ),
+                    ),
+                  );
                 }
               },
 
@@ -813,6 +835,14 @@ void openProductDialog(
                       InputValidators.requiredField("Ingrese la descripción"),
                     ], value),
                   ),
+
+                  const SizedBox(height: 16),
+
+                  XsProductImagePicker(
+                    existingImages: response.images,
+                    maxFileSizeBytes: EnvConfig.productImageMaxFileSizeBytes,
+                    onChanged: (selection) => imageSelection = selection,
+                  ),
                 ],
               ),
             ),
@@ -821,6 +851,13 @@ void openProductDialog(
       );
     },
   );
+}
+
+String? _initialMainImageKey(List<ProductImage> images) {
+  for (final image in images) {
+    if (image.isMain) return 'existing:${image.id}';
+  }
+  return null;
 }
 
 void openInventoryMovementDialog(

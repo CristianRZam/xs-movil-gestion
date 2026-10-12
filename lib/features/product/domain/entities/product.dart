@@ -15,6 +15,7 @@ class Product {
   final double baseCost;
   final int totalStock;
   final int reservedStock;
+  final String? mainImageUrl;
   final bool active;
   final bool deleted;
 
@@ -35,6 +36,7 @@ class Product {
     required this.baseCost,
     required this.totalStock,
     required this.reservedStock,
+    this.mainImageUrl,
     required this.active,
     required this.deleted,
   });
