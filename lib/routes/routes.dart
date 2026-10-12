@@ -5,6 +5,7 @@ import 'package:app_movil_sistema/features/home/presentation/pages/home_screen.d
 import 'package:app_movil_sistema/features/login/presentation/pages/login_screen.dart';
 import 'package:app_movil_sistema/features/product/presentation/pages/product_screen.dart';
 import 'package:app_movil_sistema/features/order/presentation/pages/order_screen.dart';
+import 'package:app_movil_sistema/features/order/presentation/pages/kitchen_queue_screen.dart';
 import 'package:app_movil_sistema/features/sale/presentation/pages/sale_screen.dart';
 import 'package:app_movil_sistema/features/report/presentation/pages/report_screen.dart';
 import 'package:app_movil_sistema/features/profile/presentation/pages/profile_screen.dart';
@@ -22,6 +23,7 @@ class AppRoutes {
   static const product = '/product';
   static const cashSession = '/cash-session';
   static const orders = '/orders';
+  static const kitchen = '/kitchen';
   static const sales = '/sales';
   static const reports = '/reports';
   static const profile = '/profile';
@@ -50,6 +52,10 @@ class AppRoutes {
       capability: AppCapability.viewOrders,
       builder: (_) => const OrderScreen(),
     ),
+    kitchen: (context) => AccessGuard(
+      capability: AppCapability.viewKitchenQueue,
+      builder: (_) => const KitchenQueueScreen(),
+    ),
     sales: (context) => AccessGuard(
       capability: AppCapability.viewSales,
       builder: (_) => const SaleScreen(),
@@ -70,10 +76,7 @@ class AppRoutes {
       capability: AppCapability.notifications,
       builder: (_) => const NotificationScreen(),
     ),
-    settings: (context) => AccessGuard(
-      capability: AppCapability.operate,
-      builder: (_) => const SettingsScreen(),
-    ),
+    settings: (context) => const SettingsScreen(),
     categories: (context) => AccessGuard(
       capability: AppCapability.manageCategories,
       builder: (_) => const CategoryScreen(),

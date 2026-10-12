@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/features/order/domain/entities/order.dart';
 import 'package:app_movil_sistema/features/order/domain/entities/order_item.dart';
+import 'package:app_movil_sistema/features/order/domain/entities/order_item_incident.dart';
 import 'package:app_movil_sistema/features/order/presentation/bloc/order_bloc.dart';
 import 'package:app_movil_sistema/features/order/presentation/bloc/order_event.dart';
 import 'package:app_movil_sistema/features/order/presentation/bloc/order_state.dart';
@@ -21,6 +22,337 @@ class OrderView extends StatefulWidget {
   const OrderView({super.key});
   @override
   State<OrderView> createState() => _OrderViewState();
+}
+
+class _OrderItemTrailingAction extends StatelessWidget {
+  const _OrderItemTrailingAction({required this.order, required this.item});
+
+  final Order order;
+  final OrderItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final isActiveOrder = order.status != 'COMPLETED' && order.status != 'CANCELLED';
+    final nextStatus = _nextItemStatus(item.status);
+    final capability = !isActiveOrder || nextStatus == null
+        ? null
+        : _capabilityForItemStatus(nextStatus);
+    final canUpdate = nextStatus != null &&
+        capability != null &&
+        item.id != null &&
+        order.id != null &&
+        getIt<AccessControl>().allows(capability);
+    final canReportIncident = isActiveOrder && item.status == 'SERVED' && item.id != null && order.id != null &&
+        getIt<AccessControl>().allows(AppCapability.reportOrderIncident) &&
+        getIt<AccessControl>().allows(AppCapability.approveOrderCompensation);
+    final canCancel = isActiveOrder && item.status != 'CANCELLED' && item.id != null && order.id != null &&
+        getIt<AccessControl>().allows(AppCapability.cancelOrderItem);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (canUpdate)
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.blue.shade700,
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+            ),
+            icon: const Icon(Icons.play_circle_outline, size: 17),
+            label: Text(
+              _itemStatusActionLabel(nextStatus!),
+              style: const TextStyle(fontSize: 12),
+            ),
+            onPressed: () => context.read<OrderBloc>().add(
+              ChangeOrderItemStatus(order.id!, item.id!, nextStatus!),
+            ),
+          ),
+        if (canReportIncident)
+          IconButton(
+            tooltip: 'Registrar incidencia',
+            visualDensity: VisualDensity.compact,
+            color: Colors.red.shade700,
+            icon: const Icon(Icons.add_alert_outlined, size: 20),
+            onPressed: () => _showIncidentDialog(context, order.id!, item.id!),
+          ),
+        if (canCancel)
+          IconButton(
+            tooltip: 'Cancelar producto',
+            visualDensity: VisualDensity.compact,
+            color: Colors.red.shade700,
+            icon: const Icon(Icons.cancel_outlined, size: 19),
+            onPressed: () => _showCancelOrderItemDialog(context, order.id!, item.id!),
+          ),
+      ],
+    );
+  }
+}
+
+class _OrderItemStatusBadge extends StatelessWidget {
+  const _OrderItemStatusBadge({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _itemStatusColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        _itemStatusLabel(status),
+        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+class _DashedItemDivider extends StatelessWidget {
+  const _DashedItemDivider();
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (_, constraints) {
+      final dashCount = (constraints.maxWidth / 8).floor();
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Wrap(
+          spacing: 4,
+          children: List.generate(
+            dashCount,
+            (_) => Container(
+              width: 4,
+              height: 1,
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: .45),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Future<void> _showIncidentDialog(BuildContext context, int orderId, int itemId) async {
+  final reason = TextEditingController();
+  final discount = TextEditingController();
+  var resolution = 'CANCEL_NO_CHARGE';
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (_, setDialogState) => AlertDialog(
+        title: const Text('Registrar incidencia'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          DropdownButtonFormField<String>(value: resolution, items: const [
+            DropdownMenuItem(value: 'CANCEL_NO_CHARGE', child: Text('No cobrar producto')),
+            DropdownMenuItem(value: 'REPLACE', child: Text('Reponer producto')),
+            DropdownMenuItem(value: 'DISCOUNT', child: Text('Aplicar descuento')),
+          ], onChanged: (value) => setDialogState(() => resolution = value ?? resolution)),
+          const SizedBox(height: 12),
+          TextField(controller: reason, maxLength: 500, maxLines: 3, decoration: const InputDecoration(labelText: 'Motivo')),
+          if (resolution == 'DISCOUNT') TextField(controller: discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))], decoration: const InputDecoration(labelText: 'Descuento (S/)')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
+          FilledButton(onPressed: () {
+            final incidentReason = reason.text.trim();
+            final amount = double.tryParse(discount.text);
+            if (incidentReason.isEmpty || (resolution == 'DISCOUNT' && (amount == null || amount <= 0))) return;
+            Navigator.pop(dialogContext);
+            context.read<OrderBloc>().add(ReportOrderItemIncident(orderId, itemId, resolution, incidentReason, discountAmount: amount));
+          }, child: const Text('Registrar')),
+        ],
+      ),
+    ),
+  );
+  // El cierre de un diálogo es animado; liberar los controladores en el mismo
+  // frame puede hacer que TextField los consulte durante su desmontaje.
+  await Future<void>.delayed(const Duration(milliseconds: 300));
+  reason.dispose();
+  discount.dispose();
+}
+
+Future<void> _showCancelOrderItemDialog(
+  BuildContext context,
+  int orderId,
+  int itemId,
+) async {
+  final reason = TextEditingController();
+  var stockDisposition = 'RETURN_TO_STOCK';
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (_, setDialogState) => AlertDialog(
+        title: const Text('Cancelar producto'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: reason,
+              maxLength: 500,
+              maxLines: 2,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(labelText: 'Motivo de cancelación'),
+            ),
+            DropdownButtonFormField<String>(
+              value: stockDisposition,
+              decoration: const InputDecoration(labelText: 'Destino del producto'),
+              items: const [
+                DropdownMenuItem(
+                  value: 'RETURN_TO_STOCK',
+                  child: Text('Devuelto en buen estado'),
+                ),
+                DropdownMenuItem(
+                  value: 'WASTE',
+                  child: Text('No recuperable / merma'),
+                ),
+              ],
+              onChanged: (value) => setDialogState(
+                () => stockDisposition = value ?? stockDisposition,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Volver'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final comment = reason.text.trim();
+              if (comment.isEmpty) return;
+              Navigator.pop(dialogContext);
+              context.read<OrderBloc>().add(CancelPendingOrderItem(
+                    orderId,
+                    itemId,
+                    comment: comment,
+                    stockDisposition: stockDisposition,
+                  ));
+            },
+            child: const Text('Cancelar producto'),
+          ),
+        ],
+      ),
+    ),
+  );
+  await Future<void>.delayed(const Duration(milliseconds: 300));
+  reason.dispose();
+}
+
+Future<void> _showAddOrderItem(
+  BuildContext context,
+  Order order,
+  List<Product> products,
+) async {
+  final orderBloc = context.read<OrderBloc>();
+  final selected = await showModalBottomSheet<Product>(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => BlocProvider.value(
+       value: orderBloc,
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * .78,
+        child: BlocBuilder<OrderBloc, OrderState>(
+          builder: (sheetContext, state) => ProductSelectorSheet(
+            products: state.products.isEmpty ? products : state.products,
+            hasMore: state.hasMoreProducts,
+            isLoadingMore: state.isLoadingMoreProducts,
+            onLoadMore: () => sheetContext.read<OrderBloc>().add(const LoadMoreOrderProducts()),
+            onSearchChanged: (query) => sheetContext.read<OrderBloc>().add(SearchOrderProducts(query)),
+          ),
+        ),
+      ),
+    ),
+  );
+  if (selected == null || selected.id == null || selected.availableStock <= 0) return;
+  if (!context.mounted) return;
+
+  final quantityController = TextEditingController(text: '1');
+  final priceController = TextEditingController(
+    text: (selected.promoPrice ?? selected.basePrice).toStringAsFixed(2),
+  );
+  final notesController = TextEditingController();
+  String fulfillmentType = order.orderType == 'TAKEAWAY' ? 'TAKEAWAY' : 'DINE_IN';
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => BlocProvider.value(
+      value: orderBloc,
+      child: StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+        title: Text('Agregar ${selected.name}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+            Text('Disponible: ${selected.availableStock}'),
+            TextField(
+              controller: quantityController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(labelText: 'Cantidad'),
+            ),
+            TextField(
+              controller: priceController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+              decoration: const InputDecoration(labelText: 'Precio unitario'),
+            ),
+            DropdownButtonFormField<String>(
+              value: fulfillmentType,
+              decoration: const InputDecoration(labelText: 'Entrega'),
+              items: const [
+                DropdownMenuItem(value: 'DINE_IN', child: Text('En local')),
+                DropdownMenuItem(value: 'TAKEAWAY', child: Text('Para llevar')),
+              ],
+              onChanged: (value) => setDialogState(() => fulfillmentType = value!),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: notesController,
+              maxLength: 255,
+              maxLines: 2,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Nota (opcional)',
+                hintText: 'Ej.: sin sal, sin hielo, bien cocido',
+                prefixIcon: Icon(Icons.notes_outlined),
+              ),
+            ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () {
+              final quantity = int.tryParse(quantityController.text);
+              final price = double.tryParse(priceController.text);
+              if (quantity == null || quantity <= 0 || quantity > selected.availableStock || price == null || price < 0) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Revise cantidad, disponibilidad y precio.')));
+                return;
+              }
+              final notes = _nullIfBlank(notesController.text);
+              Navigator.pop(dialogContext);
+              orderBloc.add(AddOrderItem(
+                order.id!,
+                OrderItem(productId: selected.id!, quantity: quantity.toDouble(), unitPrice: price, fulfillmentType: fulfillmentType, notes: notes),
+              ));
+            },
+            child: const Text('Agregar'),
+          ),
+        ],
+        ),
+      ),
+    ),
+  );
+  // El cierre de un diálogo es animado; liberar los controladores en el mismo
+  // frame puede hacer que TextField los consulte durante su desmontaje.
+  await Future<void>.delayed(const Duration(milliseconds: 300));
+  quantityController.dispose();
+  priceController.dispose();
+  notesController.dispose();
 }
 
 class _OrderViewState extends State<OrderView> {
@@ -63,8 +395,6 @@ class _OrderViewState extends State<OrderView> {
         context.read<OrderBloc>().add(const ClearOrderError());
       }
       if (state.savedOrder != null || state.deleted == true) {
-        final navigator = Navigator.of(context, rootNavigator: true);
-        if (navigator.canPop()) navigator.pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Operación realizada correctamente')),
         );
@@ -415,7 +745,7 @@ class _OrderCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    '${order.items.length} producto(s)',
+                    '${order.items.where((item) => item.status != 'CANCELLED').length} producto(s)',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const Spacer(),
@@ -462,14 +792,48 @@ void _showOrderDetail(
   Order order,
   List<Product> products,
 ) {
+  final quickServeSelected = <int>{};
+  if (order.id != null &&
+      getIt<AccessControl>().allows(AppCapability.viewOrderItemHistory)) {
+    context.read<OrderBloc>().add(LoadOrderIncidents(order.id!));
+  }
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    builder: (sheetContext) => DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: .76,
-      maxChildSize: .93,
-      builder: (_, controller) => ListView(
+    builder: (sheetContext) => BlocProvider.value(
+      value: context.read<OrderBloc>(),
+      child: BlocListener<OrderBloc, OrderState>(
+        listenWhen: (previous, current) =>
+            previous.deleted != true && current.deleted == true,
+        listener: (_, __) {
+          if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+        },
+        child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: .76,
+        maxChildSize: .93,
+        builder: (_, controller) => StatefulBuilder(
+        builder: (_, setSheetState) => BlocBuilder<OrderBloc, OrderState>(
+        builder: (_, state) {
+          Order currentOrder = order;
+          for (final candidate in state.orders) {
+            if (candidate.id == order.id) {
+              currentOrder = candidate;
+              break;
+            }
+          }
+          if (state.savedOrder?.id == order.id) {
+            currentOrder = state.savedOrder!;
+          }
+          final selectableIds = currentOrder.items
+              .where((item) =>
+                  item.id != null &&
+                  item.status != 'CANCELLED' &&
+                  item.status != 'SERVED')
+              .map((item) => item.id!)
+              .toSet();
+          quickServeSelected.removeWhere((id) => !selectableIds.contains(id));
+          return ListView(
         controller: controller,
         padding: const EdgeInsets.all(20),
         children: [
@@ -477,47 +841,318 @@ void _showOrderDetail(
             children: [
               Expanded(
                 child: Text(
-                  order.orderNumber,
+                  currentOrder.orderNumber,
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              _StatusChip(status: order.status ?? 'PENDING'),
+              _StatusChip(status: currentOrder.status ?? 'PENDING'),
             ],
           ),
           const SizedBox(height: 4),
-          Text(_typeLabel(order.orderType)),
-          if (order.notes?.isNotEmpty == true) ...[
+          Text(_typeLabel(currentOrder.orderType)),
+          if (currentOrder.notes?.isNotEmpty == true) ...[
             const SizedBox(height: 8),
-            Text(order.notes!),
+            Text(currentOrder.notes!),
           ],
-          const Divider(height: 32),
-          ...order.items.map(
-            (item) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(_productName(products, item.productId)),
-              subtitle: Text(
-                '${_quantity(item.quantity)} × S/ ${item.unitPrice.toStringAsFixed(2)}',
+          if (currentOrder.status != 'CANCELLED') const Divider(height: 32),
+          if (currentOrder.status == 'CANCELLED')
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 28),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 34),
+                    SizedBox(height: 8),
+                    Text(
+                      'Esta orden fue cancelada.',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    SizedBox(height: 4),
+                    Text('No tiene productos ni importe pendiente.'),
+                  ],
+                ),
               ),
-              trailing: Text('S/ ${item.subtotal.toStringAsFixed(2)}'),
             ),
+          if (currentOrder.status == 'CANCELLED' &&
+              currentOrder.items.isNotEmpty) ...[
+            const Text(
+              'Detalle de productos cancelados',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            ...currentOrder.items.map(
+              (item) => Column(
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.cancel_outlined,
+                      color: Colors.redAccent,
+                    ),
+                    title: Row(
+                      children: [
+                        Expanded(
+                          child: Text(_productName(products, item.productId)),
+                        ),
+                        Text(
+                          'S/ ${item.subtotal.toStringAsFixed(2)}',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            Text(
+                              '${_quantity(item.quantity)} × S/ ${item.unitPrice.toStringAsFixed(2)}',
+                            ),
+                            const _OrderItemStatusBadge(status: 'CANCELLED'),
+                          ],
+                        ),
+                        if (item.notes?.trim().isNotEmpty == true)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 5),
+                            child: Text(
+                              'Nota: ${item.notes!.trim()}',
+                              style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const _DashedItemDivider(),
+                ],
+              ),
+            ),
+          ],
+          if (currentOrder.status != 'CANCELLED')
+            ...currentOrder.items.where((item) => item.status != 'CANCELLED').map(
+            (item) {
+              final canSelectForQuickServe =
+                  currentOrder.status != 'COMPLETED' &&
+                  currentOrder.id != null &&
+                  item.id != null &&
+                  item.status != 'SERVED' &&
+                  getIt<AccessControl>().allows(
+                    AppCapability.correctOrderItemStatus,
+                  );
+              return Column(
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  isThreeLine: true,
+                  leading: canSelectForQuickServe
+                      ? Checkbox(
+                          value: quickServeSelected.contains(item.id),
+                          onChanged: (value) => setSheetState(() {
+                            if (value == true) {
+                              quickServeSelected.add(item.id!);
+                            } else {
+                              quickServeSelected.remove(item.id);
+                            }
+                          }),
+                        )
+                      : item.status == 'SERVED'
+                          ? const Tooltip(
+                              message: 'Producto servido',
+                              child: Icon(
+                                Icons.check_box_rounded,
+                                color: Colors.teal,
+                              ),
+                            )
+                          : null,
+                  title: Row(
+                children: [
+                  Icon(
+                    item.fulfillmentType == 'TAKEAWAY'
+                        ? Icons.shopping_bag_outlined
+                        : Icons.home_outlined,
+                    size: 18,
+                    color: item.fulfillmentType == 'TAKEAWAY'
+                        ? Colors.deepOrange.shade700
+                        : Colors.indigo.shade700,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(_productName(products, item.productId))),
+                  Text(
+                    'S/ ${item.subtotal.toStringAsFixed(2)}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  if (state.incidentsOrderId == currentOrder.id &&
+                      _hasIncidentForItem(state.incidents, item.id))
+                    const Padding(
+                      padding: EdgeInsets.only(left: 6),
+                      child: Tooltip(
+                        message: 'Producto con incidencia registrada',
+                        child: Icon(
+                          Icons.assignment_late_outlined,
+                          color: Colors.deepOrange,
+                          size: 19,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text('${_quantity(item.quantity)} × S/ ${item.unitPrice.toStringAsFixed(2)}'),
+                          _OrderItemStatusBadge(status: item.status),
+                        ],
+                      ),
+                      if (item.notes?.trim().isNotEmpty == true)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 5),
+                          child: Text(
+                            'Nota: ${item.notes!.trim()}',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: _OrderItemTrailingAction(
+                            order: currentOrder,
+                            item: item,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const _DashedItemDivider(),
+              ],
+            );
+            },
           ),
-          const Divider(),
-          Align(
+          if (currentOrder.status != 'CANCELLED' &&
+              currentOrder.status != 'COMPLETED' &&
+              currentOrder.id != null &&
+              getIt<AccessControl>().allows(AppCapability.correctOrderItemStatus) &&
+              currentOrder.items.any((item) =>
+                  item.id != null &&
+                  item.status != 'CANCELLED' &&
+                  item.status != 'SERVED')) ...[
+            const SizedBox(height: 8),
+            FilledButton.tonalIcon(
+              onPressed: quickServeSelected.isEmpty
+                  ? null
+                  : () async {
+                      final itemIds = quickServeSelected.toList();
+                      final confirmed = await _confirmQuickServe(
+                        context,
+                        itemIds.length,
+                      );
+                      if (!confirmed || !context.mounted) return;
+                      setSheetState(quickServeSelected.clear);
+                      context.read<OrderBloc>().add(ChangeOrderItemsStatus(
+                            currentOrder.id!,
+                            itemIds,
+                            'CORRECT_TO_SERVED',
+                            comment: 'Entrega registrada en lote',
+                          ));
+                    },
+              icon: const Icon(Icons.done_all_outlined),
+              label: Text(
+                quickServeSelected.isEmpty
+                    ? 'Marque productos entregados'
+                    : 'Registrar entrega (${quickServeSelected.length})',
+              ),
+            ),
+          ],
+          if (currentOrder.status != 'CANCELLED' &&
+              currentOrder.status != 'COMPLETED' &&
+              currentOrder.id != null &&
+              currentOrder.items.any((item) => item.status != 'CANCELLED') &&
+              (getIt<AccessControl>().allows(AppCapability.prepareOrderItem) ||
+                  getIt<AccessControl>().allows(AppCapability.markOrderItemReady) ||
+                  getIt<AccessControl>().allows(AppCapability.serveOrderItem) ||
+                  getIt<AccessControl>().allows(AppCapability.correctOrderItemStatus)))
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () =>
+                    _showBulkStatusDialog(context, currentOrder, products),
+                icon: const Icon(Icons.done_all_outlined),
+                label: const Text('Actualizar varios'),
+              ),
+            ),
+          if (currentOrder.status != 'CANCELLED' &&
+              getIt<AccessControl>().allows(AppCapability.viewOrderItemHistory) &&
+              order.id != null) ...[
+            const Divider(height: 32),
+            const Text('Historial de incidencias', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            if (state.incidentsOrderId != order.id)
+              const Padding(
+                padding: EdgeInsets.all(8),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (state.incidents.isEmpty)
+              const Text('No se registraron incidencias.')
+            else
+              ...state.incidents.map((incident) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.report_problem_outlined),
+                    title: Text(
+                      '${_incidentResolutionLabel(incident.resolution)} · ${_productName(products, incident.productId)}',
+                    ),
+                    subtitle: Text(
+                      '${incident.reason}${incident.discountAmount > 0 ? ' · S/ ${incident.discountAmount.toStringAsFixed(2)}' : ''}\n'
+                      'Estado: ${_incidentStatusLabel(incident.status)}${incident.reportedAt != null ? ' · ${_incidentDate(incident.reportedAt!)}' : ''}',
+                    ),
+                    isThreeLine: true,
+                  )),
+          ],
+          if (currentOrder.status != 'CANCELLED') const Divider(),
+          if (currentOrder.status != 'CANCELLED') Align(
             alignment: Alignment.centerRight,
-            child: Text(
-              'Total: S/ ${order.total.toStringAsFixed(2)}',
-              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (currentOrder.incidentDiscount > 0)
+                  Text(
+                    'Descuento por incidencias: -S/ ${currentOrder.incidentDiscount.toStringAsFixed(2)}',
+                    style: TextStyle(color: Colors.green.shade700),
+                  ),
+                Text(
+                  'Total: S/ ${currentOrder.total.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 20),
-          if (_canEditActiveOrder(order.status) &&
+          if (currentOrder.status != 'CANCELLED') const SizedBox(height: 20),
+          if (_canEditActiveOrder(currentOrder.status) &&
+              currentOrder.items.every((item) => item.status == 'PENDING') &&
               getIt<AccessControl>().allows(AppCapability.editOrders)) ...[
               FilledButton.icon(
                 onPressed: () async {
-                  final wasSaved = await _openOrderForm(context, order: order);
+                  final wasSaved = await _openOrderForm(context, order: currentOrder);
                   final sheetNavigator = Navigator.of(sheetContext);
                   if (wasSaved == true && sheetNavigator.mounted) {
                     sheetNavigator.pop();
@@ -528,28 +1163,26 @@ void _showOrderDetail(
               ),
               const SizedBox(height: 10),
             ],
-          if (order.status == 'PENDING' &&
+          if (_canEditActiveOrder(currentOrder.status) &&
+              getIt<AccessControl>().allows(AppCapability.addOrderItem)) ...[
+              FilledButton.tonalIcon(
+                onPressed: () => _showAddOrderItem(context, currentOrder, products),
+                icon: const Icon(Icons.add_shopping_cart_outlined),
+                label: const Text('Agregar producto'),
+              ),
+              const SizedBox(height: 10),
+            ],
+          if (currentOrder.status == 'PENDING' &&
               getIt<AccessControl>().allows(AppCapability.deleteOrders))
             OutlinedButton.icon(
-              onPressed: () => _confirmDelete(context, order),
+              onPressed: () => _confirmDelete(context, currentOrder),
               icon: const Icon(Icons.delete_outline),
               label: const Text('Eliminar orden'),
             ),
-          if (_nextStatus(order.status) != null &&
-              getIt<AccessControl>().allows(AppCapability.updateOrderStatus)) ...[
-            const SizedBox(height: 10),
-            FilledButton.icon(
-              onPressed: () => context.read<OrderBloc>().add(
-                ChangeOrderStatus(order.id!, _nextStatus(order.status)!),
-              ),
-              icon: const Icon(Icons.arrow_forward),
-              label: Text(
-                'Marcar como ${_statusLabel(_nextStatus(order.status)!)}',
-              ),
-            ),
-          ],
-          if (order.status != 'COMPLETED' &&
-              order.status != 'CANCELLED' &&
+          if (state.status != OrderStatus.loading &&
+              currentOrder.status != 'COMPLETED' &&
+              currentOrder.status != 'CANCELLED' &&
+              _isOrderReadyToCharge(currentOrder) &&
               getIt<AccessControl>().allows(AppCapability.viewSales) &&
               getIt<AccessControl>().allows(AppCapability.createSales)) ...[
             const SizedBox(height: 10),
@@ -557,7 +1190,7 @@ void _showOrderDetail(
               onPressed: () {
                 final navigator = Navigator.of(context);
                 navigator.pop();
-                navigator.pushNamed(AppRoutes.sales, arguments: order).then((
+                navigator.pushNamed(AppRoutes.sales, arguments: currentOrder).then((
                   _,
                 ) {
                   if (navigator.mounted) {
@@ -570,20 +1203,259 @@ void _showOrderDetail(
               label: const Text('Cobrar orden'),
             ),
           ],
-          if (order.status != 'COMPLETED' &&
-              order.status != 'CANCELLED' &&
+          if (currentOrder.status != 'COMPLETED' &&
+              currentOrder.status != 'CANCELLED' &&
+              currentOrder.items.every((item) =>
+                  item.status == 'PENDING' || item.status == 'CANCELLED') &&
               getIt<AccessControl>().allows(AppCapability.updateOrderStatus)) ...[
             const SizedBox(height: 10),
             TextButton(
-              onPressed: () => _confirmCancel(context, order),
+              onPressed: () => _confirmCancel(context, currentOrder),
               child: const Text('Cancelar orden'),
             ),
           ],
         ],
+          );
+        },
+        ),
+        ),
+      ),
       ),
     ),
   );
 }
+
+Future<bool> _confirmQuickServe(BuildContext context, int count) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Confirmar entrega'),
+      content: Text(
+        count == 1
+            ? '¿Marcar este producto como servido?'
+            : '¿Marcar $count productos como servidos?',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Volver'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Confirmar entrega'),
+        ),
+      ],
+    ),
+  );
+  return confirmed ?? false;
+}
+
+Future<void> _showBulkStatusDialog(
+  BuildContext context,
+  Order order,
+  List<Product> products,
+) async {
+  final bloc = context.read<OrderBloc>();
+  final selected = <int>{};
+  final commentController = TextEditingController();
+  var targetStatus = 'PREPARING';
+  var serveDirectly = false;
+  final access = getIt<AccessControl>();
+  final availableStatuses = <String>{
+    if (access.allows(AppCapability.prepareOrderItem)) 'PREPARING',
+    if (access.allows(AppCapability.markOrderItemReady)) 'READY',
+    if (access.allows(AppCapability.serveOrderItem)) 'SERVED',
+    if (access.allows(AppCapability.correctOrderItemStatus)) ...{
+      'RESTORE_PREVIOUS',
+      'CORRECT_TO_PENDING',
+      'CORRECT_TO_PREPARING',
+      'CORRECT_TO_READY',
+      'CORRECT_TO_SERVED',
+    },
+  };
+  if (availableStatuses.isEmpty || order.id == null) return;
+  targetStatus = availableStatuses.contains('PREPARING')
+      ? 'PREPARING'
+      : availableStatuses.first;
+
+  List<OrderItem> eligibleItems() => order.items.where((item) {
+        if (item.id == null || item.status == 'CANCELLED') return false;
+        if (serveDirectly) return item.status == 'PENDING';
+        return switch (targetStatus) {
+          'PREPARING' => item.status == 'PENDING',
+          'READY' => item.status == 'PREPARING',
+          'SERVED' => item.status == 'READY',
+          'RESTORE_PREVIOUS' => item.status == 'PREPARING' ||
+              item.status == 'READY' ||
+              item.status == 'SERVED',
+          'CORRECT_TO_PENDING' => item.status != 'PENDING',
+          'CORRECT_TO_PREPARING' => item.status != 'PREPARING',
+          'CORRECT_TO_READY' => item.status != 'READY',
+          'CORRECT_TO_SERVED' => item.status != 'SERVED',
+          _ => false,
+        };
+      }).toList();
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => BlocProvider.value(
+      value: bloc,
+      child: StatefulBuilder(
+        builder: (_, setState) => AlertDialog(
+          title: const Text('Actualizar varios productos'),
+          content: SizedBox(
+            width: 420,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                const Text('1. Elija una acción.  2. Marque los productos compatibles.'),
+                const SizedBox(height: 8),
+                if (!serveDirectly)
+                  DropdownButtonFormField<String>(
+                    value: targetStatus,
+                    decoration: const InputDecoration(labelText: 'Acción a aplicar'),
+                    items: [
+                      if (access.allows(AppCapability.prepareOrderItem))
+                        const DropdownMenuItem(value: 'PREPARING', child: Text('Pasar a En preparación')),
+                      if (access.allows(AppCapability.markOrderItemReady))
+                        const DropdownMenuItem(value: 'READY', child: Text('Marcar como Listo')),
+                      if (access.allows(AppCapability.serveOrderItem))
+                        const DropdownMenuItem(value: 'SERVED', child: Text('Marcar como Servido')),
+                      if (access.allows(AppCapability.correctOrderItemStatus))
+                        const DropdownMenuItem<String>(
+                          enabled: false,
+                          child: Text('— Correcciones —'),
+                        ),
+                      if (access.allows(AppCapability.correctOrderItemStatus))
+                        const DropdownMenuItem(value: 'RESTORE_PREVIOUS', child: Text('Restaurar estado anterior')),
+                      if (access.allows(AppCapability.correctOrderItemStatus))
+                        const DropdownMenuItem(value: 'CORRECT_TO_PENDING', child: Text('Corregir: Pendiente')),
+                      if (access.allows(AppCapability.correctOrderItemStatus))
+                        const DropdownMenuItem(value: 'CORRECT_TO_PREPARING', child: Text('Corregir: En preparación')),
+                      if (access.allows(AppCapability.correctOrderItemStatus))
+                        const DropdownMenuItem(value: 'CORRECT_TO_READY', child: Text('Corregir: Listo')),
+                      if (access.allows(AppCapability.correctOrderItemStatus))
+                        const DropdownMenuItem(value: 'CORRECT_TO_SERVED', child: Text('Corregir: Servido')),
+                    ],
+                    onChanged: (value) => setState(() {
+                      if (value == null || !availableStatuses.contains(value)) return;
+                      targetStatus = value;
+                      selected.clear();
+                    }),
+                  ),
+                if (targetStatus == 'RESTORE_PREVIOUS')
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Cada producto volverá al estado que tenía antes de su último cambio. No modifica stock ni importes.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF5F6368)),
+                    ),
+                  ),
+                if (targetStatus.startsWith('CORRECT_TO_'))
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Corrección operativa: actualiza solo el estado. No modifica stock ni importes.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF5F6368)),
+                    ),
+                  ),
+                if (targetStatus == 'RESTORE_PREVIOUS' ||
+                    targetStatus.startsWith('CORRECT_TO_'))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: TextField(
+                      controller: commentController,
+                      maxLength: 500,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Comentario de corrección (opcional)',
+                        hintText: 'Ej.: se marcó por error como servido',
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Text('Productos disponibles (${eligibleItems().length})', style: const TextStyle(fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    if (eligibleItems().isNotEmpty)
+                      TextButton(
+                        onPressed: () => setState(() => selected
+                          ..clear()
+                          ..addAll(eligibleItems().map((item) => item.id!))),
+                        child: const Text('Todos'),
+                      ),
+                  ],
+                ),
+                if (eligibleItems().isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Text('No hay productos con el estado requerido para esta acción.'),
+                  ),
+                ...eligibleItems().map((item) => CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: selected.contains(item.id),
+                      onChanged: (value) => setState(() => value == true ? selected.add(item.id!) : selected.remove(item.id)),
+                      title: Text(_productName(products, item.productId)),
+                      subtitle: Text('${_quantity(item.quantity)} · ${_itemStatusLabel(item.status)}'),
+                    )),
+                if (access.allows(AppCapability.correctOrderItemStatus))
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: serveDirectly,
+                    title: const Text('Servir directamente'),
+                    subtitle: const Text('Solo muestra productos pendientes.'),
+                    onChanged: (value) => setState(() {
+                      serveDirectly = value ?? false;
+                      selected.clear();
+                    }),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
+            FilledButton.icon(
+              onPressed: selected.isEmpty ? null : () {
+                Navigator.pop(dialogContext);
+                bloc.add(ChangeOrderItemsStatus(
+                  order.id!,
+                  selected.toList(),
+                  serveDirectly ? 'SERVED' : targetStatus,
+                  comment: commentController.text.trim().isEmpty
+                      ? null
+                      : commentController.text.trim(),
+                ));
+              },
+              icon: const Icon(Icons.done_all_outlined),
+              label: Text('Aplicar a ${selected.length}'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+  await Future<void>.delayed(const Duration(milliseconds: 300));
+  commentController.dispose();
+}
+
+String _incidentResolutionLabel(String resolution) => switch (resolution) {
+  'CANCEL_NO_CHARGE' => 'Producto no cobrado',
+  'REPLACE' => 'Reposición',
+  'DISCOUNT' => 'Descuento',
+  _ => resolution,
+};
+
+String _incidentStatusLabel(String status) => switch (status) {
+  'SUPERSEDED' => 'Sustituido por una compensación posterior',
+  'APROVED' || 'APPROVED' => 'Aprobado',
+  _ => status,
+};
+
+String _incidentDate(DateTime value) =>
+    '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year} ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 
 void _confirmDelete(BuildContext context, Order order) {
   if (!getIt<AccessControl>().allows(AppCapability.deleteOrders)) return;
@@ -716,7 +1588,18 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => BlocListener<OrderBloc, OrderState>(
+    listenWhen: (previous, current) =>
+        previous.savedOrder == null && current.savedOrder != null,
+    listener: (context, state) {
+      final savedOrder = state.savedOrder;
+      final savedThisOrder = savedOrder != null &&
+          (widget.order == null || savedOrder.id == widget.order!.id);
+      if (savedThisOrder && context.mounted) {
+        Navigator.of(context).pop(true);
+      }
+    },
+    child: AlertDialog(
     title: Text(widget.order == null ? 'Nueva orden' : 'Editar orden'),
     content: SizedBox(
       width: 480,
@@ -774,11 +1657,12 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
-                  TextButton.icon(
-                    onPressed: availableProducts.isEmpty ? null : _addProduct,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Agregar'),
-                  ),
+                  if (widget.order == null || widget.order?.status == 'PENDING')
+                    TextButton.icon(
+                      onPressed: availableProducts.isEmpty ? null : _addProduct,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Agregar'),
+                    ),
                 ],
               ),
               if (items.isEmpty)
@@ -816,6 +1700,14 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
+              if (widget.order != null &&
+                  widget.order!.status != 'COMPLETED' &&
+                  widget.order!.status != 'CANCELLED' &&
+                  !_isOrderReadyToCharge(widget.order!))
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: Text('El cobro estará disponible cuando todos los productos activos estén servidos.'),
+            ),
             ],
           ),
         ),
@@ -828,6 +1720,7 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
       ),
       FilledButton(onPressed: _submit, child: const Text('Guardar')),
     ],
+    ),
   );
   Future<void> _addProduct() async {
     final selected = await showModalBottomSheet<Product>(
@@ -882,6 +1775,8 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
           quantity: old.quantity + 1,
           unitPrice: old.unitPrice,
           notes: old.notes,
+          fulfillmentType: old.fulfillmentType,
+          status: old.status,
         );
       } else {
         items.add(
@@ -889,6 +1784,7 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
             productId: selected.id,
             quantity: 1,
             unitPrice: selected.promoPrice ?? selected.basePrice,
+            fulfillmentType: type == 'TAKEAWAY' ? 'TAKEAWAY' : 'DINE_IN',
           ),
         );
       }
@@ -1015,6 +1911,8 @@ class _EditableItem extends StatelessWidget {
                       productId: item.productId,
                       quantity: v,
                       unitPrice: item.unitPrice,
+                      fulfillmentType: item.fulfillmentType,
+                      status: item.status,
                       notes: item.notes,
                     ),
                   ),
@@ -1031,6 +1929,8 @@ class _EditableItem extends StatelessWidget {
                       productId: item.productId,
                       quantity: item.quantity,
                       unitPrice: v,
+                      fulfillmentType: item.fulfillmentType,
+                      status: item.status,
                       notes: item.notes,
                     ),
                   ),
@@ -1060,6 +1960,8 @@ class _EditableItem extends StatelessWidget {
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 notes: _nullIfBlank(value),
+                fulfillmentType: item.fulfillmentType,
+                status: item.status,
               ),
             ),
           ),
@@ -1195,3 +2097,50 @@ String? _nextStatus(String? status) => switch (status) {
   'PREPARING' => 'READY',
   _ => null,
 };
+
+AppCapability? _capabilityForItemStatus(String status) => switch (status) {
+  'PREPARING' => AppCapability.prepareOrderItem,
+  'READY' => AppCapability.markOrderItemReady,
+  'SERVED' => AppCapability.serveOrderItem,
+  _ => null,
+};
+
+String? _nextItemStatus(String status) => switch (status) {
+  'PENDING' => 'PREPARING',
+  'PREPARING' => 'READY',
+  'READY' => 'SERVED',
+  _ => null,
+};
+
+String _itemStatusLabel(String status) => switch (status) {
+  'PENDING' => 'Pendiente',
+  'PREPARING' => 'Preparando',
+  'READY' => 'Listo',
+  'SERVED' => 'Servido',
+  'CANCELLED' => 'Cancelado',
+  _ => status,
+};
+
+Color _itemStatusColor(String status) => switch (status) {
+  'PENDING' => Colors.orange.shade800,
+  'PREPARING' => Colors.blue.shade700,
+  'READY' => Colors.green.shade700,
+  'SERVED' => Colors.teal.shade700,
+  'CANCELLED' => Colors.red.shade700,
+  _ => AppColors.primary,
+};
+
+String _itemStatusActionLabel(String status) => switch (status) {
+  'PREPARING' => 'Preparar',
+  'READY' => 'Listo',
+  'SERVED' => 'Servir',
+  _ => status,
+};
+
+bool _isOrderReadyToCharge(Order order) {
+  final activeItems = order.items.where((item) => item.status != 'CANCELLED');
+  return activeItems.isNotEmpty && activeItems.every((item) => item.status == 'SERVED');
+}
+
+bool _hasIncidentForItem(List<OrderItemIncident> incidents, int? itemId) =>
+    itemId != null && incidents.any((incident) => incident.orderItemId == itemId);

@@ -1,5 +1,7 @@
 import 'package:app_movil_sistema/features/order/data/models/order_model.dart';
 import 'package:app_movil_sistema/features/order/data/models/order_page_model.dart';
+import 'package:app_movil_sistema/features/order/domain/entities/order_item_status_history.dart';
+import 'package:app_movil_sistema/features/order/domain/entities/order_item_incident.dart';
 
 abstract class OrderRemoteDataSource {
   Future<OrderPageModel> getAll({
@@ -10,8 +12,16 @@ abstract class OrderRemoteDataSource {
     String? status,
     String? search,
   });
+  Future<OrderPageModel> getKitchenQueue({int page = 0, int size = 20});
   Future<OrderModel> create(OrderModel order);
   Future<OrderModel> update(int id, OrderModel order);
   Future<OrderModel> updateStatus(int id, String status);
+  Future<OrderModel> addItem(int orderId, OrderItemModel item);
+  Future<OrderModel> updateItemStatus(int orderId, int itemId, String status, {String? comment});
+  Future<OrderModel> updateItemsStatus(int orderId, List<int> itemIds, String status, {String? comment});
+  Future<OrderModel> cancelPendingItem(int orderId, int itemId, {required String comment, required String stockDisposition});
+  Future<OrderModel> reportIncident(int orderId, int itemId, String resolution, String reason, {double? discountAmount});
+  Future<List<OrderItemIncident>> getIncidents(int orderId);
+  Future<List<OrderItemStatusHistory>> getItemStatusHistory(int orderId, int itemId);
   Future<bool> delete(int id);
 }

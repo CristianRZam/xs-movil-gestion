@@ -19,6 +19,15 @@ class SaleView extends StatelessWidget {
   bool get _canCreateSale =>
       getIt<AccessControl>().allows(AppCapability.createSales);
 
+  bool get _isOrderReadyToCharge {
+    final activeItems = order?.items
+            .where((item) => item.status != 'CANCELLED')
+            .toList() ??
+        const [];
+    return activeItems.isNotEmpty &&
+        activeItems.every((item) => item.status == 'SERVED');
+  }
+
   @override
   Widget build(BuildContext context) => BlocConsumer<SaleBloc, SaleState>(
     listenWhen: (previous, current) =>
@@ -60,7 +69,9 @@ class SaleView extends StatelessWidget {
       ),
       endDrawer: const XsDrawer(),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _canCreateSale && state.cashOpen == true
+        onPressed: _canCreateSale &&
+                state.cashOpen == true &&
+                (order == null || _isOrderReadyToCharge)
             ? () => _openSaleForm(context, state.products, order: order)
             : null,
         icon: const Icon(Icons.point_of_sale),
@@ -82,8 +93,10 @@ class SaleView extends StatelessWidget {
             Card(
               child: ListTile(
                 title: Text('Orden ${order!.orderNumber}'),
-                subtitle: const Text(
-                  'Los productos y cantidades quedan bloqueados al cobrar una orden.',
+                subtitle: Text(
+                  _isOrderReadyToCharge
+                      ? 'Todos los productos activos fueron servidos y estan listos para cobrar.'
+                      : 'Falta servir productos activos antes de poder cobrar esta orden.',
                 ),
               ),
             ),
@@ -100,6 +113,7 @@ class SaleView extends StatelessWidget {
           ...state.sales.map(
             (sale) => Card(
               child: ListTile(
+                isThreeLine: sale.notes?.trim().isNotEmpty == true,
                 title: Row(
                   children: [
                     Expanded(child: Text(sale.saleNumber)),
@@ -107,9 +121,31 @@ class SaleView extends StatelessWidget {
                     _SaleStatusBadge(status: sale.status),
                   ],
                 ),
-                subtitle: Text(
-                  '${sale.payments.map((p) => p.paymentMethod).join(' + ')} · '
-                  '${sale.items.length} producto(s)',
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${sale.payments.map((p) => p.paymentMethod).join(' + ')} · '
+                      '${sale.items.length} producto(s)',
+                    ),
+                    if (sale.notes?.trim().isNotEmpty == true) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const Icon(Icons.note_alt_outlined, size: 14),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              sale.notes!.trim(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
                 trailing: Text('S/ ${sale.total.toStringAsFixed(2)}'),
                 onTap: () => _showSaleDetail(context, sale, state.products),
@@ -234,6 +270,10 @@ void _showSaleDetail(BuildContext context, Sale sale, List<Product> products) {
             Text(
               'Registrada por: ${sale.createdByName ?? 'Usuario no disponible'}',
             ),
+            if (sale.notes?.trim().isNotEmpty == true) ...[
+              const SizedBox(height: 10),
+              _SaleNotesCard(notes: sale.notes!.trim()),
+            ],
             if (sale.cancellationReason != null) ...[
               const SizedBox(height: 12),
               _SaleCancellationCard(sale: sale),
@@ -467,6 +507,56 @@ class _SaleAmountRow extends StatelessWidget {
   }
 }
 
+class _SaleNotesCard extends StatelessWidget {
+  const _SaleNotesCard({required this.notes});
+
+  final String notes;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.note_alt_outlined,
+            color: theme.colorScheme.onSecondaryContainer,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Nota de venta',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSecondaryContainer,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  notes,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SaleCancellationCard extends StatelessWidget {
   const _SaleCancellationCard({required this.sale});
 
@@ -578,6 +668,7 @@ class _SaleFormState extends State<_SaleForm> {
   final _payments = <_PaymentDraft>[];
   final _productsById = <int, Product>{};
   final _discount = TextEditingController();
+  final _notes = TextEditingController();
 
   @override
   void initState() {
@@ -588,22 +679,36 @@ class _SaleFormState extends State<_SaleForm> {
     _payments.add(_PaymentDraft());
     final order = widget.order;
     if (order != null) {
-      _items.addAll(
-        order.items.map(
-          (item) => SaleItem(
+      for (final item in order.items.where((item) => item.status != 'CANCELLED')) {
+        final index = _items.indexWhere((saleItem) =>
+            saleItem.productId == item.productId &&
+            saleItem.unitPrice == item.unitPrice &&
+            saleItem.discount == 0);
+        if (index < 0) {
+          _items.add(SaleItem(
             productId: item.productId,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-          ),
-        ),
-      );
+          ));
+        } else {
+          final saleItem = _items[index];
+          _items[index] = SaleItem(
+            productId: saleItem.productId,
+            productName: saleItem.productName,
+            quantity: saleItem.quantity + item.quantity,
+            unitPrice: saleItem.unitPrice,
+          );
+        }
+      }
     }
   }
 
   double get _subtotal =>
       _items.fold<double>(0, (sum, item) => sum + item.subtotal);
   double get _discountAmount => double.tryParse(_discount.text) ?? 0;
-  double get _total => (_subtotal - _discountAmount).clamp(0, double.infinity);
+  double get _incidentDiscount => widget.order?.incidentDiscount ?? 0;
+  double get _totalDiscount => _discountAmount + _incidentDiscount;
+  double get _total => (_subtotal - _totalDiscount).clamp(0, double.infinity);
   double get _paid => _payments.fold<double>(
     0,
     (sum, payment) => sum + (double.tryParse(payment.amount.text) ?? 0),
@@ -615,6 +720,7 @@ class _SaleFormState extends State<_SaleForm> {
       payment.dispose();
     }
     _discount.dispose();
+    _notes.dispose();
     super.dispose();
   }
 
@@ -669,18 +775,35 @@ class _SaleFormState extends State<_SaleForm> {
                   decimal: true,
                 ),
                 decoration: const InputDecoration(
-                  labelText: 'Descuento (S/)',
+                  labelText: 'Descuento de venta (S/)',
                   prefixIcon: Icon(Icons.sell_outlined),
                 ),
-                validator: (value) => _discountAmount > _subtotal
-                    ? 'El descuento no puede superar el subtotal'
+                validator: (value) => _totalDiscount > _subtotal
+                    ? 'Los descuentos no pueden superar el subtotal'
                     : null,
                 onChanged: (_) => setState(() {}),
+              ),
+              if (_incidentDiscount > 0) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Descuento por incidencias: -S/ ${_incidentDiscount.toStringAsFixed(2)}',
+                  style: TextStyle(color: Colors.green.shade700),
+                ),
+              ],
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _notes,
+                maxLength: 500,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Nota de venta (opcional)',
+                  prefixIcon: Icon(Icons.note_alt_outlined),
+                ),
               ),
               const SizedBox(height: 12),
               _PaymentSummary(
                 subtotal: _subtotal,
-                discount: _discountAmount,
+                discount: _totalDiscount,
                 total: _total,
                 paid: _paid,
               ),
@@ -962,6 +1085,7 @@ class _SaleFormState extends State<_SaleForm> {
       // El backend asigna el número según la fecha y hora del servidor.
       saleNumber: '',
       orderId: widget.order?.id,
+      notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       discount: _discountAmount,
       items: _items,
       payments: _payments

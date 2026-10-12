@@ -5,7 +5,6 @@ import 'package:app_movil_sistema/features/dashboard/domain/usecases/get_dashboa
 import 'package:app_movil_sistema/features/home/presentation/widgets/owner_dashboard.dart';
 import 'package:app_movil_sistema/features/home/presentation/widgets/dashboard_sale_analityc.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
-import 'package:app_movil_sistema/features/shared/widgets/xs-bottom-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -117,7 +116,6 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           },
         ),
-        bottomNavigationBar: const XsBottomBar(),
       ),
     );
   }

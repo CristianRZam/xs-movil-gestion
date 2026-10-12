@@ -25,6 +25,7 @@ import 'package:app_movil_sistema/features/product/domain/usecases/update_produc
 import 'package:get_it/get_it.dart';
 
 import 'package:app_movil_sistema/core/network/api_client.dart';
+import 'package:app_movil_sistema/core/app_version/app_version_service.dart';
 import 'package:app_movil_sistema/core/storage/token_storage.dart';
 
 /// LOGIN
@@ -113,6 +114,17 @@ void setupLocator() {
         AppCapability.createOrders: {'CREATE_ORDER'},
         AppCapability.editOrders: {'EDIT_ORDER'},
         AppCapability.updateOrderStatus: {'UPDATE_ORDER_STATUS'},
+        AppCapability.addOrderItem: {'ADD_ORDER_ITEM'},
+        AppCapability.editPendingOrderItem: {'EDIT_PENDING_ORDER_ITEM'},
+        AppCapability.cancelOrderItem: {'CANCEL_ORDER_ITEM'},
+        AppCapability.correctOrderItemStatus: {'CORRECT_ORDER_ITEM_STATUS'},
+        AppCapability.serveOrderItem: {'SERVE_ORDER_ITEM'},
+        AppCapability.viewOrderItemHistory: {'VIEW_ORDER_ITEM_HISTORY'},
+        AppCapability.viewKitchenQueue: {'VIEW_KITCHEN_QUEUE'},
+        AppCapability.prepareOrderItem: {'PREPARE_ORDER_ITEM'},
+        AppCapability.markOrderItemReady: {'MARK_ORDER_ITEM_READY'},
+        AppCapability.reportOrderIncident: {'REPORT_ORDER_INCIDENT'},
+        AppCapability.approveOrderCompensation: {'APPROVE_ORDER_COMPENSATION'},
         AppCapability.deleteOrders: {'DELETE_ORDER'},
         AppCapability.viewSales: {'VIEW_SALE'},
         AppCapability.createSales: {'CREATE_SALE'},
@@ -131,6 +143,9 @@ void setupLocator() {
   // ============================
 
   getIt.registerLazySingleton<ApiClient>(() => ApiClient());
+  getIt.registerLazySingleton<AppVersionService>(
+    () => AppVersionService(getIt<ApiClient>()),
+  );
 
   getIt.registerLazySingleton<TokenStorage>(
     () => TokenStorage(getIt<AccessControl>()),
@@ -278,6 +293,9 @@ void setupLocator() {
   getIt.registerFactory<GetOrdersUseCase>(
     () => GetOrdersUseCase(getIt<OrderRepository>()),
   );
+  getIt.registerFactory<GetKitchenQueueUseCase>(
+    () => GetKitchenQueueUseCase(getIt<OrderRepository>()),
+  );
   getIt.registerFactory<CreateOrderUseCase>(
     () => CreateOrderUseCase(getIt<OrderRepository>()),
   );
@@ -286,6 +304,24 @@ void setupLocator() {
   );
   getIt.registerFactory<UpdateOrderStatusUseCase>(
     () => UpdateOrderStatusUseCase(getIt<OrderRepository>()),
+  );
+  getIt.registerFactory<AddOrderItemUseCase>(
+    () => AddOrderItemUseCase(getIt<OrderRepository>()),
+  );
+  getIt.registerFactory<UpdateOrderItemStatusUseCase>(
+    () => UpdateOrderItemStatusUseCase(getIt<OrderRepository>()),
+  );
+  getIt.registerFactory<UpdateOrderItemsStatusUseCase>(
+    () => UpdateOrderItemsStatusUseCase(getIt<OrderRepository>()),
+  );
+  getIt.registerFactory<CancelPendingOrderItemUseCase>(
+    () => CancelPendingOrderItemUseCase(getIt<OrderRepository>()),
+  );
+  getIt.registerFactory<ReportOrderItemIncidentUseCase>(
+    () => ReportOrderItemIncidentUseCase(getIt<OrderRepository>()),
+  );
+  getIt.registerFactory<GetOrderIncidentsUseCase>(
+    () => GetOrderIncidentsUseCase(getIt<OrderRepository>()),
   );
   getIt.registerFactory<DeleteOrderUseCase>(
     () => DeleteOrderUseCase(getIt<OrderRepository>()),

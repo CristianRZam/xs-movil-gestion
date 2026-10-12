@@ -4,6 +4,7 @@ import 'package:app_movil_sistema/features/profile/domain/usecases/profile_useca
 import 'package:app_movil_sistema/features/profile/presentation/bloc/profile_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:app_movil_sistema/routes/routes.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -73,6 +74,15 @@ class _ProfileViewState extends State<_ProfileView> {
     builder: (context, state) => Scaffold(
       appBar: AppBar(
         title: const Text('Mi perfil'),
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          tooltip: 'Volver a Inicio',
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
+            AppRoutes.home,
+            (_) => false,
+          ),
+        ),
         actions: [
           IconButton(
             tooltip: 'Actualizar datos',

@@ -33,6 +33,7 @@ class Sale {
   final int? id;
   final String saleNumber;
   final int? orderId;
+  final String? notes;
   final double discount;
   final String? status;
   final int? createdBy;
@@ -47,6 +48,7 @@ class Sale {
     this.id,
     required this.saleNumber,
     this.orderId,
+    this.notes,
     this.discount = 0,
     this.status,
     this.createdBy,

@@ -22,6 +22,9 @@ class XsDrawer extends StatelessWidget {
     final canOrders =
     access.allows(AppCapability.viewOrders);
 
+    final canKitchen =
+    access.allows(AppCapability.viewKitchenQueue);
+
     final canSales =
     access.allows(AppCapability.viewSales);
 
@@ -42,6 +45,9 @@ class XsDrawer extends StatelessWidget {
 
     final canRoles =
     access.allows(AppCapability.manageRoles);
+
+    final canProfile =
+    access.allows(AppCapability.operate);
 
     final backgroundColor =
     isDarkMode ? AppColors.darkBody : AppColors.lightBackground;
@@ -129,6 +135,7 @@ class XsDrawer extends StatelessWidget {
 // =================================================
 
                   if (canOrders ||
+                      canKitchen ||
                       canSales ||
                       canCashSession) ...[
 
@@ -156,6 +163,20 @@ class XsDrawer extends StatelessWidget {
                                 _navigate(
                                   context,
                                   AppRoutes.orders,
+                                );
+                              },
+                            ),
+
+                          if (canKitchen)
+                            _DrawerItem(
+                              icon: Icons.restaurant_rounded,
+                              title: 'Cocina',
+                              subtitle: 'Cola de preparación',
+                              isDarkMode: isDarkMode,
+                              onTap: () {
+                                _navigate(
+                                  context,
+                                  AppRoutes.kitchen,
                                 );
                               },
                             ),
@@ -313,6 +334,38 @@ class XsDrawer extends StatelessWidget {
                       ),
                     ),
                   ],
+
+                  const SizedBox(height: 24),
+
+                  _SectionTitle(
+                    title: 'CUENTA',
+                    isDarkMode: isDarkMode,
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  _MenuContainer(
+                    color: surfaceColor,
+                    child: Column(
+                      children: [
+                        if (canProfile)
+                          _DrawerItem(
+                            icon: Icons.person_rounded,
+                            title: 'Mi perfil',
+                            subtitle: 'Datos y seguridad de la cuenta',
+                            isDarkMode: isDarkMode,
+                            onTap: () => _navigate(context, AppRoutes.profile),
+                          ),
+                        _DrawerItem(
+                          icon: Icons.settings_rounded,
+                          title: 'Configuración',
+                          subtitle: 'Preferencias de la aplicación',
+                          isDarkMode: isDarkMode,
+                          onTap: () => _navigate(context, AppRoutes.settings),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

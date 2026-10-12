@@ -117,6 +117,12 @@ class ApiAccessPolicy {
       if (verb == 'PUT' && segments.length >= 3 && segments[2] == 'status') {
         return AppCapability.updateOrderStatus;
       }
+      if (verb == 'PUT' && segments.length >= 5 && segments[2] == 'items' && segments[4] == 'status') {
+        return AppCapability.updateOrderStatus;
+      }
+      if (verb == 'POST' && segments.length >= 3 && segments[2] == 'items') {
+        return AppCapability.editOrders;
+      }
       if (verb == 'PUT') return AppCapability.editOrders;
       if (verb == 'DELETE') return AppCapability.deleteOrders;
     }

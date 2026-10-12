@@ -1,6 +1,7 @@
 import 'package:app_movil_sistema/core/theme/theme_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:app_movil_sistema/routes/routes.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -8,7 +9,18 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Configuración')),
+      appBar: AppBar(
+        title: const Text('Configuración'),
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          tooltip: 'Volver a Inicio',
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
+            AppRoutes.home,
+            (_) => false,
+          ),
+        ),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),

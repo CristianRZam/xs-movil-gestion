@@ -6,6 +6,8 @@ import 'package:app_movil_sistema/features/login/presentation/pages/login_screen
 import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:app_movil_sistema/core/storage/token_storage.dart';
+import 'package:app_movil_sistema/core/app_version/app_version_service.dart';
+import 'package:app_movil_sistema/core/app_version/app_update_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -24,6 +26,20 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkSession() async {
+    try {
+      final version = await getIt<AppVersionService>().check();
+      final continuePage = await _resolveStartPage();
+      if (version.updateAvailable || version.updateRequired) {
+        _goTo(AppUpdateScreen(status: version, continuePage: continuePage));
+        return;
+      }
+      _goTo(continuePage);
+    } catch (_) {
+      _goTo(const _VersionCheckUnavailableScreen());
+    }
+  }
+
+  Future<Widget> _resolveStartPage() async {
     final token = await tokenStorage.getToken();
 
     if (token != null && token.isNotEmpty) {
@@ -31,19 +47,15 @@ class _SplashScreenState extends State<SplashScreen> {
       final bool isExpired = !getIt<AccessControl>().isAuthenticated;
 
       if (!isExpired) {
-        _goTo(
-          AccessGuard(
-            capability: AppCapability.operate,
-            builder: (_) => const HomeScreen(),
-          ),
+        return AccessGuard(
+          capability: AppCapability.operate,
+          builder: (_) => const HomeScreen(),
         );
-        return;
       } else {
         await tokenStorage.deleteToken();
       }
     }
-
-    _goTo(const LoginScreen());
+    return const LoginScreen();
   }
 
   void _goTo(Widget page) {
@@ -74,4 +86,21 @@ class _SplashScreenState extends State<SplashScreen> {
       ),
     );
   }
+}
+
+class _VersionCheckUnavailableScreen extends StatelessWidget {
+  const _VersionCheckUnavailableScreen();
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(28),
+            child: Text(
+              'No se pudo verificar la versión de la aplicación. Conéctese a internet y vuelva a intentarlo.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
 }

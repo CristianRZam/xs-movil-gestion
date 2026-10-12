@@ -19,9 +19,16 @@ class OrderScreen extends StatelessWidget {
     create: (_) {
       final bloc = OrderBloc(
         getIt<GetOrdersUseCase>(),
+        getIt<GetKitchenQueueUseCase>(),
         getIt<CreateOrderUseCase>(),
         getIt<UpdateOrderUseCase>(),
         getIt<UpdateOrderStatusUseCase>(),
+        getIt<AddOrderItemUseCase>(),
+        getIt<UpdateOrderItemStatusUseCase>(),
+        getIt<UpdateOrderItemsStatusUseCase>(),
+        getIt<CancelPendingOrderItemUseCase>(),
+        getIt<ReportOrderItemIncidentUseCase>(),
+        getIt<GetOrderIncidentsUseCase>(),
         getIt<DeleteOrderUseCase>(),
         getIt<GetProductViewUseCase>(),
         getIt<ExistsOpenCashSessionUseCase>(),
@@ -32,7 +39,8 @@ class OrderScreen extends StatelessWidget {
         bloc.add(const CheckOpenCashSession());
       }
       if (access.allows(AppCapability.createOrders) ||
-          access.allows(AppCapability.editOrders)) {
+          access.allows(AppCapability.editOrders) ||
+          access.allows(AppCapability.addOrderItem)) {
         bloc.add(const LoadOrderProducts());
       }
       return bloc;

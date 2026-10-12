@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:app_movil_sistema/features/order/domain/entities/order.dart';
+import 'package:app_movil_sistema/features/order/domain/entities/order_item.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
 import 'package:equatable/equatable.dart';
 
@@ -39,6 +40,10 @@ class LoadMoreOrders extends OrderEvent {
   const LoadMoreOrders();
 }
 
+class LoadKitchenQueue extends OrderEvent {
+  const LoadKitchenQueue();
+}
+
 class LoadOrderProducts extends OrderEvent {
   const LoadOrderProducts();
 }
@@ -74,6 +79,62 @@ class ChangeOrderStatus extends OrderEvent {
   const ChangeOrderStatus(this.id, this.status);
   @override
   List<Object?> get props => [id, status];
+}
+
+class AddOrderItem extends OrderEvent {
+  final int orderId;
+  final OrderItem item;
+  const AddOrderItem(this.orderId, this.item);
+  @override
+  List<Object?> get props => [orderId, item];
+}
+
+class ChangeOrderItemStatus extends OrderEvent {
+  final int orderId;
+  final int itemId;
+  final String status;
+  final String? comment;
+  const ChangeOrderItemStatus(this.orderId, this.itemId, this.status, {this.comment});
+  @override
+  List<Object?> get props => [orderId, itemId, status, comment];
+}
+
+class ChangeOrderItemsStatus extends OrderEvent {
+  final int orderId;
+  final List<int> itemIds;
+  final String status;
+  final String? comment;
+  const ChangeOrderItemsStatus(this.orderId, this.itemIds, this.status, {this.comment});
+  @override
+  List<Object?> get props => [orderId, itemIds, status, comment];
+}
+
+class CancelPendingOrderItem extends OrderEvent {
+  final int orderId;
+  final int itemId;
+  final String comment;
+  final String stockDisposition;
+  const CancelPendingOrderItem(this.orderId, this.itemId, {required this.comment, required this.stockDisposition});
+  @override
+  List<Object?> get props => [orderId, itemId, comment, stockDisposition];
+}
+
+class ReportOrderItemIncident extends OrderEvent {
+  final int orderId;
+  final int itemId;
+  final String resolution;
+  final String reason;
+  final double? discountAmount;
+  const ReportOrderItemIncident(this.orderId, this.itemId, this.resolution, this.reason, {this.discountAmount});
+  @override
+  List<Object?> get props => [orderId, itemId, resolution, reason, discountAmount];
+}
+
+class LoadOrderIncidents extends OrderEvent {
+  final int orderId;
+  const LoadOrderIncidents(this.orderId);
+  @override
+  List<Object?> get props => [orderId];
 }
 
 class DeleteOrder extends OrderEvent {

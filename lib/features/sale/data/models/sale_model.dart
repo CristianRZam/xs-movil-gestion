@@ -5,6 +5,7 @@ class SaleModel extends Sale {
     super.id,
     required super.saleNumber,
     super.orderId,
+    super.notes,
     super.discount,
     super.status,
     super.createdBy,
@@ -20,6 +21,7 @@ class SaleModel extends Sale {
     id: _int(json['id']),
     saleNumber: json['saleNumber'] as String? ?? '',
     orderId: _int(json['orderId']),
+    notes: json['notes'] as String?,
     discount: _double(json['discount']),
     status: json['status'] as String?,
     createdBy: _int(json['createdBy']),
@@ -55,6 +57,7 @@ class SaleModel extends Sale {
     id: sale.id,
     saleNumber: sale.saleNumber,
     orderId: sale.orderId,
+    notes: sale.notes,
     discount: sale.discount,
     status: sale.status,
     createdBy: sale.createdBy,
@@ -69,6 +72,7 @@ class SaleModel extends Sale {
   Map<String, dynamic> toJson() => {
     'saleNumber': saleNumber,
     'orderId': orderId,
+    'notes': notes,
     'discount': discount,
     'items': items
         .map(

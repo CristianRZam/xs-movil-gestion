@@ -4,8 +4,10 @@ import 'package:app_movil_sistema/core/config/env_config.dart';
 import 'package:app_movil_sistema/core/session/session_coordinator.dart';
 import 'package:app_movil_sistema/core/storage/token_storage.dart';
 import 'package:dio/dio.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class ApiClient {
+  static Future<PackageInfo>? _packageInfo;
   late final Dio dio;
   final TokenStorage tokenStorage = getIt<TokenStorage>();
 
@@ -25,6 +27,10 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          final package = await (_packageInfo ??= PackageInfo.fromPlatform());
+          options.headers['X-App-Platform'] = 'ANDROID';
+          options.headers['X-App-Version'] = package.version;
+          options.headers['X-App-Build'] = package.buildNumber;
           final requiresAuth = options.extra['requiresAuth'] ?? true;
 
           if (!requiresAuth) {

@@ -1,4 +1,5 @@
 import 'package:app_movil_sistema/features/order/domain/entities/order.dart';
+import 'package:app_movil_sistema/features/order/domain/entities/order_item_incident.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
 import 'order_event.dart';
 
@@ -7,6 +8,7 @@ enum OrderStatus { initial, loading, success, failure }
 class OrderState {
   final OrderStatus status;
   final List<Order> orders;
+  final List<Order> kitchenOrders;
   final List<Product> products;
   final bool? isCashSessionOpen;
   final Order? savedOrder;
@@ -22,10 +24,13 @@ class OrderState {
   final DateTime? toDate;
   final String orderStatus;
   final String searchQuery;
+  final List<OrderItemIncident> incidents;
+  final int? incidentsOrderId;
 
   const OrderState({
     this.status = OrderStatus.initial,
     this.orders = const [],
+    this.kitchenOrders = const [],
     this.products = const [],
     this.isCashSessionOpen,
     this.savedOrder,
@@ -41,6 +46,8 @@ class OrderState {
     this.toDate,
     this.orderStatus = 'ALL',
     this.searchQuery = '',
+    this.incidents = const [],
+    this.incidentsOrderId,
   });
 
   bool get hasMoreProducts => products.length < totalProducts;
@@ -48,6 +55,7 @@ class OrderState {
   OrderState copyWith({
     OrderStatus? status,
     List<Order>? orders,
+    List<Order>? kitchenOrders,
     List<Product>? products,
     Object? isCashSessionOpen = _sentinel,
     Object? savedOrder = _sentinel,
@@ -63,9 +71,12 @@ class OrderState {
     Object? toDate = _sentinel,
     String? orderStatus,
     String? searchQuery,
+    List<OrderItemIncident>? incidents,
+    Object? incidentsOrderId = _sentinel,
   }) => OrderState(
     status: status ?? this.status,
     orders: orders ?? this.orders,
+    kitchenOrders: kitchenOrders ?? this.kitchenOrders,
     products: products ?? this.products,
     isCashSessionOpen: identical(isCashSessionOpen, _sentinel)
         ? this.isCashSessionOpen
@@ -89,6 +100,8 @@ class OrderState {
     toDate: identical(toDate, _sentinel) ? this.toDate : toDate as DateTime?,
     orderStatus: orderStatus ?? this.orderStatus,
     searchQuery: searchQuery ?? this.searchQuery,
+    incidents: incidents ?? this.incidents,
+    incidentsOrderId: identical(incidentsOrderId, _sentinel) ? this.incidentsOrderId : incidentsOrderId as int?,
   );
   static const _sentinel = Object();
 }

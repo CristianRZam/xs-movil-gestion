@@ -1,6 +1,8 @@
 import 'package:app_movil_sistema/features/cash_session/domain/usecases/exists_open_cash_session_usecase.dart';
 import 'package:app_movil_sistema/core/config/env_config.dart';
 import 'package:app_movil_sistema/features/order/domain/entities/order.dart';
+import 'package:app_movil_sistema/features/order/domain/entities/order_item.dart';
+import 'package:app_movil_sistema/features/order/domain/entities/order_item_incident.dart';
 import 'package:app_movil_sistema/features/order/domain/usecases/order_usecases.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_view_request.dart';
 import 'package:app_movil_sistema/features/product/domain/usecases/get_product_view_usecase.dart';
@@ -10,24 +12,39 @@ import 'order_state.dart';
 
 class OrderBloc extends Bloc<OrderEvent, OrderState> {
   final GetOrdersUseCase getOrdersUseCase;
+  final GetKitchenQueueUseCase getKitchenQueueUseCase;
   final CreateOrderUseCase createOrderUseCase;
   final UpdateOrderUseCase updateOrderUseCase;
   final UpdateOrderStatusUseCase updateOrderStatusUseCase;
+  final AddOrderItemUseCase addOrderItemUseCase;
+  final UpdateOrderItemStatusUseCase updateOrderItemStatusUseCase;
+  final UpdateOrderItemsStatusUseCase updateOrderItemsStatusUseCase;
+  final CancelPendingOrderItemUseCase cancelPendingOrderItemUseCase;
+  final ReportOrderItemIncidentUseCase reportOrderItemIncidentUseCase;
+  final GetOrderIncidentsUseCase getOrderIncidentsUseCase;
   final DeleteOrderUseCase deleteOrderUseCase;
   final GetProductViewUseCase getProductViewUseCase;
   final ExistsOpenCashSessionUseCase existsOpenCashSessionUseCase;
 
   OrderBloc(
     this.getOrdersUseCase,
+    this.getKitchenQueueUseCase,
     this.createOrderUseCase,
     this.updateOrderUseCase,
     this.updateOrderStatusUseCase,
+    this.addOrderItemUseCase,
+    this.updateOrderItemStatusUseCase,
+    this.updateOrderItemsStatusUseCase,
+    this.cancelPendingOrderItemUseCase,
+    this.reportOrderItemIncidentUseCase,
+    this.getOrderIncidentsUseCase,
     this.deleteOrderUseCase,
     this.getProductViewUseCase,
     this.existsOpenCashSessionUseCase,
   ) : super(const OrderState()) {
     on<LoadOrders>(_loadOrders);
     on<LoadMoreOrders>(_loadMoreOrders);
+    on<LoadKitchenQueue>(_loadKitchenQueue);
     on<LoadOrderProducts>(_loadProducts);
     on<LoadMoreOrderProducts>(_loadMoreProducts);
     on<SearchOrderProducts>(_searchProducts);
@@ -35,6 +52,12 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     on<CheckOpenCashSession>(_checkOpenCashSession);
     on<SaveOrder>(_saveOrder);
     on<ChangeOrderStatus>(_changeStatus);
+    on<AddOrderItem>(_addItem);
+    on<ChangeOrderItemStatus>(_changeItemStatus);
+    on<ChangeOrderItemsStatus>(_changeItemsStatus);
+    on<CancelPendingOrderItem>(_cancelPendingItem);
+    on<ReportOrderItemIncident>(_reportIncident);
+    on<LoadOrderIncidents>(_loadIncidents);
     on<DeleteOrder>(_deleteOrder);
     on<ClearOrderAction>(
       (_, emit) => emit(state.copyWith(savedOrder: null, deleted: null)),
@@ -42,6 +65,109 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     on<ClearOrderError>(
       (_, emit) =>
           emit(state.copyWith(status: OrderStatus.success, errorMessage: null)),
+    );
+  }
+
+  Future<void> _loadKitchenQueue(
+    LoadKitchenQueue event,
+    Emitter<OrderState> emit,
+  ) async {
+    emit(state.copyWith(status: OrderStatus.loading));
+    final result = await getKitchenQueueUseCase(
+      size: EnvConfig.salesAndOrdersPageSize,
+    );
+    result.fold(
+      (failure) => emit(
+        state.copyWith(
+          status: OrderStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
+      (page) => emit(
+        state.copyWith(
+          status: OrderStatus.success,
+          kitchenOrders: page.orders,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addItem(AddOrderItem event, Emitter<OrderState> emit) async {
+    emit(state.copyWith(status: OrderStatus.loading));
+    final result = await addOrderItemUseCase(event.orderId, event.item);
+    await result.fold(
+      (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
+      (order) => _emitMutationSuccess(emit, savedOrder: order),
+    );
+  }
+
+  Future<void> _changeItemStatus(ChangeOrderItemStatus event, Emitter<OrderState> emit) async {
+    emit(state.copyWith(status: OrderStatus.loading));
+    final result = await updateOrderItemStatusUseCase(
+      event.orderId,
+      event.itemId,
+      event.status,
+      comment: event.comment,
+    );
+    await result.fold(
+      (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
+      (order) => _emitMutationSuccess(emit, savedOrder: order),
+    );
+  }
+
+  Future<void> _changeItemsStatus(ChangeOrderItemsStatus event, Emitter<OrderState> emit) async {
+    emit(state.copyWith(status: OrderStatus.loading));
+    final result = await updateOrderItemsStatusUseCase(
+      event.orderId,
+      event.itemIds,
+      event.status,
+      comment: event.comment,
+    );
+    await result.fold(
+      (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
+      (order) => _emitMutationSuccess(emit, savedOrder: order),
+    );
+  }
+
+  Future<void> _cancelPendingItem(CancelPendingOrderItem event, Emitter<OrderState> emit) async {
+    emit(state.copyWith(status: OrderStatus.loading));
+    final result = await cancelPendingOrderItemUseCase(event.orderId, event.itemId, comment: event.comment, stockDisposition: event.stockDisposition);
+    await result.fold(
+      (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
+      (order) => _emitMutationSuccess(emit, savedOrder: order),
+    );
+  }
+
+  Future<void> _reportIncident(ReportOrderItemIncident event, Emitter<OrderState> emit) async {
+    emit(state.copyWith(status: OrderStatus.loading));
+    final result = await reportOrderItemIncidentUseCase(event.orderId, event.itemId, event.resolution, event.reason, discountAmount: event.discountAmount);
+    await result.fold(
+      (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
+      (order) async {
+        await _emitMutationSuccess(emit, savedOrder: order);
+        final incidents = await getOrderIncidentsUseCase(event.orderId);
+        incidents.fold(
+          (_) {},
+          (value) => emit(state.copyWith(
+            savedOrder: _withIncidentDiscount(order, value),
+            incidents: value,
+            incidentsOrderId: event.orderId,
+          )),
+        );
+      },
+    );
+  }
+
+  Future<void> _loadIncidents(LoadOrderIncidents event, Emitter<OrderState> emit) async {
+    final result = await getOrderIncidentsUseCase(event.orderId);
+    result.fold(
+      (failure) => emit(state.copyWith(errorMessage: failure.message)),
+      (incidents) {
+        emit(state.copyWith(
+          incidents: incidents,
+          incidentsOrderId: event.orderId,
+        ));
+      },
     );
   }
 
@@ -306,6 +432,34 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     );
   }
 
+  Order _withIncidentDiscount(
+    Order order,
+    List<OrderItemIncident> incidents,
+  ) => Order(
+    id: order.id,
+    orderNumber: order.orderNumber,
+    cashRegisterId: order.cashRegisterId,
+    orderType: order.orderType,
+    tableNumber: order.tableNumber,
+    status: order.status,
+    notes: order.notes,
+    items: order.items,
+    incidentDiscount: incidents
+        .where((incident) =>
+            incident.resolution == 'DISCOUNT' &&
+            _isApprovedIncident(incident.status) &&
+            order.items.any((item) =>
+                item.id == incident.orderItemId && item.status != 'CANCELLED'))
+        .fold(0.0, (total, incident) => total + incident.discountAmount),
+    createdAt: order.createdAt,
+    modifiedAt: order.modifiedAt,
+  );
+
+  bool _isApprovedIncident(String status) {
+    final normalized = status.trim().toUpperCase();
+    return normalized == 'APPROVED' || normalized == 'APROVED';
+  }
+
   /// Las mutaciones de una orden cambian el stock reservado. Sincronizamos
   /// ambos listados antes de notificar el éxito a la interfaz.
   Future<void> _emitMutationSuccess(
@@ -313,7 +467,16 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     Order? savedOrder,
     bool deleted = false,
   }) async {
-    final ordersResult = await getOrdersUseCase(
+    if (savedOrder != null) {
+      emit(state.copyWith(
+        status: OrderStatus.success,
+        orders: state.orders
+            .map((order) => order.id == savedOrder.id ? savedOrder : order)
+            .toList(),
+        savedOrder: savedOrder,
+      ));
+    }
+    final ordersFuture = getOrdersUseCase(
       page: 0,
       size: EnvConfig.salesAndOrdersPageSize,
       from: state.fromDate,
@@ -321,7 +484,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       status: state.orderStatus,
       search: state.searchQuery,
     );
-    final productsResult = await getProductViewUseCase(
+    final productsFuture = getProductViewUseCase(
       ProductViewRequest(
         page: 0,
         size: EnvConfig.productPageSize,
@@ -329,6 +492,8 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       ),
     );
 
+    final ordersResult = await ordersFuture;
+    final productsResult = await productsFuture;
     final refreshedOrders = ordersResult.fold(
       (_) => state.orders,
       (page) => page.orders,
@@ -355,7 +520,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
           (_) => state.totalProducts,
           (response) => response.totalProducts,
         ),
-        savedOrder: savedOrder,
+        savedOrder: null,
         deleted: deleted ? true : null,
       ),
     );
