@@ -7,6 +7,10 @@ class DashboardSummary {
   final List<DailySale> weeklySales;
   final List<TopProduct> topProducts;
   final List<PaymentMethodUsage> paymentMethods;
+  final String scope;
+  final DateTime? fromDate;
+  final DateTime? toDate;
+  final int? sellerId;
 
   const DashboardSummary({
     this.summaryDate,
@@ -17,7 +21,38 @@ class DashboardSummary {
     required this.weeklySales,
     required this.topProducts,
     required this.paymentMethods,
+    this.scope = 'GLOBAL',
+    this.fromDate,
+    this.toDate,
+    this.sellerId,
   });
+}
+
+class DashboardFilter {
+  const DashboardFilter({
+    required this.fromDate,
+    required this.toDate,
+    this.scope = 'GLOBAL',
+    this.sellerId,
+  });
+
+  final DateTime fromDate;
+  final DateTime toDate;
+  final String scope;
+  final int? sellerId;
+
+  DashboardFilter copyWith({DateTime? fromDate, DateTime? toDate, String? scope, int? sellerId, bool clearSeller = false}) => DashboardFilter(
+        fromDate: fromDate ?? this.fromDate,
+        toDate: toDate ?? this.toDate,
+        scope: scope ?? this.scope,
+        sellerId: clearSeller ? null : sellerId ?? this.sellerId,
+      );
+}
+
+class DashboardSeller {
+  const DashboardSeller({required this.id, required this.name});
+  final int id;
+  final String name;
 }
 
 class DailySale {

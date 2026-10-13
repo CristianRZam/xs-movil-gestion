@@ -866,6 +866,8 @@ void openInventoryMovementDialog(
   required String type,
 }) {
   final quantityController = TextEditingController();
+  final availableStock = product.availableStock;
+  final reservedStock = product.reservedStock;
 
   final commentController = TextEditingController();
 
@@ -896,10 +898,32 @@ void openInventoryMovementDialog(
                   return;
                 }
 
+                final quantity = double.parse(quantityController.text);
+                if (type == "WASTE" && quantity > availableStock) {
+                  ScaffoldMessenger.of(parentContext).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Solo puede registrar hasta $availableStock unidad(es) de merma. Hay $reservedStock unidad(es) reservada(s) en ordenes activas.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+                if (type == "ADJUSTMENT" && quantity < reservedStock) {
+                  ScaffoldMessenger.of(parentContext).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'El stock final no puede ser menor que las $reservedStock unidad(es) reservada(s).',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+
                 final request = InventoryMovementCreateRequest(
                   productId: product.id,
                   type: type,
-                  quantity: double.parse(quantityController.text),
+                  quantity: quantity,
                   previousStock: 0,
                   currentStock: 0,
                   reason: commentController.text.trim().isEmpty
@@ -969,6 +993,16 @@ void openInventoryMovementDialog(
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
+                              if (reservedStock > 0) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Reservado: $reservedStock · Disponible: $availableStock',
+                                  style: TextStyle(
+                                    color: Colors.orange.shade800,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -984,9 +1018,23 @@ void openInventoryMovementDialog(
                     labelText: "Cantidad",
                     decimal: true,
                     prefixIcon: const Icon(Icons.inventory),
-                    validator: (value) => composeValidators([
-                      InputValidators.requiredField("Ingrese la cantidad"),
-                    ], value),
+                    validator: (value) {
+                      final required = composeValidators([
+                        InputValidators.requiredField("Ingrese la cantidad"),
+                      ], value);
+                      if (required != null) return required;
+                      final quantity = double.tryParse(value ?? '');
+                      if (quantity == null || quantity <= 0) {
+                        return 'Ingrese una cantidad válida';
+                      }
+                      if (type == "WASTE" && quantity > availableStock) {
+                        return 'Máximo para merma: $availableStock';
+                      }
+                      if (type == "ADJUSTMENT" && quantity < reservedStock) {
+                        return 'Mínimo por reservas: $reservedStock';
+                      }
+                      return null;
+                    },
                   ),
 
                   const SizedBox(height: 16),

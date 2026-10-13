@@ -87,7 +87,7 @@ void setupLocator() {
   getIt.registerLazySingleton<AccessControl>(
     () => AccessControl(
       permissionRequirements: const {
-        AppCapability.dashboard: {'VIEW_DASHBOARD'},
+        AppCapability.dashboard: {'VIEW_DASHBOARD', 'VIEW_OWN_DASHBOARD'},
         AppCapability.viewProducts: {'VIEW_PRODUCT'},
         AppCapability.viewProductMovements: {'VIEW_PRODUCT_MOVEMENT'},
         AppCapability.manageProducts: {'EDIT_PRODUCT'},
@@ -129,6 +129,7 @@ void setupLocator() {
         AppCapability.viewSales: {'VIEW_SALE'},
         AppCapability.createSales: {'CREATE_SALE'},
         AppCapability.cancelSales: {'CANCEL_SALE'},
+        AppCapability.viewProfile: {'VIEW_PROFILE'},
         AppCapability.reports: {'VIEW_REPORT'},
         AppCapability.notifications: {'VIEW_NOTIFICATION'},
         AppCapability.manageCategories: {'VIEW_PARAMETER'},
@@ -307,6 +308,12 @@ void setupLocator() {
   );
   getIt.registerFactory<AddOrderItemUseCase>(
     () => AddOrderItemUseCase(getIt<OrderRepository>()),
+  );
+  getIt.registerFactory<AddOrderItemsUseCase>(
+    () => AddOrderItemsUseCase(getIt<OrderRepository>()),
+  );
+  getIt.registerFactory<UpdatePendingOrderItemUseCase>(
+    () => UpdatePendingOrderItemUseCase(getIt<OrderRepository>()),
   );
   getIt.registerFactory<UpdateOrderItemStatusUseCase>(
     () => UpdateOrderItemStatusUseCase(getIt<OrderRepository>()),

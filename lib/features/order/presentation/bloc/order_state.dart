@@ -1,6 +1,7 @@
 import 'package:app_movil_sistema/features/order/domain/entities/order.dart';
 import 'package:app_movil_sistema/features/order/domain/entities/order_item_incident.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
+import 'package:app_movil_sistema/features/parameter/domain/entities/parameter.dart';
 import 'order_event.dart';
 
 enum OrderStatus { initial, loading, success, failure }
@@ -10,6 +11,10 @@ class OrderState {
   final List<Order> orders;
   final List<Order> kitchenOrders;
   final List<Product> products;
+  final List<Parameter> productCategories;
+  final String productSearchQuery;
+  final List<int> selectedProductCategoryIds;
+  final bool availableProductsOnly;
   final bool? isCashSessionOpen;
   final Order? savedOrder;
   final bool? deleted;
@@ -32,6 +37,10 @@ class OrderState {
     this.orders = const [],
     this.kitchenOrders = const [],
     this.products = const [],
+    this.productCategories = const [],
+    this.productSearchQuery = '',
+    this.selectedProductCategoryIds = const [],
+    this.availableProductsOnly = false,
     this.isCashSessionOpen,
     this.savedOrder,
     this.deleted,
@@ -57,6 +66,10 @@ class OrderState {
     List<Order>? orders,
     List<Order>? kitchenOrders,
     List<Product>? products,
+    List<Parameter>? productCategories,
+    String? productSearchQuery,
+    List<int>? selectedProductCategoryIds,
+    bool? availableProductsOnly,
     Object? isCashSessionOpen = _sentinel,
     Object? savedOrder = _sentinel,
     Object? deleted = _sentinel,
@@ -78,6 +91,12 @@ class OrderState {
     orders: orders ?? this.orders,
     kitchenOrders: kitchenOrders ?? this.kitchenOrders,
     products: products ?? this.products,
+    productCategories: productCategories ?? this.productCategories,
+    productSearchQuery: productSearchQuery ?? this.productSearchQuery,
+    selectedProductCategoryIds:
+        selectedProductCategoryIds ?? this.selectedProductCategoryIds,
+    availableProductsOnly:
+        availableProductsOnly ?? this.availableProductsOnly,
     isCashSessionOpen: identical(isCashSessionOpen, _sentinel)
         ? this.isCashSessionOpen
         : isCashSessionOpen as bool?,

@@ -11,13 +11,20 @@ class DashboardRepositoryImpl implements DashboardRepository {
   DashboardRepositoryImpl(this.remote);
 
   @override
-  Future<Either<Failure, DashboardSummary>> getSummary() async {
+  Future<Either<Failure, DashboardSummary>> getSummary(DashboardFilter filter) async {
     try {
-      return Right(await remote.getSummary());
+      return Right(await remote.getSummary(filter));
     } on DioException catch (error) {
       return Left(FailureMapper.fromDioException(error));
     } catch (_) {
       return Left(UnexpectedFailure());
     }
+  }
+
+  @override
+  Future<Either<Failure, List<DashboardSeller>>> getSellers() async {
+    try { return Right(await remote.getSellers()); }
+    on DioException catch (error) { return Left(FailureMapper.fromDioException(error)); }
+    catch (_) { return Left(UnexpectedFailure()); }
   }
 }

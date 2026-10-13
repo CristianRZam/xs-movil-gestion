@@ -74,6 +74,24 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
       _save(apiClient.dio.post('/orders/$orderId/items', data: item.toJson()));
 
   @override
+  Future<OrderModel> addItems(int orderId, List<OrderItemModel> items) =>
+      _save(
+        apiClient.dio.post(
+          '/orders/$orderId/items/batch',
+          data: {'items': items.map((item) => item.toJson()).toList()},
+        ),
+      );
+
+  @override
+  Future<OrderModel> updatePendingItem(
+    int orderId,
+    int itemId,
+    OrderItemModel item,
+  ) => _save(
+    apiClient.dio.put('/orders/$orderId/items/$itemId', data: item.toJson()),
+  );
+
+  @override
   Future<OrderModel> updateItemStatus(int orderId, int itemId, String status, {String? comment}) =>
       _save(apiClient.dio.put('/orders/$orderId/items/$itemId/status', data: {
         'status': status,

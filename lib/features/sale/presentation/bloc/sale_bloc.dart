@@ -3,6 +3,7 @@ import 'package:app_movil_sistema/features/cash_session/domain/usecases/exists_o
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_view_request.dart';
 import 'package:app_movil_sistema/features/product/domain/usecases/get_product_view_usecase.dart';
+import 'package:app_movil_sistema/features/parameter/domain/entities/parameter.dart';
 import 'package:app_movil_sistema/features/sale/domain/entities/sale.dart';
 import 'package:app_movil_sistema/features/sale/domain/usecases/sale_usecases.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,6 +16,10 @@ class SaleState {
   final SaleStatus status;
   final List<Sale> sales;
   final List<Product> products;
+  final List<Parameter> productCategories;
+  final String productSearchQuery;
+  final List<int> selectedProductCategoryIds;
+  final bool availableProductsOnly;
   final bool? cashOpen;
   final String? error;
   final bool saved;
@@ -33,6 +38,10 @@ class SaleState {
     this.status = SaleStatus.initial,
     this.sales = const [],
     this.products = const [],
+    this.productCategories = const [],
+    this.productSearchQuery = '',
+    this.selectedProductCategoryIds = const [],
+    this.availableProductsOnly = false,
     this.cashOpen,
     this.error,
     this.saved = false,
@@ -54,6 +63,10 @@ class SaleState {
     SaleStatus? status,
     List<Sale>? sales,
     List<Product>? products,
+    List<Parameter>? productCategories,
+    String? productSearchQuery,
+    List<int>? selectedProductCategoryIds,
+    bool? availableProductsOnly,
     Object? cashOpen = _sentinel,
     Object? error = _sentinel,
     bool? saved,
@@ -71,6 +84,12 @@ class SaleState {
     status: status ?? this.status,
     sales: sales ?? this.sales,
     products: products ?? this.products,
+    productCategories: productCategories ?? this.productCategories,
+    productSearchQuery: productSearchQuery ?? this.productSearchQuery,
+    selectedProductCategoryIds:
+        selectedProductCategoryIds ?? this.selectedProductCategoryIds,
+    availableProductsOnly:
+        availableProductsOnly ?? this.availableProductsOnly,
     cashOpen: identical(cashOpen, _sentinel)
         ? this.cashOpen
         : cashOpen as bool?,
@@ -118,6 +137,16 @@ class SearchSaleProducts {
   final String query;
 }
 
+class FilterSaleProducts {
+  const FilterSaleProducts({
+    required this.categoryIds,
+    required this.availableOnly,
+  });
+
+  final List<int> categoryIds;
+  final bool availableOnly;
+}
+
 class SaveSale {
   const SaveSale(this.sale);
   final Sale sale;
@@ -146,6 +175,7 @@ class SaleBloc extends Bloc<Object, SaleState> {
     on<LoadMoreSales>(_loadMoreSales);
     on<LoadMoreSaleProducts>(_loadMoreProducts);
     on<SearchSaleProducts>(_searchProducts);
+    on<FilterSaleProducts>(_filterProducts);
     on<SaveSale>(_save);
     on<CancelSale>(_cancel);
     on<ClearSaleMessage>(
@@ -200,6 +230,10 @@ class SaleBloc extends Bloc<Object, SaleState> {
             (_) => state.products,
             (value) => value.products,
           ),
+          productCategories: products.fold(
+            (_) => state.productCategories,
+            (value) => value.categories,
+          ),
           totalProducts: products.fold(
             (_) => state.totalProducts,
             (value) => value.totalProducts,
@@ -249,6 +283,11 @@ class SaleBloc extends Bloc<Object, SaleState> {
         page: page,
         size: EnvConfig.productPageSize,
         status: true,
+        name: state.productSearchQuery.isEmpty
+            ? null
+            : state.productSearchQuery,
+        categories: state.selectedProductCategoryIds,
+        availableOnly: state.availableProductsOnly,
       ),
     );
     result.fold(
@@ -258,6 +297,7 @@ class SaleBloc extends Bloc<Object, SaleState> {
       (response) => emit(
         state.copyWith(
           products: [...state.products, ...response.products],
+          productCategories: response.categories,
           totalProducts: response.totalProducts,
           isLoadingMoreProducts: false,
         ),
@@ -269,12 +309,15 @@ class SaleBloc extends Bloc<Object, SaleState> {
     SearchSaleProducts event,
     Emitter<SaleState> emit,
   ) async {
+    emit(state.copyWith(productSearchQuery: event.query));
     final result = await getProducts(
       ProductViewRequest(
         name: event.query.isEmpty ? null : event.query,
         page: 0,
         size: EnvConfig.productPageSize,
         status: true,
+        categories: state.selectedProductCategoryIds,
+        availableOnly: state.availableProductsOnly,
       ),
     );
     result.fold(
@@ -282,9 +325,40 @@ class SaleBloc extends Bloc<Object, SaleState> {
       (response) => emit(
         state.copyWith(
           products: response.products,
+          productCategories: response.categories,
           totalProducts: response.totalProducts,
         ),
       ),
+    );
+  }
+
+  Future<void> _filterProducts(
+    FilterSaleProducts event,
+    Emitter<SaleState> emit,
+  ) async {
+    emit(state.copyWith(
+      selectedProductCategoryIds: event.categoryIds,
+      availableProductsOnly: event.availableOnly,
+    ));
+    final result = await getProducts(
+      ProductViewRequest(
+        name: state.productSearchQuery.isEmpty
+            ? null
+            : state.productSearchQuery,
+        categories: event.categoryIds,
+        availableOnly: event.availableOnly,
+        page: 0,
+        size: EnvConfig.productPageSize,
+        status: true,
+      ),
+    );
+    result.fold(
+      (failure) => emit(state.copyWith(error: failure.message)),
+      (response) => emit(state.copyWith(
+        products: response.products,
+        productCategories: response.categories,
+        totalProducts: response.totalProducts,
+      )),
     );
   }
 

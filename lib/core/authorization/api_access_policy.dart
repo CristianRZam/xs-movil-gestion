@@ -11,6 +11,7 @@ class ApiAccessPolicy {
     final resource = segments.first;
     if (resource == 'reports') return AppCapability.reports;
     if (resource == 'notifications') return AppCapability.notifications;
+    if (resource == 'profile') return AppCapability.viewProfile;
     if (resource == 'dashboard' &&
         segments.length == 1 &&
         method.toUpperCase() == 'GET') {

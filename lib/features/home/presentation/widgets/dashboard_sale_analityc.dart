@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:app_movil_sistema/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -22,21 +24,23 @@ class DashboardSaleAnalytic extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _SectionCard(
-          title: 'Ventas últimos 7 días',
-          subtitle: 'Importe de ventas completadas por día',
+          title: 'Ventas del periodo',
+          subtitle: summary.weeklySales.length > 7
+              ? 'Importe por día. Desliza para ver todo el periodo.'
+              : 'Importe de ventas completadas por día',
           child: _WeeklyChart(sales: summary.weeklySales),
         ),
         const SizedBox(height: 16),
         _SectionCard(
-          title: 'Productos más vendidos',
+          title: 'Productos más vendidos · histórico',
           subtitle:
-              'Top ${summary.topProducts.length.clamp(0, 10)} por unidades',
+              'Top ${summary.topProducts.length.clamp(0, 10)} acumulado por unidades',
           child: _ProductsChart(products: summary.topProducts),
         ),
         const SizedBox(height: 16),
         _SectionCard(
-          title: 'Métodos de pago más usados',
-          subtitle: 'Distribución por importe cobrado',
+          title: 'Métodos de pago · histórico',
+          subtitle: 'Distribución acumulada por importe cobrado',
           child: _PaymentMethods(methods: summary.paymentMethods),
         ),
       ],
@@ -57,12 +61,23 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: isDark ? colors.surfaceContainerHigh : colors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.dividerColor.withOpacity(.32)),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: .55)),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: colors.shadow.withValues(alpha: .045),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,7 +89,12 @@ class _SectionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 3),
-          Text(subtitle, style: theme.textTheme.bodySmall),
+          Text(
+            subtitle,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(height: 18),
           child,
         ],
@@ -94,13 +114,39 @@ class _WeeklyChart extends StatelessWidget {
     final highest = sales
         .map((item) => item.total)
         .reduce((a, b) => a > b ? a : b);
-    final maxY = highest == 0 ? 10.0 : highest * 1.25;
+    final maxY = highest == 0 ? 10.0 : highest * 1.35;
+    final colorScheme = Theme.of(context).colorScheme;
     return SizedBox(
       height: 220,
-      child: BarChart(
-        BarChartData(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final chartWidth = math.max(
+            constraints.maxWidth,
+            sales.length * 56.0,
+          );
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: chartWidth,
+              child: BarChart(
+                BarChartData(
           maxY: maxY,
           alignment: BarChartAlignment.spaceAround,
+          barTouchData: BarTouchData(
+            touchTooltipData: BarTouchTooltipData(
+              fitInsideHorizontally: true,
+              fitInsideVertically: true,
+              tooltipMargin: 8,
+              getTooltipColor: (_) => colorScheme.inverseSurface,
+              getTooltipItem: (_, _, rod, _) => BarTooltipItem(
+                'S/ ${rod.toY.toStringAsFixed(2)}',
+                TextStyle(
+                  color: colorScheme.onInverseSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
@@ -137,7 +183,7 @@ class _WeeklyChart extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
-                      _day(sales[index].date.weekday),
+                      _date(sales[index].date),
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -168,13 +214,17 @@ class _WeeklyChart extends StatelessWidget {
               ],
             ),
           ),
-        ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  String _day(int day) =>
-      const ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][day - 1];
+  String _date(DateTime value) =>
+      '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}';
 }
 
 class _ProductsChart extends StatelessWidget {

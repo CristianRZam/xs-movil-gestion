@@ -9,6 +9,7 @@ import 'package:app_movil_sistema/features/order/domain/entities/order_item_inci
 import 'package:app_movil_sistema/features/order/presentation/bloc/order_bloc.dart';
 import 'package:app_movil_sistema/features/order/presentation/bloc/order_event.dart';
 import 'package:app_movil_sistema/features/order/presentation/bloc/order_state.dart';
+import 'package:app_movil_sistema/features/order/presentation/pages/order_composer_page.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
 import 'package:app_movil_sistema/features/product/presentation/widgets/product_selector_sheet.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
@@ -45,8 +46,6 @@ class _OrderItemTrailingAction extends StatelessWidget {
     final canReportIncident = isActiveOrder && item.status == 'SERVED' && item.id != null && order.id != null &&
         getIt<AccessControl>().allows(AppCapability.reportOrderIncident) &&
         getIt<AccessControl>().allows(AppCapability.approveOrderCompensation);
-    final canCancel = isActiveOrder && item.status != 'CANCELLED' && item.id != null && order.id != null &&
-        getIt<AccessControl>().allows(AppCapability.cancelOrderItem);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -73,14 +72,6 @@ class _OrderItemTrailingAction extends StatelessWidget {
             color: Colors.red.shade700,
             icon: const Icon(Icons.add_alert_outlined, size: 20),
             onPressed: () => _showIncidentDialog(context, order.id!, item.id!),
-          ),
-        if (canCancel)
-          IconButton(
-            tooltip: 'Cancelar producto',
-            visualDensity: VisualDensity.compact,
-            color: Colors.red.shade700,
-            icon: const Icon(Icons.cancel_outlined, size: 19),
-            onPressed: () => _showCancelOrderItemDialog(context, order.id!, item.id!),
           ),
       ],
     );
@@ -241,6 +232,89 @@ Future<void> _showCancelOrderItemDialog(
   reason.dispose();
 }
 
+Future<void> _showEditPendingOrderItemDialog(
+  BuildContext context,
+  int orderId,
+  OrderItem item,
+  int maximumQuantity,
+) async {
+  final quantity = TextEditingController(text: _quantity(item.quantity));
+  final notes = TextEditingController(text: item.notes ?? '');
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Editar producto pendiente'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: quantity,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: 'Cantidad',
+              helperText: 'Máximo disponible: $maximumQuantity',
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: notes,
+            maxLength: 255,
+            maxLines: 3,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Nota (opcional)',
+              prefixIcon: Icon(Icons.notes_outlined),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final value = int.tryParse(quantity.text);
+            if (value == null || value <= 0 || value > maximumQuantity) {
+              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                SnackBar(
+                  content: Text('Ingrese una cantidad entre 1 y $maximumQuantity.'),
+                ),
+              );
+              return;
+            }
+            Navigator.pop(dialogContext);
+            context.read<OrderBloc>().add(
+              UpdatePendingOrderItem(
+                orderId,
+                item.id!,
+                OrderItem(
+                  id: item.id,
+                  productId: item.productId,
+                  productName: item.productName,
+                  quantity: value.toDouble(),
+                  unitPrice: item.unitPrice,
+                  notes: _nullIfBlank(notes.text),
+                  fulfillmentType: item.fulfillmentType,
+                  status: item.status,
+                  createdAt: item.createdAt,
+                  modifiedAt: item.modifiedAt,
+                ),
+              ),
+            );
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
+    ),
+  );
+  await Future<void>.delayed(const Duration(milliseconds: 300));
+  quantity.dispose();
+  notes.dispose();
+}
+
 Future<void> _showAddOrderItem(
   BuildContext context,
   Order order,
@@ -257,10 +331,21 @@ Future<void> _showAddOrderItem(
         child: BlocBuilder<OrderBloc, OrderState>(
           builder: (sheetContext, state) => ProductSelectorSheet(
             products: state.products.isEmpty ? products : state.products,
+            categories: state.productCategories,
+            selectedCategoryIds: state.selectedProductCategoryIds,
+            availableOnly: state.availableProductsOnly,
+            searchQuery: state.productSearchQuery,
             hasMore: state.hasMoreProducts,
             isLoadingMore: state.isLoadingMoreProducts,
             onLoadMore: () => sheetContext.read<OrderBloc>().add(const LoadMoreOrderProducts()),
             onSearchChanged: (query) => sheetContext.read<OrderBloc>().add(SearchOrderProducts(query)),
+            onFiltersChanged: (categoryIds, availableOnly) =>
+                sheetContext.read<OrderBloc>().add(
+                  FilterOrderProducts(
+                    categoryIds: categoryIds,
+                    availableOnly: availableOnly,
+                  ),
+                ),
           ),
         ),
       ),
@@ -274,7 +359,11 @@ Future<void> _showAddOrderItem(
     text: (selected.promoPrice ?? selected.basePrice).toStringAsFixed(2),
   );
   final notesController = TextEditingController();
-  String fulfillmentType = order.orderType == 'TAKEAWAY' ? 'TAKEAWAY' : 'DINE_IN';
+  String fulfillmentType = switch (order.orderType) {
+    'TAKEAWAY' => 'TAKEAWAY',
+    'DELIVERY' => 'DELIVERY',
+    _ => 'DINE_IN',
+  };
   await showDialog<void>(
     context: context,
     builder: (dialogContext) => BlocProvider.value(
@@ -305,6 +394,7 @@ Future<void> _showAddOrderItem(
               items: const [
                 DropdownMenuItem(value: 'DINE_IN', child: Text('En local')),
                 DropdownMenuItem(value: 'TAKEAWAY', child: Text('Para llevar')),
+                DropdownMenuItem(value: 'DELIVERY', child: Text('Entrega')),
               ],
               onChanged: (value) => setDialogState(() => fulfillmentType = value!),
             ),
@@ -738,8 +828,20 @@ class _OrderCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                '${_typeLabel(order.orderType)}${order.tableNumber?.isNotEmpty == true ? ' · ${order.tableNumber}' : ''}',
+              Row(
+                children: [
+                  Icon(
+                    _typeIcon(order.orderType),
+                    size: 17,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '${_typeLabel(order.orderType)}${order.tableNumber?.isNotEmpty == true ? ' · ${order.tableNumber}' : ''}',
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               Row(
@@ -852,7 +954,17 @@ void _showOrderDetail(
             ],
           ),
           const SizedBox(height: 4),
-          Text(_typeLabel(currentOrder.orderType)),
+          Row(
+            children: [
+              Icon(
+                _typeIcon(currentOrder.orderType),
+                size: 18,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 6),
+              Text(_typeLabel(currentOrder.orderType)),
+            ],
+          ),
           if (currentOrder.notes?.isNotEmpty == true) ...[
             const SizedBox(height: 8),
             Text(currentOrder.notes!),
@@ -948,6 +1060,24 @@ void _showOrderDetail(
                   getIt<AccessControl>().allows(
                     AppCapability.correctOrderItemStatus,
                   );
+              final canCancelItem =
+                  currentOrder.status != 'COMPLETED' &&
+                  currentOrder.status != 'CANCELLED' &&
+                  item.status != 'CANCELLED' &&
+                  currentOrder.id != null &&
+                  item.id != null &&
+                  getIt<AccessControl>().allows(AppCapability.cancelOrderItem);
+              final canEditPendingItem =
+                  item.status == 'PENDING' &&
+                  currentOrder.id != null &&
+                  item.id != null &&
+                  getIt<AccessControl>().allows(
+                    AppCapability.editPendingOrderItem,
+                  );
+              final availableQuantity = _availableStock(products, item.productId);
+              final maximumEditableQuantity = availableQuantity < 0
+                  ? item.quantity.toInt()
+                  : availableQuantity + item.quantity.toInt();
               return Column(
               children: [
                 ListTile(
@@ -976,13 +1106,13 @@ void _showOrderDetail(
                   title: Row(
                 children: [
                   Icon(
-                    item.fulfillmentType == 'TAKEAWAY'
-                        ? Icons.shopping_bag_outlined
-                        : Icons.home_outlined,
+                    _typeIcon(item.fulfillmentType),
                     size: 18,
-                    color: item.fulfillmentType == 'TAKEAWAY'
-                        ? Colors.deepOrange.shade700
-                        : Colors.indigo.shade700,
+                    color: switch (item.fulfillmentType) {
+                      'TAKEAWAY' => Colors.deepOrange.shade700,
+                      'DELIVERY' => Colors.teal.shade700,
+                      _ => Colors.indigo.shade700,
+                    },
                   ),
                   const SizedBox(width: 6),
                   Expanded(child: Text(_productName(products, item.productId))),
@@ -1001,6 +1131,30 @@ void _showOrderDetail(
                           color: Colors.deepOrange,
                           size: 19,
                         ),
+                      ),
+                    ),
+                  if (canEditPendingItem)
+                    IconButton(
+                      tooltip: 'Editar cantidad y nota',
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.edit_outlined, size: 19),
+                      onPressed: () => _showEditPendingOrderItemDialog(
+                        context,
+                        currentOrder.id!,
+                        item,
+                        maximumEditableQuantity,
+                      ),
+                    ),
+                  if (canCancelItem)
+                    IconButton(
+                      tooltip: 'Cancelar producto',
+                      visualDensity: VisualDensity.compact,
+                      color: Colors.red.shade700,
+                      icon: const Icon(Icons.cancel_outlined, size: 19),
+                      onPressed: () => _showCancelOrderItemDialog(
+                        context,
+                        currentOrder.id!,
+                        item.id!,
                       ),
                     ),
                 ],
@@ -1166,9 +1320,15 @@ void _showOrderDetail(
           if (_canEditActiveOrder(currentOrder.status) &&
               getIt<AccessControl>().allows(AppCapability.addOrderItem)) ...[
               FilledButton.tonalIcon(
-                onPressed: () => _showAddOrderItem(context, currentOrder, products),
+                onPressed: () async {
+                  await _openOrderForm(
+                    context,
+                    order: currentOrder,
+                    appendItemsOnly: true,
+                  );
+                },
                 icon: const Icon(Icons.add_shopping_cart_outlined),
-                label: const Text('Agregar producto'),
+                label: const Text('Agregar productos'),
               ),
               const SizedBox(height: 10),
             ],
@@ -1513,14 +1673,23 @@ void _confirmCancel(BuildContext context, Order order) {
   );
 }
 
-Future<bool?> _openOrderForm(BuildContext context, {Order? order}) async {
-  final required = order == null
+Future<bool?> _openOrderForm(
+  BuildContext context, {
+  Order? order,
+  bool appendItemsOnly = false,
+}) async {
+  final required = appendItemsOnly
+      ? AppCapability.addOrderItem
+      : order == null
       ? AppCapability.createOrders
       : AppCapability.editOrders;
   if (!getIt<AccessControl>().allows(required)) return null;
   final bloc = context.read<OrderBloc>();
   final navigator = Navigator.of(context, rootNavigator: true);
   final completer = Completer<List<Product>>();
+  // El compositor solo debe reaccionar al resultado de su propio guardado,
+  // no a una mutacion anterior que aun permanezca en el estado compartido.
+  bloc.add(const ClearOrderAction());
   bloc.add(RefreshOrderProducts(completer));
 
   try {
@@ -1529,12 +1698,16 @@ Future<bool?> _openOrderForm(BuildContext context, {Order? order}) async {
     final freshProducts = await completer.future;
     if (!navigator.mounted) return null;
 
-    return await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => BlocProvider.value(
-        value: bloc,
-        child: _OrderFormDialog(order: order, products: freshProducts),
+    return await navigator.push<bool>(
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: bloc,
+          child: OrderComposerPage(
+            order: order,
+            appendItemsOnly: appendItemsOnly,
+            initialProducts: freshProducts,
+          ),
+        ),
       ),
     );
   } catch (_) {
@@ -1733,6 +1906,10 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
             height: MediaQuery.sizeOf(sheetContext).height * .78,
             child: ProductSelectorSheet(
               products: state.products,
+              categories: state.productCategories,
+              selectedCategoryIds: state.selectedProductCategoryIds,
+              availableOnly: state.availableProductsOnly,
+              searchQuery: state.productSearchQuery,
               hasMore: state.hasMoreProducts,
               isLoadingMore: state.isLoadingMoreProducts,
               onLoadMore: () => sheetContext.read<OrderBloc>().add(
@@ -1741,6 +1918,13 @@ class _OrderFormDialogState extends State<_OrderFormDialog> {
               onSearchChanged: (query) => sheetContext.read<OrderBloc>().add(
                 SearchOrderProducts(query),
               ),
+              onFiltersChanged: (categoryIds, availableOnly) =>
+                  sheetContext.read<OrderBloc>().add(
+                    FilterOrderProducts(
+                      categoryIds: categoryIds,
+                      availableOnly: availableOnly,
+                    ),
+                  ),
             ),
           ),
         ),
@@ -2073,6 +2257,12 @@ String _typeLabel(String type) => switch (type) {
   'TAKEAWAY' => 'Para llevar',
   'DELIVERY' => 'Entrega',
   _ => type,
+};
+IconData _typeIcon(String type) => switch (type) {
+  'DINE_IN' => Icons.table_restaurant_outlined,
+  'TAKEAWAY' => Icons.shopping_bag_outlined,
+  'DELIVERY' => Icons.delivery_dining_outlined,
+  _ => Icons.receipt_long_outlined,
 };
 String _statusLabel(String status) => switch (status) {
   'PENDING' => 'PENDIENTE',

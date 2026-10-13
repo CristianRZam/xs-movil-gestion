@@ -10,6 +10,7 @@ class ProductViewRequest {
   final bool? manageVariant;
   final int? minimumStock;
   final int? maximumStock;
+  final bool? availableOnly;
   final bool? status;
 
   final int page;
@@ -25,6 +26,7 @@ class ProductViewRequest {
     this.manageVariant,
     this.minimumStock,
     this.maximumStock,
+    this.availableOnly,
     this.status,
     this.page = 0,
     this.size = 5,
@@ -40,6 +42,7 @@ class ProductViewRequest {
     bool? manageVariant,
     int? minimumStock,
     int? maximumStock,
+    bool? availableOnly,
     bool? status,
     int? page,
     int? size,
@@ -54,6 +57,7 @@ class ProductViewRequest {
       manageVariant: manageVariant ?? this.manageVariant,
       minimumStock: minimumStock ?? this.minimumStock,
       maximumStock: maximumStock ?? this.maximumStock,
+      availableOnly: availableOnly ?? this.availableOnly,
       status: status ?? this.status,
       page: page ?? this.page,
       size: size ?? this.size,

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
@@ -88,7 +90,6 @@ class FlashMessage {
     overlay.insert(overlayEntry);
     _currentOverlay = overlayEntry;
 
-    Future.delayed(const Duration(seconds: 4), close);
   }
 
   static _FlashConfig _getConfig(FlashMessageType type) {
@@ -155,8 +156,9 @@ class _FlashMessageWidget extends StatefulWidget {
 }
 
 class _FlashMessageWidgetState extends State<_FlashMessageWidget>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _controller;
+  late AnimationController _durationController;
 
   late Animation<Offset> _slide;
 
@@ -170,6 +172,10 @@ class _FlashMessageWidgetState extends State<_FlashMessageWidget>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+    _durationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2600),
+    );
 
     _slide = Tween(
       begin: const Offset(0, 0.15),
@@ -182,19 +188,27 @@ class _FlashMessageWidgetState extends State<_FlashMessageWidget>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     _controller.forward();
+    _durationController
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed && mounted) {
+          widget.onClose();
+        }
+      })
+      ..forward();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _durationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final backgroundColor = widget.isDark
-        ? const Color(0xFF1C1C1E)
-        : Colors.white;
+        ? const Color(0xAE1A2024)
+        : const Color(0xB3FFFFFF);
 
     final textColor = widget.isDark ? Colors.white : Colors.black87;
 
@@ -209,83 +223,103 @@ class _FlashMessageWidgetState extends State<_FlashMessageWidget>
           opacity: _fade,
           child: SlideTransition(
             position: _slide,
-            child: Container(
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: widget.accentColor.withOpacity(.25)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: backgroundColor,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: widget.accentColor.withValues(alpha: .42),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: .14),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: widget.accentColor.withOpacity(.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: FaIcon(
-                          widget.icon,
-                          size: 18,
-                          color: widget.accentColor,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: widget.accentColor.withValues(alpha: .16),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Center(
+                                child: FaIcon(
+                                  widget.icon,
+                                  size: 18,
+                                  color: widget.accentColor,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    widget.title,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    widget.message,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      height: 1.4,
+                                      color: textColor.withValues(alpha: .80),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(100),
+                              onTap: widget.onClose,
+                              child: Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.close,
+                                  size: 18,
+                                  color: textColor.withValues(alpha: .65),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-
-                    const SizedBox(width: 14),
-
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            widget.title,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: textColor,
-                            ),
+                      AnimatedBuilder(
+                        animation: _durationController,
+                        builder: (context, _) => LinearProgressIndicator(
+                          value: 1 - _durationController.value,
+                          minHeight: 3,
+                          backgroundColor: Colors.transparent,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            widget.accentColor.withValues(alpha: .92),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.message,
-                            style: TextStyle(
-                              fontSize: 14,
-                              height: 1.4,
-                              color: textColor.withOpacity(.75),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(width: 8),
-
-                    InkWell(
-                      borderRadius: BorderRadius.circular(100),
-                      onTap: widget.onClose,
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(
-                          Icons.close,
-                          size: 18,
-                          color: textColor.withOpacity(.55),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

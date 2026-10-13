@@ -47,7 +47,7 @@ class XsDrawer extends StatelessWidget {
     access.allows(AppCapability.manageRoles);
 
     final canProfile =
-    access.allows(AppCapability.operate);
+    access.allows(AppCapability.viewProfile);
 
     final backgroundColor =
     isDarkMode ? AppColors.darkBody : AppColors.lightBackground;

@@ -636,18 +636,19 @@ String _paymentLabel(String method) => switch (method) {
   _ => method,
 };
 
-void _openSaleForm(
+Future<void> _openSaleForm(
   BuildContext context,
   List<Product> products, {
   Order? order,
-}) {
+}) async {
   if (!getIt<AccessControl>().allows(AppCapability.createSales)) return;
-  showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => BlocProvider.value(
-      value: context.read<SaleBloc>(),
-      child: _SaleForm(products: products, order: order),
+  final navigator = Navigator.of(context, rootNavigator: true);
+  await navigator.push<void>(
+    MaterialPageRoute(
+      builder: (_) => BlocProvider.value(
+        value: context.read<SaleBloc>(),
+        child: _SaleForm(products: products, order: order),
+      ),
     ),
   );
 }
@@ -669,6 +670,7 @@ class _SaleFormState extends State<_SaleForm> {
   final _productsById = <int, Product>{};
   final _discount = TextEditingController();
   final _notes = TextEditingController();
+  bool _showCheckout = false;
 
   @override
   void initState() {
@@ -725,15 +727,22 @@ class _SaleFormState extends State<_SaleForm> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-    title: Text(widget.order == null ? 'Nueva venta directa' : 'Cobrar'),
-    content: SizedBox(
-      width: 520,
+  Widget build(BuildContext context) {
+    if (widget.order == null && !_showCheckout) {
+      return _buildSaleCatalog(context);
+    }
+    return _buildCheckout(context);
+  }
+
+  Widget _buildCheckout(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: Text(widget.order == null ? 'Nueva venta directa' : 'Cobrar orden'),
+    ),
+    body: SafeArea(
       child: Form(
         key: _formKey,
         child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 110),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -817,12 +826,6 @@ class _SaleFormState extends State<_SaleForm> {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                   const Spacer(),
-                  if (widget.order == null)
-                    TextButton.icon(
-                      onPressed: _addProduct,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Agregar'),
-                    ),
                 ],
               ),
               if (_items.isEmpty)
@@ -871,18 +874,255 @@ class _SaleFormState extends State<_SaleForm> {
         ),
       ),
     ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Cancelar'),
+    bottomNavigationBar: SafeArea(
+      top: false,
+      child: Material(
+        elevation: 8,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: widget.order == null
+                      ? () => setState(() => _showCheckout = false)
+                      : () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: _items.isEmpty ? null : _save,
+                  icon: const Icon(Icons.lock_open_rounded),
+                  label: const Text('Confirmar cobro'),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      FilledButton.icon(
-        onPressed: _save,
-        icon: const Icon(Icons.lock_open_rounded),
-        label: const Text('Confirmar cobro'),
-      ),
-    ],
+    ),
   );
+
+  Widget _buildSaleCatalog(BuildContext context) => BlocBuilder<SaleBloc, SaleState>(
+    builder: (context, state) {
+      for (final product in state.products) {
+        _productsById[product.id] = product;
+      }
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Nueva venta'),
+          actions: [
+            IconButton(
+              tooltip: 'Ver carrito',
+              onPressed: _showCart,
+              icon: Badge(
+                isLabelVisible: _items.isNotEmpty,
+                label: Text('${_items.length}'),
+                child: const Icon(Icons.shopping_cart_outlined),
+              ),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: ProductSelectorSheet(
+                  products: state.products,
+                  categories: state.productCategories,
+                  selectedCategoryIds: state.selectedProductCategoryIds,
+                  availableOnly: state.availableProductsOnly,
+                  searchQuery: state.productSearchQuery,
+                  hasMore: state.hasMoreProducts,
+                  isLoadingMore: state.isLoadingMoreProducts,
+                  onLoadMore: () => context.read<SaleBloc>().add(
+                    const LoadMoreSaleProducts(),
+                  ),
+                  onSearchChanged: (query) => context.read<SaleBloc>().add(
+                    SearchSaleProducts(query),
+                  ),
+                  onFiltersChanged: (categoryIds, availableOnly) => context
+                      .read<SaleBloc>()
+                      .add(
+                        FilterSaleProducts(
+                          categoryIds: categoryIds,
+                          availableOnly: availableOnly,
+                        ),
+                      ),
+                  onProductSelected: _addProductToCart,
+                ),
+              ),
+              _SaleCartBar(
+                itemCount: _items.length,
+                total: _subtotal,
+                onOpenCart: _showCart,
+                onCheckout: _items.isEmpty
+                    ? null
+                    : () => setState(() => _showCheckout = true),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+
+  void _addProductToCart(Product product) {
+    if (product.availableStock <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El producto no tiene stock disponible.')),
+      );
+      return;
+    }
+    final existingIndex = _items.indexWhere(
+      (item) => item.productId == product.id,
+    );
+    if (existingIndex >= 0 &&
+        _items[existingIndex].quantity >= product.availableStock) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Solo hay ${product.availableStock} unidad(es) disponible(s).',
+          ),
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _productsById[product.id] = product;
+      if (existingIndex >= 0) {
+        final item = _items[existingIndex];
+        _items[existingIndex] = SaleItem(
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity + 1,
+          unitPrice: item.unitPrice,
+          discount: item.discount,
+        );
+      } else {
+        _items.add(
+          SaleItem(
+            productId: product.id,
+            productName: product.name,
+            quantity: 1,
+            unitPrice: product.promoPrice ?? product.basePrice,
+          ),
+        );
+      }
+    });
+  }
+
+  void _showCart() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * .72,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.shopping_cart_outlined),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Carrito (${_items.length})',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
+                      Text(
+                        'S/ ${_subtotal.toStringAsFixed(2)}',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: _items.isEmpty
+                      ? const Center(child: Text('Aún no agregó productos.'))
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _items.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 8),
+                          itemBuilder: (_, index) => _SaleCartItem(
+                            item: _items[index],
+                            product: _product(_items[index].productId),
+                            onDecrease: () {
+                              setState(() {
+                                final item = _items[index];
+                                if (item.quantity <= 1) {
+                                  _items.removeAt(index);
+                                } else {
+                                  _items[index] = SaleItem(
+                                    productId: item.productId,
+                                    productName: item.productName,
+                                    quantity: item.quantity - 1,
+                                    unitPrice: item.unitPrice,
+                                    discount: item.discount,
+                                  );
+                                }
+                              });
+                              setSheetState(() {});
+                            },
+                            onIncrease: () {
+                              final item = _items[index];
+                              final stock = _product(item.productId)?.availableStock ?? 0;
+                              if (item.quantity >= stock) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Solo hay $stock unidad(es) disponible(s).')),
+                                );
+                                return;
+                              }
+                              setState(() {
+                                _items[index] = SaleItem(
+                                  productId: item.productId,
+                                  productName: item.productName,
+                                  quantity: item.quantity + 1,
+                                  unitPrice: item.unitPrice,
+                                  discount: item.discount,
+                                );
+                              });
+                              setSheetState(() {});
+                            },
+                            onRemove: () {
+                              setState(() => _items.removeAt(index));
+                              setSheetState(() {});
+                            },
+                          ),
+                        ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: _items.isEmpty
+                          ? null
+                          : () {
+                              Navigator.of(sheetContext).pop();
+                              setState(() => _showCheckout = true);
+                            },
+                      icon: const Icon(Icons.payments_outlined),
+                      label: const Text('Ir a cobrar'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _itemTile(MapEntry<int, SaleItem> entry) {
     final item = entry.value;
@@ -998,6 +1238,10 @@ class _SaleFormState extends State<_SaleForm> {
             height: MediaQuery.sizeOf(sheetContext).height * .78,
             child: ProductSelectorSheet(
               products: state.products,
+              categories: state.productCategories,
+              selectedCategoryIds: state.selectedProductCategoryIds,
+              availableOnly: state.availableProductsOnly,
+              searchQuery: state.productSearchQuery,
               hasMore: state.hasMoreProducts,
               isLoadingMore: state.isLoadingMoreProducts,
               onLoadMore: () => sheetContext.read<SaleBloc>().add(
@@ -1005,6 +1249,13 @@ class _SaleFormState extends State<_SaleForm> {
               ),
               onSearchChanged: (query) =>
                   sheetContext.read<SaleBloc>().add(SearchSaleProducts(query)),
+              onFiltersChanged: (categoryIds, availableOnly) =>
+                  sheetContext.read<SaleBloc>().add(
+                    FilterSaleProducts(
+                      categoryIds: categoryIds,
+                      availableOnly: availableOnly,
+                    ),
+                  ),
             ),
           ),
         ),
@@ -1105,6 +1356,119 @@ class _SaleFormState extends State<_SaleForm> {
     );
     context.read<SaleBloc>().add(SaveSale(sale));
   }
+}
+
+class _SaleCartBar extends StatelessWidget {
+  const _SaleCartBar({
+    required this.itemCount,
+    required this.total,
+    required this.onOpenCart,
+    required this.onCheckout,
+  });
+
+  final int itemCount;
+  final double total;
+  final VoidCallback onOpenCart;
+  final VoidCallback? onCheckout;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    top: false,
+    child: Material(
+      elevation: 10,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onOpenCart,
+                icon: Badge(
+                  isLabelVisible: itemCount > 0,
+                  label: Text('$itemCount'),
+                  child: const Icon(Icons.shopping_cart_outlined),
+                ),
+                label: Text(itemCount == 0 ? 'Carrito' : 'S/ ${total.toStringAsFixed(2)}'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: FilledButton.icon(
+                onPressed: onCheckout,
+                icon: const Icon(Icons.payments_outlined),
+                label: const Text('Cobrar'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _SaleCartItem extends StatelessWidget {
+  const _SaleCartItem({
+    required this.item,
+    required this.product,
+    required this.onDecrease,
+    required this.onIncrease,
+    required this.onRemove,
+  });
+
+  final SaleItem item;
+  final Product? product;
+  final VoidCallback onDecrease;
+  final VoidCallback onIncrease;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product?.name ?? item.productName ?? 'Producto #${item.productId}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'S/ ${item.unitPrice.toStringAsFixed(2)} c/u · S/ ${item.subtotal.toStringAsFixed(2)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Restar una unidad',
+            onPressed: onDecrease,
+            icon: const Icon(Icons.remove_circle_outline),
+          ),
+          Text(
+            item.quantity.toInt().toString(),
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+          IconButton(
+            tooltip: 'Agregar una unidad',
+            onPressed: onIncrease,
+            icon: const Icon(Icons.add_circle_outline),
+          ),
+          IconButton(
+            tooltip: 'Quitar producto',
+            onPressed: onRemove,
+            icon: const Icon(Icons.delete_outline),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _SalePriceVariationHint extends StatelessWidget {

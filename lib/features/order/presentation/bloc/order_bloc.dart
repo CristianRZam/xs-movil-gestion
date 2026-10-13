@@ -17,6 +17,8 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
   final UpdateOrderUseCase updateOrderUseCase;
   final UpdateOrderStatusUseCase updateOrderStatusUseCase;
   final AddOrderItemUseCase addOrderItemUseCase;
+  final AddOrderItemsUseCase addOrderItemsUseCase;
+  final UpdatePendingOrderItemUseCase updatePendingOrderItemUseCase;
   final UpdateOrderItemStatusUseCase updateOrderItemStatusUseCase;
   final UpdateOrderItemsStatusUseCase updateOrderItemsStatusUseCase;
   final CancelPendingOrderItemUseCase cancelPendingOrderItemUseCase;
@@ -33,6 +35,8 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     this.updateOrderUseCase,
     this.updateOrderStatusUseCase,
     this.addOrderItemUseCase,
+    this.addOrderItemsUseCase,
+    this.updatePendingOrderItemUseCase,
     this.updateOrderItemStatusUseCase,
     this.updateOrderItemsStatusUseCase,
     this.cancelPendingOrderItemUseCase,
@@ -48,11 +52,14 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     on<LoadOrderProducts>(_loadProducts);
     on<LoadMoreOrderProducts>(_loadMoreProducts);
     on<SearchOrderProducts>(_searchProducts);
+    on<FilterOrderProducts>(_filterProducts);
     on<RefreshOrderProducts>(_refreshProductsForForm);
     on<CheckOpenCashSession>(_checkOpenCashSession);
     on<SaveOrder>(_saveOrder);
     on<ChangeOrderStatus>(_changeStatus);
     on<AddOrderItem>(_addItem);
+    on<AddOrderItems>(_addItems);
+    on<UpdatePendingOrderItem>(_updatePendingItem);
     on<ChangeOrderItemStatus>(_changeItemStatus);
     on<ChangeOrderItemsStatus>(_changeItemsStatus);
     on<CancelPendingOrderItem>(_cancelPendingItem);
@@ -97,6 +104,46 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     final result = await addOrderItemUseCase(event.orderId, event.item);
     await result.fold(
       (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
+      (order) => _emitMutationSuccess(emit, savedOrder: order),
+    );
+  }
+
+  Future<void> _addItems(AddOrderItems event, Emitter<OrderState> emit) async {
+    emit(state.copyWith(status: OrderStatus.loading));
+    final result = await addOrderItemsUseCase(event.orderId, event.items);
+    await result.fold(
+      (failure) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.completeError(StateError(failure.message));
+        }
+        emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message));
+      },
+      (order) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.complete(order);
+        }
+        await _emitMutationSuccess(emit, savedOrder: order);
+      },
+    );
+  }
+
+  Future<void> _updatePendingItem(
+    UpdatePendingOrderItem event,
+    Emitter<OrderState> emit,
+  ) async {
+    emit(state.copyWith(status: OrderStatus.loading));
+    final result = await updatePendingOrderItemUseCase(
+      event.orderId,
+      event.itemId,
+      event.item,
+    );
+    await result.fold(
+      (failure) async => emit(
+        state.copyWith(
+          status: OrderStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
       (order) => _emitMutationSuccess(emit, savedOrder: order),
     );
   }
@@ -266,6 +313,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       (response) => emit(
         state.copyWith(
           products: response.products,
+          productCategories: response.categories,
           totalProducts: response.totalProducts,
         ),
       ),
@@ -284,6 +332,11 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
         page: page,
         size: EnvConfig.productPageSize,
         status: true,
+        name: state.productSearchQuery.isEmpty
+            ? null
+            : state.productSearchQuery,
+        categories: state.selectedProductCategoryIds,
+        availableOnly: state.availableProductsOnly,
       ),
     );
     result.fold(
@@ -296,6 +349,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       (response) => emit(
         state.copyWith(
           products: [...state.products, ...response.products],
+          productCategories: response.categories,
           totalProducts: response.totalProducts,
           isLoadingMoreProducts: false,
         ),
@@ -307,12 +361,15 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     SearchOrderProducts event,
     Emitter<OrderState> emit,
   ) async {
+    emit(state.copyWith(productSearchQuery: event.query));
     final result = await getProductViewUseCase(
       ProductViewRequest(
         name: event.query.isEmpty ? null : event.query,
         page: 0,
         size: EnvConfig.productPageSize,
         status: true,
+        categories: state.selectedProductCategoryIds,
+        availableOnly: state.availableProductsOnly,
       ),
     );
     result.fold(
@@ -320,9 +377,40 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       (response) => emit(
         state.copyWith(
           products: response.products,
+          productCategories: response.categories,
           totalProducts: response.totalProducts,
         ),
       ),
+    );
+  }
+
+  Future<void> _filterProducts(
+    FilterOrderProducts event,
+    Emitter<OrderState> emit,
+  ) async {
+    emit(state.copyWith(
+      selectedProductCategoryIds: event.categoryIds,
+      availableProductsOnly: event.availableOnly,
+    ));
+    final result = await getProductViewUseCase(
+      ProductViewRequest(
+        name: state.productSearchQuery.isEmpty
+            ? null
+            : state.productSearchQuery,
+        categories: event.categoryIds,
+        availableOnly: event.availableOnly,
+        page: 0,
+        size: EnvConfig.productPageSize,
+        status: true,
+      ),
+    );
+    result.fold(
+      (failure) => emit(state.copyWith(errorMessage: failure.message)),
+      (response) => emit(state.copyWith(
+        products: response.products,
+        productCategories: response.categories,
+        totalProducts: response.totalProducts,
+      )),
     );
   }
 
@@ -345,7 +433,11 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
         emit(
           state.copyWith(
             products: response.products,
+            productCategories: response.categories,
             totalProducts: response.totalProducts,
+            productSearchQuery: '',
+            selectedProductCategoryIds: const [],
+            availableProductsOnly: false,
           ),
         );
         event.completer.complete(response.products);
@@ -360,6 +452,9 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
 
       cashSessionResult.fold(
         (failure) {
+          if (event.completer?.isCompleted == false) {
+            event.completer!.completeError(StateError(failure.message));
+          }
           emit(
             state.copyWith(
               status: OrderStatus.failure,
@@ -375,6 +470,11 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
 
       if (isCashSessionOpen != true) {
         if (isCashSessionOpen == false) {
+          if (event.completer?.isCompleted == false) {
+            event.completer!.completeError(
+              StateError('Abra una caja antes de crear una orden.'),
+            );
+          }
           emit(
             state.copyWith(
               status: OrderStatus.failure,
@@ -391,13 +491,23 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
         ? await createOrderUseCase(event.order)
         : await updateOrderUseCase(event.order.id!, event.order);
     await result.fold(
-      (failure) async => emit(
-        state.copyWith(
-          status: OrderStatus.failure,
-          errorMessage: failure.message,
-        ),
-      ),
-      (order) => _emitMutationSuccess(emit, savedOrder: order),
+      (failure) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.completeError(StateError(failure.message));
+        }
+        emit(
+          state.copyWith(
+            status: OrderStatus.failure,
+            errorMessage: failure.message,
+          ),
+        );
+      },
+      (order) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.complete(order);
+        }
+        await _emitMutationSuccess(emit, savedOrder: order);
+      },
     );
   }
 

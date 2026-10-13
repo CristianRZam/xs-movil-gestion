@@ -53,7 +53,9 @@ class _LoginFormState extends State<LoginForm> {
                 return XsTextField(
                   labelText: "Usuario o correo electrónico",
                   prefixIcon: const Icon(Icons.person_outline),
-                  borderColor: AppColors.grey,
+                  borderColor: AppColors.primary.withValues(alpha: .55),
+                  underlineOnly: true,
+                  useWhiteInDarkMode: true,
                   validator: (value) => composeValidators([
                     InputValidators.requiredField(
                       'Ingrese su usuario o correo electrónico',
@@ -73,7 +75,9 @@ class _LoginFormState extends State<LoginForm> {
                   labelText: "Contraseña",
                   isPassword: true,
                   prefixIcon: const Icon(Icons.lock_outline),
-                  borderColor: AppColors.grey,
+                  borderColor: AppColors.primary.withValues(alpha: .55),
+                  underlineOnly: true,
+                  useWhiteInDarkMode: true,
                   validator: (value) => composeValidators([
                     InputValidators.requiredField('Ingrese su contraseña'),
                   ], value),
@@ -91,7 +95,11 @@ class _LoginFormState extends State<LoginForm> {
                   text: isLoading ? 'Ingresando...' : 'Ingresar',
                   onPressed: isLoading ? () {}  : () => _submit(context),
                   mode: XsButtonMode.filled,
-                  borderRadius: 12,
+                  color: AppColors.primary,
+                  borderRadius: 15,
+                  uppercase: false,
+                  fontSize: 15,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
                 );
               },
             ),

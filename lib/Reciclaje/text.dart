@@ -16,6 +16,7 @@ class XsTextField extends StatefulWidget {
   final TextInputType keyboardType;
   final bool autoValidate;
   final bool useWhiteInDarkMode;
+  final bool underlineOnly;
 
   const XsTextField({
     super.key,
@@ -33,6 +34,7 @@ class XsTextField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.autoValidate = false,
     this.useWhiteInDarkMode = false,
+    this.underlineOnly = false,
   });
 
   @override
@@ -42,7 +44,12 @@ class XsTextField extends StatefulWidget {
 class _XsTextFieldState extends State<XsTextField> {
   bool _obscureText = true;
 
-  OutlineInputBorder getBorder(Color color) {
+  InputBorder getBorder(Color color) {
+    if (widget.underlineOnly) {
+      return UnderlineInputBorder(
+        borderSide: BorderSide(color: color, width: 1.5),
+      );
+    }
     return OutlineInputBorder(
       borderSide: BorderSide(color: color, width: 1.5),
       borderRadius: BorderRadius.circular(widget.borderRadius),

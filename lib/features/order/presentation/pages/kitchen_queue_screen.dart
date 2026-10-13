@@ -26,6 +26,8 @@ class KitchenQueueScreen extends StatelessWidget {
           getIt<UpdateOrderUseCase>(),
           getIt<UpdateOrderStatusUseCase>(),
           getIt<AddOrderItemUseCase>(),
+          getIt<AddOrderItemsUseCase>(),
+          getIt<UpdatePendingOrderItemUseCase>(),
           getIt<UpdateOrderItemStatusUseCase>(),
           getIt<UpdateOrderItemsStatusUseCase>(),
           getIt<CancelPendingOrderItemUseCase>(),
@@ -53,27 +55,274 @@ class KitchenQueueScreen extends StatelessWidget {
             child: Scaffold(
               appBar: const XsAppBar(title: 'Cocina', backIcon: false),
               endDrawer: const XsDrawer(),
-              body: RefreshIndicator(
-                onRefresh: () async => context.read<OrderBloc>().add(const LoadKitchenQueue()),
-                child: state.kitchenOrders.isEmpty
-                    ? ListView(
-                        padding: const EdgeInsets.all(28),
-                        children: const [
-                          SizedBox(height: 90),
-                          Icon(Icons.restaurant_menu_rounded, size: 58),
-                          SizedBox(height: 14),
-                          Center(child: Text('No hay productos pendientes de cocina.')),
-                        ],
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: state.kitchenOrders.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (_, index) => _KitchenOrderCard(order: state.kitchenOrders[index]),
-                      ),
-              ),
+              body: _KitchenWorkflowBoard(orders: state.kitchenOrders),
             ),
           ),
+        ),
+      );
+}
+
+enum _KitchenStage { pending, preparing, ready }
+
+class _KitchenWorkflowBoard extends StatefulWidget {
+  const _KitchenWorkflowBoard({required this.orders});
+
+  final List<Order> orders;
+
+  @override
+  State<_KitchenWorkflowBoard> createState() => _KitchenWorkflowBoardState();
+}
+
+class _KitchenWorkflowBoardState extends State<_KitchenWorkflowBoard> {
+  _KitchenStage _stage = _KitchenStage.pending;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = switch (_stage) {
+      _KitchenStage.pending => 'PENDING',
+      _KitchenStage.preparing => 'PREPARING',
+      _KitchenStage.ready => 'READY',
+    };
+    final orders = widget.orders
+        .where((order) => order.items.any((item) => item.status == status))
+        .toList();
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        Container(
+          color: colorScheme.surfaceContainerLow,
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: SegmentedButton<_KitchenStage>(
+              segments: const [
+                ButtonSegment(
+                  value: _KitchenStage.pending,
+                  icon: Icon(Icons.receipt_long_outlined, size: 18),
+                  label: Text('Pendientes', softWrap: false),
+                ),
+                ButtonSegment(
+                  value: _KitchenStage.preparing,
+                  icon: Icon(Icons.soup_kitchen_outlined, size: 18),
+                  label: Text('Preparando', softWrap: false),
+                ),
+                ButtonSegment(
+                  value: _KitchenStage.ready,
+                  icon: Icon(Icons.room_service_outlined, size: 18),
+                  label: Text('Entrega', softWrap: false),
+                ),
+              ],
+              selected: {_stage},
+              showSelectedIcon: false,
+              style: const ButtonStyle(visualDensity: VisualDensity.compact),
+              onSelectionChanged: (selection) =>
+                  setState(() => _stage = selection.first),
+            ),
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async =>
+                context.read<OrderBloc>().add(const LoadKitchenQueue()),
+            child: orders.isEmpty
+                ? ListView(
+                    padding: const EdgeInsets.all(28),
+                    children: [
+                      const SizedBox(height: 90),
+                      Icon(
+                        _stage == _KitchenStage.ready
+                            ? Icons.task_alt_outlined
+                            : Icons.restaurant_menu_rounded,
+                        size: 58,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(height: 14),
+                      Center(
+                        child: Text(
+                          switch (_stage) {
+                            _KitchenStage.pending => 'No hay productos pendientes.',
+                            _KitchenStage.preparing => 'No hay productos en preparación.',
+                            _KitchenStage.ready => 'No hay productos listos para entregar.',
+                          },
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: orders.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (_, index) => _KitchenStageOrderCard(
+                      order: orders[index],
+                      status: status,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _KitchenStageOrderCard extends StatelessWidget {
+  const _KitchenStageOrderCard({required this.order, required this.status});
+
+  final Order order;
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = order.items.where((item) => item.status == status).toList();
+    final nextStatus = switch (status) {
+      'PENDING' => 'PREPARING',
+      'PREPARING' => 'READY',
+      'READY' => 'SERVED',
+      _ => null,
+    };
+    final capability = nextStatus == 'PREPARING'
+        ? AppCapability.prepareOrderItem
+        : nextStatus == 'READY'
+        ? AppCapability.markOrderItemReady
+        : nextStatus == 'SERVED'
+        ? AppCapability.serveOrderItem
+        : null;
+    final canAdvance = nextStatus != null &&
+        capability != null &&
+        order.id != null &&
+        getIt<AccessControl>().allows(capability);
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.receipt_long_outlined),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    order.orderNumber,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                _KitchenStatusChip(status: status),
+              ],
+            ),
+            const SizedBox(height: 3),
+            Text(
+              order.tableNumber?.trim().isNotEmpty == true
+                  ? 'Mesa ${order.tableNumber}'
+                  : _fulfillmentLabel(order.orderType),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const Divider(height: 22),
+            ...items.map(
+              (item) => _KitchenStageItem(
+                order: order,
+                item: item,
+                nextStatus: nextStatus,
+                canAdvance: canAdvance,
+              ),
+            ),
+            if (canAdvance && items.length > 1) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  onPressed: () => context.read<OrderBloc>().add(
+                        ChangeOrderItemsStatus(
+                          order.id!,
+                          items.map((item) => item.id!).toList(),
+                          nextStatus!,
+                        ),
+                      ),
+                  icon: const Icon(Icons.done_all_outlined),
+                  label: Text(
+                    nextStatus == 'PREPARING'
+                        ? 'Iniciar ${items.length} productos'
+                        : nextStatus == 'READY'
+                        ? 'Marcar ${items.length} como listos'
+                        : 'Entregar ${items.length} productos',
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _KitchenStageItem extends StatelessWidget {
+  const _KitchenStageItem({
+    required this.order,
+    required this.item,
+    required this.nextStatus,
+    required this.canAdvance,
+  });
+
+  final Order order;
+  final OrderItem item;
+  final String? nextStatus;
+  final bool canAdvance;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 17,
+              child: Text(_quantity(item.quantity)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.productName?.trim().isNotEmpty == true
+                        ? item.productName!
+                        : 'Producto #${item.productId}',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    _fulfillmentLabel(item.fulfillmentType),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  if (item.notes?.trim().isNotEmpty == true)
+                    Text(
+                      item.notes!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (canAdvance)
+              FilledButton(
+                onPressed: () => context.read<OrderBloc>().add(
+                      ChangeOrderItemStatus(
+                        order.id!,
+                        item.id!,
+                        nextStatus!,
+                      ),
+                    ),
+                child: Text(
+                  nextStatus == 'PREPARING'
+                      ? 'Preparar'
+                      : nextStatus == 'READY'
+                      ? 'Listo'
+                      : 'Entregar',
+                ),
+              ),
+          ],
         ),
       );
 }

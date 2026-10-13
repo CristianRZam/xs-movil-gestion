@@ -27,10 +27,16 @@ class SummaryRepository implements DashboardRepository {
   int calls = 0;
 
   @override
-  Future<Either<Failure, DashboardSummary>> getSummary() async {
+  Future<Either<Failure, DashboardSummary>> getSummary(
+    DashboardFilter filter,
+  ) async {
     calls++;
     return Right(summary);
   }
+
+  @override
+  Future<Either<Failure, List<DashboardSeller>>> getSellers() async =>
+      const Right([]);
 }
 
 class DashboardAdapter implements HttpClientAdapter {
@@ -86,7 +92,7 @@ void main() {
   setUp(() {
     access = AccessControl(
       permissionRequirements: const {
-        AppCapability.dashboard: {'VIEW_DASHBOARD'},
+        AppCapability.dashboard: {'VIEW_DASHBOARD', 'VIEW_OWN_DASHBOARD'},
       },
     );
     storage = TokenStorage(access);
@@ -102,15 +108,23 @@ void main() {
   });
 
   test(
-    'dashboard response is consumed without sending an owner or scope',
+    'personal dashboard response sends the selected range and scope',
     () async {
-      await storage.saveToken(token(claims(['VIEW_DASHBOARD'])));
+      await storage.saveToken(token(claims(['VIEW_OWN_DASHBOARD'])));
+      expect(access.allows(AppCapability.dashboard), isTrue);
       final client = ApiClient();
       final adapter = DashboardAdapter(null);
       client.dio.httpClientAdapter = adapter;
       addTearDown(() => client.dio.close());
 
-      final summary = await DashboardRemoteDataSourceImpl(client).getSummary();
+      final filter = DashboardFilter(
+        fromDate: DateTime(2026, 9, 22),
+        toDate: DateTime(2026, 9, 22),
+        scope: 'MY_SALES',
+      );
+      final summary = await DashboardRemoteDataSourceImpl(client).getSummary(
+        filter,
+      );
 
       expect(summary.todaySales, 150.5);
       expect(summary.todaySalesCount, 2);
@@ -118,22 +132,34 @@ void main() {
       expect(summary.summaryDate, DateTime(2026, 9, 22));
       expect(summary.topProducts.single.quantity, 4);
       expect(summary.paymentMethods.single.total, 150.5);
+      expect(summary.scope, 'MY_SALES');
       expect(adapter.request!.path, '/dashboard');
-      expect(adapter.request!.queryParameters, isEmpty);
+      expect(adapter.request!.queryParameters, {
+        'fromDate': '2026-09-22',
+        'toDate': '2026-09-22',
+        'scope': 'MY_SALES',
+      });
       expect(adapter.request!.data, isNull);
     },
   );
 
   test(
-    'dashboard response does not depend on a scope field',
+    'dashboard response uses the filter scope when the API omits it',
     () async {
       await storage.saveToken(token(claims(['VIEW_DASHBOARD'])));
       final client = ApiClient();
       client.dio.httpClientAdapter = DashboardAdapter(null);
       addTearDown(() => client.dio.close());
 
-      final summary = await DashboardRemoteDataSourceImpl(client).getSummary();
+      final filter = DashboardFilter(
+        fromDate: DateTime(2026, 9, 22),
+        toDate: DateTime(2026, 9, 22),
+      );
+      final summary = await DashboardRemoteDataSourceImpl(client).getSummary(
+        filter,
+      );
       expect(summary.todaySales, 150.5);
+      expect(summary.scope, 'GLOBAL');
     },
   );
 
@@ -159,6 +185,7 @@ void main() {
       getIt.registerSingleton<GetDashboardSummaryUseCase>(
         GetDashboardSummaryUseCase(repository),
       );
+      getIt.registerSingleton<DashboardRepository>(repository);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -168,7 +195,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Resumen de tu negocio'), findsOneWidget);
+      expect(find.text('Panel de operaciones'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       await tester.tap(find.byTooltip('Actualizar'));
@@ -201,7 +228,7 @@ void main() {
       find.text('No tienes permiso para visualizar el dashboard.'),
       findsOneWidget,
     );
-    expect(find.text('Resumen de tu negocio'), findsNothing);
+    expect(find.text('Panel de operaciones'), findsNothing);
     expect(find.textContaining('999999'), findsNothing);
     expect(repository.calls, 0);
     access.clear();

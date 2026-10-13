@@ -49,6 +49,26 @@ class OrderRepositoryImpl implements OrderRepository {
   Future<Either<Failure, Order>> addItem(int orderId, OrderItem item) =>
       _handle(() => remoteDataSource.addItem(orderId, OrderItemModel.fromEntity(item)));
   @override
+  Future<Either<Failure, Order>> addItems(int orderId, List<OrderItem> items) =>
+      _handle(
+        () => remoteDataSource.addItems(
+          orderId,
+          items.map(OrderItemModel.fromEntity).toList(),
+        ),
+      );
+  @override
+  Future<Either<Failure, Order>> updatePendingItem(
+    int orderId,
+    int itemId,
+    OrderItem item,
+  ) => _handle(
+    () => remoteDataSource.updatePendingItem(
+      orderId,
+      itemId,
+      OrderItemModel.fromEntity(item),
+    ),
+  );
+  @override
   Future<Either<Failure, Order>> updateItemStatus(int orderId, int itemId, String status, {String? comment}) =>
       _handle(() => remoteDataSource.updateItemStatus(orderId, itemId, status, comment: comment));
   @override

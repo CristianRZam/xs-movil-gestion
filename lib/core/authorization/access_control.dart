@@ -52,6 +52,7 @@ enum AppCapability {
   deleteOrders,
   notifications,
   cancelSales,
+  viewProfile,
 }
 
 /// JWT claims only drive client UX. The API must enforce authorization itself.
@@ -82,6 +83,9 @@ class AccessControl extends ChangeNotifier {
   bool allows(AppCapability capability) {
     if (!isAuthenticated || _permissions.isEmpty) return false;
     if (capability == AppCapability.operate) return true;
+    if (capability == AppCapability.dashboard) {
+      return hasAnyPermission(const ['VIEW_DASHBOARD', 'VIEW_OWN_DASHBOARD']);
+    }
     final required = permissionRequirements[capability];
     // Capacidades aún no vinculadas a un permiso del backend quedan libres
     // durante la implementación progresiva de la matriz de permisos.

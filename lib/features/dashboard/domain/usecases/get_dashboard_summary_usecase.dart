@@ -7,5 +7,5 @@ class GetDashboardSummaryUseCase {
   final DashboardRepository repository;
   GetDashboardSummaryUseCase(this.repository);
 
-  Future<Either<Failure, DashboardSummary>> call() => repository.getSummary();
+  Future<Either<Failure, DashboardSummary>> call(DashboardFilter filter) => repository.getSummary(filter);
 }

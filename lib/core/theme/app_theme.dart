@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 class AppTheme {
+  static const fontFamily = 'Poppins';
+
   static ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
     primaryColor: AppColors.primary,
     scaffoldBackgroundColor: AppColors.lightBackground,
     colorScheme: ColorScheme.light(primary: AppColors.primary),
+    fontFamily: fontFamily,
     useMaterial3: true,
   );
 
@@ -15,6 +18,7 @@ class AppTheme {
     primaryColor: AppColors.primary,
     scaffoldBackgroundColor: AppColors.darkBackground,
     colorScheme: ColorScheme.dark(primary: AppColors.primary),
+    fontFamily: fontFamily,
     useMaterial3: true,
   );
 }

@@ -60,6 +60,20 @@ class AddOrderItemUseCase {
   Future<Either<Failure, Order>> call(int orderId, OrderItem item) => repository.addItem(orderId, item);
 }
 
+class AddOrderItemsUseCase {
+  final OrderRepository repository;
+  AddOrderItemsUseCase(this.repository);
+  Future<Either<Failure, Order>> call(int orderId, List<OrderItem> items) =>
+      repository.addItems(orderId, items);
+}
+
+class UpdatePendingOrderItemUseCase {
+  final OrderRepository repository;
+  UpdatePendingOrderItemUseCase(this.repository);
+  Future<Either<Failure, Order>> call(int orderId, int itemId, OrderItem item) =>
+      repository.updatePendingItem(orderId, itemId, item);
+}
+
 class UpdateOrderItemStatusUseCase {
   final OrderRepository repository;
   UpdateOrderItemStatusUseCase(this.repository);

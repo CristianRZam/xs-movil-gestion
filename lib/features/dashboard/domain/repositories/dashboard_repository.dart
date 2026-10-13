@@ -3,5 +3,6 @@ import 'package:app_movil_sistema/features/dashboard/domain/entities/dashboard_s
 import 'package:dartz/dartz.dart';
 
 abstract class DashboardRepository {
-  Future<Either<Failure, DashboardSummary>> getSummary();
+  Future<Either<Failure, DashboardSummary>> getSummary(DashboardFilter filter);
+  Future<Either<Failure, List<DashboardSeller>>> getSellers();
 }

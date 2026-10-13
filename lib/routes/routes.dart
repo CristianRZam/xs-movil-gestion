@@ -65,7 +65,7 @@ class AppRoutes {
       builder: (_) => const ReportScreen(),
     ),
     profile: (context) => AccessGuard(
-      capability: AppCapability.operate,
+      capability: AppCapability.viewProfile,
       builder: (_) => const ProfileScreen(),
     ),
     inventoryCount: (context) => AccessGuard(

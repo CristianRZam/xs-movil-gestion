@@ -57,6 +57,19 @@ class SearchOrderProducts extends OrderEvent {
   const SearchOrderProducts(this.query);
 }
 
+class FilterOrderProducts extends OrderEvent {
+  const FilterOrderProducts({
+    required this.categoryIds,
+    required this.availableOnly,
+  });
+
+  final List<int> categoryIds;
+  final bool availableOnly;
+
+  @override
+  List<Object?> get props => [categoryIds, availableOnly];
+}
+
 class RefreshOrderProducts extends OrderEvent {
   final Completer<List<Product>> completer;
   RefreshOrderProducts(this.completer);
@@ -68,7 +81,9 @@ class CheckOpenCashSession extends OrderEvent {
 
 class SaveOrder extends OrderEvent {
   final Order order;
-  const SaveOrder(this.order);
+  final Completer<Order>? completer;
+
+  const SaveOrder(this.order, {this.completer});
   @override
   List<Object?> get props => [order];
 }
@@ -87,6 +102,28 @@ class AddOrderItem extends OrderEvent {
   const AddOrderItem(this.orderId, this.item);
   @override
   List<Object?> get props => [orderId, item];
+}
+
+class AddOrderItems extends OrderEvent {
+  const AddOrderItems(this.orderId, this.items, {this.completer});
+
+  final int orderId;
+  final List<OrderItem> items;
+  final Completer<Order>? completer;
+
+  @override
+  List<Object?> get props => [orderId, items];
+}
+
+class UpdatePendingOrderItem extends OrderEvent {
+  const UpdatePendingOrderItem(this.orderId, this.itemId, this.item);
+
+  final int orderId;
+  final int itemId;
+  final OrderItem item;
+
+  @override
+  List<Object?> get props => [orderId, itemId, item];
 }
 
 class ChangeOrderItemStatus extends OrderEvent {

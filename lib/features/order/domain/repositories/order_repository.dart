@@ -20,6 +20,8 @@ abstract class OrderRepository {
   Future<Either<Failure, Order>> update(int id, Order order);
   Future<Either<Failure, Order>> updateStatus(int id, String status);
   Future<Either<Failure, Order>> addItem(int orderId, OrderItem item);
+  Future<Either<Failure, Order>> addItems(int orderId, List<OrderItem> items);
+  Future<Either<Failure, Order>> updatePendingItem(int orderId, int itemId, OrderItem item);
   Future<Either<Failure, Order>> updateItemStatus(int orderId, int itemId, String status, {String? comment});
   Future<Either<Failure, Order>> updateItemsStatus(int orderId, List<int> itemIds, String status, {String? comment});
   Future<Either<Failure, Order>> cancelPendingItem(int orderId, int itemId, {required String comment, required String stockDisposition});
