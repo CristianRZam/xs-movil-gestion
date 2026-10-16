@@ -10,6 +10,8 @@ class Order {
   final String? notes;
   final List<OrderItem> items;
   final double incidentDiscount;
+  final double packagingCharge;
+  final double deliveryCharge;
   final List<int> nonChargeableItemIds;
   final List<int> incidentLockedItemIds;
   final DateTime? createdAt;
@@ -35,6 +37,8 @@ class Order {
     this.notes,
     required this.items,
     this.incidentDiscount = 0,
+    this.packagingCharge = 0,
+    this.deliveryCharge = 0,
     this.nonChargeableItemIds = const [],
     this.incidentLockedItemIds = const [],
     this.createdAt,
@@ -54,5 +58,5 @@ class Order {
   double get total => totalAmount ?? (items
           .where((item) => item.status != 'CANCELLED')
           .fold(0.0, (sum, item) => sum + item.subtotal) -
-      incidentDiscount).clamp(0, double.infinity);
+          incidentDiscount + packagingCharge + deliveryCharge).clamp(0, double.infinity);
 }

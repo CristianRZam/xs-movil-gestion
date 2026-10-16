@@ -73,6 +73,18 @@ class OrderRepositoryImpl implements OrderRepository {
     ),
   );
   @override
+  Future<Either<Failure, Order>> updateCharges(
+    int orderId, {
+    required double packagingCharge,
+    required double deliveryCharge,
+  }) => _handle(
+    () => remoteDataSource.updateCharges(
+      orderId,
+      packagingCharge: packagingCharge,
+      deliveryCharge: deliveryCharge,
+    ),
+  );
+  @override
   Future<Either<Failure, Order>> splitPendingItem(
     int orderId,
     int itemId,

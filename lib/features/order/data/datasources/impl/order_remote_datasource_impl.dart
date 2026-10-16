@@ -97,6 +97,21 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
   );
 
   @override
+  Future<OrderModel> updateCharges(
+    int orderId, {
+    required double packagingCharge,
+    required double deliveryCharge,
+  }) => _save(
+    apiClient.dio.put(
+      '/orders/$orderId/charges',
+      data: {
+        'packagingCharge': packagingCharge,
+        'deliveryCharge': deliveryCharge,
+      },
+    ),
+  );
+
+  @override
   Future<OrderModel> splitPendingItem(
     int orderId,
     int itemId,

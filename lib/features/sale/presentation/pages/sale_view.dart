@@ -562,6 +562,23 @@ void _showSaleDetail(BuildContext context, Sale sale, List<Product> products) {
                 trailing: Text('S/ ${item.subtotal.toStringAsFixed(2)}'),
               ),
             ),
+            if (sale.packagingCharge > 0 || sale.deliveryCharge > 0) ...[
+              const Divider(height: 1),
+              if (sale.packagingCharge > 0)
+                _SaleAdditionalChargeTile(
+                  label: 'Cargo por envase',
+                  amount: sale.packagingCharge,
+                  icon: Icons.inventory_2_outlined,
+                ),
+              if (sale.packagingCharge > 0 && sale.deliveryCharge > 0)
+                const Divider(height: 1),
+              if (sale.deliveryCharge > 0)
+                _SaleAdditionalChargeTile(
+                  label: 'Cargo por delivery',
+                  amount: sale.deliveryCharge,
+                  icon: Icons.delivery_dining_outlined,
+                ),
+            ],
             const Divider(height: 28),
             const Text(
               'Formas de pago',
@@ -647,6 +664,27 @@ void _showSaleDetail(BuildContext context, Sale sale, List<Product> products) {
         ),
       ),
     ),
+  );
+}
+
+class _SaleAdditionalChargeTile extends StatelessWidget {
+  const _SaleAdditionalChargeTile({
+    required this.label,
+    required this.amount,
+    required this.icon,
+  });
+
+  final String label;
+  final double amount;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    contentPadding: EdgeInsets.zero,
+    leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+    title: Text(label),
+    subtitle: const Text('Cargo adicional'),
+    trailing: Text('S/ ${amount.toStringAsFixed(2)}'),
   );
 }
 
@@ -946,6 +984,8 @@ class _SaleFormState extends State<_SaleForm> {
   final _productsById = <int, Product>{};
   final _discount = TextEditingController();
   final _notes = TextEditingController();
+  late final TextEditingController _packagingCharge;
+  late final TextEditingController _deliveryCharge;
   bool _showCheckout = false;
 
   @override
@@ -955,6 +995,12 @@ class _SaleFormState extends State<_SaleForm> {
       widget.products.map((product) => MapEntry(product.id, product)),
     );
     _payments.add(_PaymentDraft());
+    _packagingCharge = TextEditingController(
+      text: (widget.order?.packagingCharge ?? 0).toStringAsFixed(2),
+    );
+    _deliveryCharge = TextEditingController(
+      text: (widget.order?.deliveryCharge ?? 0).toStringAsFixed(2),
+    );
     final order = widget.order;
     if (order != null) {
       for (final item in order.items.where(
@@ -963,8 +1009,7 @@ class _SaleFormState extends State<_SaleForm> {
       )) {
         final index = _items.indexWhere((saleItem) =>
             saleItem.productId == item.productId &&
-            saleItem.unitPrice == item.unitPrice &&
-            saleItem.discount == 0);
+            saleItem.unitPrice == item.unitPrice);
         if (index < 0) {
           _items.add(SaleItem(
             productId: item.productId,
@@ -996,7 +1041,24 @@ class _SaleFormState extends State<_SaleForm> {
     return (order.incidentDiscount - noChargeAmount).clamp(0, double.infinity);
   }
   double get _totalDiscount => _discountAmount + _incidentDiscount;
-  double get _total => (_subtotal - _totalDiscount).clamp(0, double.infinity);
+  double get _packagingAmount => double.tryParse(_packagingCharge.text) ?? 0;
+  double get _deliveryAmount => double.tryParse(_deliveryCharge.text) ?? 0;
+  bool get _hasTakeaway => widget.order == null || widget.order!.items.any(
+        (item) =>
+            item.status != 'CANCELLED' &&
+            (item.fulfillmentType == 'TAKEAWAY' ||
+                item.fulfillmentType == 'DELIVERY'),
+      );
+  bool get _hasDelivery => widget.order == null || widget.order!.items.any(
+        (item) =>
+            item.status != 'CANCELLED' && item.fulfillmentType == 'DELIVERY',
+      );
+  double get _total =>
+      (_subtotal -
+              _totalDiscount +
+              (_hasTakeaway ? _packagingAmount : 0) +
+              (_hasDelivery ? _deliveryAmount : 0))
+          .clamp(0, double.infinity);
   double get _paid => _payments.fold<double>(
     0,
     (sum, payment) => sum + (double.tryParse(payment.amount.text) ?? 0),
@@ -1009,6 +1071,8 @@ class _SaleFormState extends State<_SaleForm> {
     }
     _discount.dispose();
     _notes.dispose();
+    _packagingCharge.dispose();
+    _deliveryCharge.dispose();
     super.dispose();
   }
 
@@ -1085,6 +1149,41 @@ class _SaleFormState extends State<_SaleForm> {
                   style: TextStyle(color: Colors.green.shade700),
                 ),
               ],
+              if (widget.order == null) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Cargos adicionales (opcionales)',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ],
+              if (_hasTakeaway) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _packagingCharge,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                  decoration: const InputDecoration(
+                    labelText: 'Cargo por envase (S/)',
+                    prefixIcon: Icon(Icons.inventory_2_outlined),
+                  ),
+                  validator: (value) => _packagingAmount < 0 ? 'El cargo no puede ser negativo' : null,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+              if (_hasDelivery) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _deliveryCharge,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                  decoration: const InputDecoration(
+                    labelText: 'Cargo por delivery (S/)',
+                    prefixIcon: Icon(Icons.delivery_dining_outlined),
+                  ),
+                  validator: (value) => _deliveryAmount < 0 ? 'El cargo no puede ser negativo' : null,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
               const SizedBox(height: 12),
               TextFormField(
                 controller: _notes,
@@ -1099,6 +1198,8 @@ class _SaleFormState extends State<_SaleForm> {
               _PaymentSummary(
                 subtotal: _subtotal,
                 discount: _totalDiscount,
+                packagingCharge: _hasTakeaway ? _packagingAmount : 0,
+                deliveryCharge: _hasDelivery ? _deliveryAmount : 0,
                 total: _total,
                 paid: _paid,
               ),
@@ -1264,10 +1365,11 @@ class _SaleFormState extends State<_SaleForm> {
       return;
     }
     final existingIndex = _items.indexWhere(
-      (item) => item.productId == product.id,
+      (item) =>
+          item.productId == product.id &&
+            item.unitPrice == (product.promoPrice ?? product.basePrice),
     );
-    if (existingIndex >= 0 &&
-        _items[existingIndex].quantity >= product.availableStock) {
+    if (_quantityForProduct(product.id) >= product.availableStock) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -1362,7 +1464,7 @@ class _SaleFormState extends State<_SaleForm> {
                             onIncrease: () {
                               final item = _items[index];
                               final stock = _product(item.productId)?.availableStock ?? 0;
-                              if (item.quantity >= stock) {
+                              if (_quantityForProduct(item.productId) >= stock) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('Solo hay $stock unidad(es) disponible(s).')),
                                 );
@@ -1506,12 +1608,35 @@ class _SaleFormState extends State<_SaleForm> {
   }
 
   void _replaceItem(int index, SaleItem item) {
-    setState(() => _items[index] = item);
+    setState(() {
+      final matchingIndex = _items.indexWhere(
+        (candidate) =>
+            candidate.productId == item.productId &&
+            candidate.unitPrice == item.unitPrice,
+      );
+      if (matchingIndex >= 0 && matchingIndex != index) {
+        final matchingItem = _items[matchingIndex];
+        _items[matchingIndex] = SaleItem(
+          productId: matchingItem.productId,
+          productName: matchingItem.productName ?? item.productName,
+          quantity: matchingItem.quantity + item.quantity,
+          unitPrice: matchingItem.unitPrice,
+          discount: matchingItem.discount + item.discount,
+        );
+        _items.removeAt(index);
+      } else {
+        _items[index] = item;
+      }
+    });
   }
 
   Product? _product(int id) {
     return _productsById[id];
   }
+
+  double _quantityForProduct(int productId) => _items
+      .where((item) => item.productId == productId)
+      .fold(0.0, (total, item) => total + item.quantity);
 
   Future<void> _addProduct() async {
     final product = await showModalBottomSheet<Product>(
@@ -1555,10 +1680,11 @@ class _SaleFormState extends State<_SaleForm> {
       return;
     }
     final existingIndex = _items.indexWhere(
-      (item) => item.productId == product.id,
+      (item) =>
+          item.productId == product.id &&
+            item.unitPrice == (product.promoPrice ?? product.basePrice),
     );
-    if (existingIndex >= 0 &&
-        _items[existingIndex].quantity >= product.availableStock) {
+    if (_quantityForProduct(product.id) >= product.availableStock) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -1594,11 +1720,17 @@ class _SaleFormState extends State<_SaleForm> {
   void _save() {
     if (!(_formKey.currentState?.validate() ?? false) || _items.isEmpty) return;
     if (widget.order == null) {
+      final quantitiesByProduct = <int, double>{};
       for (final item in _items) {
-        final product = _product(item.productId);
-        if (item.quantity % 1 != 0 ||
-            product == null ||
-            item.quantity > product.availableStock) {
+        quantitiesByProduct.update(
+          item.productId,
+          (quantity) => quantity + item.quantity,
+          ifAbsent: () => item.quantity,
+        );
+      }
+      for (final entry in quantitiesByProduct.entries) {
+        final product = _product(entry.key);
+        if (product == null || entry.value > product.availableStock) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -1624,6 +1756,8 @@ class _SaleFormState extends State<_SaleForm> {
       orderId: widget.order?.id,
       notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       discount: _discountAmount,
+      packagingCharge: _hasTakeaway ? _packagingAmount : 0,
+      deliveryCharge: _hasDelivery ? _deliveryAmount : 0,
       items: _items,
       payments: _payments
           .map(
@@ -1854,11 +1988,15 @@ class _PaymentDraft {
 class _PaymentSummary extends StatelessWidget {
   final double subtotal;
   final double discount;
+  final double packagingCharge;
+  final double deliveryCharge;
   final double total;
   final double paid;
   const _PaymentSummary({
     required this.subtotal,
     required this.discount,
+    required this.packagingCharge,
+    required this.deliveryCharge,
     required this.total,
     required this.paid,
   });
@@ -1908,6 +2046,14 @@ class _PaymentSummary extends StatelessWidget {
               fontSize: 12,
             ),
           ),
+          if (packagingCharge > 0 || deliveryCharge > 0)
+            Text(
+              '${packagingCharge > 0 ? 'Envase +S/ ${packagingCharge.toStringAsFixed(2)}' : ''}${packagingCharge > 0 && deliveryCharge > 0 ? ' / ' : ''}${deliveryCharge > 0 ? 'Delivery +S/ ${deliveryCharge.toStringAsFixed(2)}' : ''}',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: .85),
+                fontSize: 12,
+              ),
+            ),
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),

@@ -13,6 +13,11 @@ class AppColors {
   static const Color darkBody = Color(0xFF101010);
   static const Color white = Color(0xFFFFFFFF);
 
+  // Modalidades de atención usadas de forma consistente en órdenes.
+  static const Color dineIn = Color(0xFF0F766E);
+  static const Color takeaway = Color(0xFFD97706);
+  static const Color delivery = Color(0xFF2563EB);
+
 
 // Yape
   static const Color yapePrimary = Color(0xFF742284);

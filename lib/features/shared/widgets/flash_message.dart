@@ -17,7 +17,16 @@ class FlashMessage {
     String message = '',
     FlashMessagePosition position = FlashMessagePosition.top,
   }) {
-    final overlay = Overlay.maybeOf(context);
+    // Una respuesta HTTP puede llegar justo cuando el coordinador elimina la
+    // ruta por cierre de sesión. En ese instante el contexto anterior está
+    // desactivado y no se debe resolver ningún ancestro desde él.
+    if (!context.mounted) return;
+    OverlayState? overlay;
+    try {
+      overlay = Overlay.maybeOf(context, rootOverlay: true);
+    } catch (_) {
+      return;
+    }
     if (overlay == null) return;
 
     showOnOverlay(
@@ -38,6 +47,7 @@ class FlashMessage {
     String message = '',
     FlashMessagePosition position = FlashMessagePosition.top,
   }) {
+    if (!overlay.mounted) return;
     if (_currentOverlay?.mounted ?? false) {
       _currentOverlay?.remove();
       _currentOverlay = null;
@@ -45,7 +55,10 @@ class FlashMessage {
 
     final config = _getConfig(type);
 
-    final theme = Theme.of(context);
+    // El overlay del Navigator raíz permanece estable aunque la pantalla que
+    // originó el mensaje haya sido retirada de la pila.
+    final overlayContext = overlay.context;
+    final theme = Theme.of(overlayContext);
     final isDark = theme.brightness == Brightness.dark;
 
     late OverlayEntry overlayEntry;
@@ -66,7 +79,7 @@ class FlashMessage {
         break;
 
       case FlashMessagePosition.center:
-        top = MediaQuery.of(context).size.height * .40;
+        top = MediaQuery.of(overlayContext).size.height * .40;
         break;
 
       case FlashMessagePosition.bottom:

@@ -15,10 +15,15 @@ class LoadingOverlay extends StatefulWidget {
 
 class _LoadingOverlayState extends State<LoadingOverlay> {
   OverlayEntry? _entry;
+  OverlayState? _rootOverlay;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Conservar la referencia mientras el widget sigue activo evita buscar un
+    // ancestro con el contexto de una ruta que acaba de ser desmontada (por
+    // ejemplo, cuando expira la sesión durante una petición).
+    _rootOverlay = Overlay.maybeOf(context, rootOverlay: true);
     _sync();
   }
 
@@ -32,6 +37,8 @@ class _LoadingOverlayState extends State<LoadingOverlay> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (widget.isLoading && _entry == null) {
+        final overlay = _rootOverlay;
+        if (overlay == null || !overlay.mounted) return;
         _entry = OverlayEntry(
           builder: (_) => Positioned.fill(
             child: Material(
@@ -76,7 +83,7 @@ class _LoadingOverlayState extends State<LoadingOverlay> {
             ),
           ),
         );
-        Overlay.of(context, rootOverlay: true).insert(_entry!);
+        overlay.insert(_entry!);
       } else if (!widget.isLoading) {
         _remove();
       }

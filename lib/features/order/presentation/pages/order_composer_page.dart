@@ -31,6 +31,8 @@ class OrderComposerPage extends StatefulWidget {
 class _OrderComposerPageState extends State<OrderComposerPage> {
   late final TextEditingController _referenceController;
   late final TextEditingController _notesController;
+  late final TextEditingController _packagingChargeController;
+  late final TextEditingController _deliveryChargeController;
   late String _orderType;
   late List<OrderItem> _items;
   late final Map<int, Product> _productsById;
@@ -46,6 +48,12 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
       text: widget.order?.tableNumber ?? '',
     );
     _notesController = TextEditingController(text: widget.order?.notes ?? '');
+    _packagingChargeController = TextEditingController(
+      text: (widget.order?.packagingCharge ?? 0).toStringAsFixed(2),
+    );
+    _deliveryChargeController = TextEditingController(
+      text: (widget.order?.deliveryCharge ?? 0).toStringAsFixed(2),
+    );
     _orderType = widget.order?.orderType ?? 'DINE_IN';
     // Los ítems cancelados son historial: no se muestran ni se envían en la
     // edición estructural de los productos activos.
@@ -64,6 +72,8 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
   void dispose() {
     _referenceController.dispose();
     _notesController.dispose();
+    _packagingChargeController.dispose();
+    _deliveryChargeController.dispose();
     super.dispose();
   }
 
@@ -143,9 +153,20 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
         },
       );
 
+  bool get _hasPackagingEligibleItems => _items.any((item) =>
+      item.status != 'CANCELLED' &&
+      (item.fulfillmentType == 'TAKEAWAY' || item.fulfillmentType == 'DELIVERY'));
+  bool get _hasDeliveryItems => _items.any((item) =>
+      item.status != 'CANCELLED' && item.fulfillmentType == 'DELIVERY');
+  double get _packagingCharge =>
+      double.tryParse(_packagingChargeController.text) ?? 0;
+  double get _deliveryCharge =>
+      double.tryParse(_deliveryChargeController.text) ?? 0;
   double get _total => _items
       .where((item) => item.status != 'CANCELLED')
-      .fold(0.0, (sum, item) => sum + item.subtotal);
+      .fold(0.0, (sum, item) => sum + item.subtotal) +
+      (_hasPackagingEligibleItems ? _packagingCharge : 0) +
+      (_hasDeliveryItems ? _deliveryCharge : 0);
 
   String get _appBarTitle {
     if (_isAppending) {
@@ -224,6 +245,32 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
                       prefixIcon: Icon(Icons.note_alt_outlined),
                     ),
                   ),
+                  if (_hasPackagingEligibleItems) ...[
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _packagingChargeController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                      onChanged: (_) => setSheetState(() {}),
+                      decoration: const InputDecoration(
+                        labelText: 'Cargo por envase (S/)',
+                        prefixIcon: Icon(Icons.inventory_2_outlined),
+                      ),
+                    ),
+                  ],
+                  if (_hasDeliveryItems) ...[
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _deliveryChargeController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                      onChanged: (_) => setSheetState(() {}),
+                      decoration: const InputDecoration(
+                        labelText: 'Cargo por delivery (S/)',
+                        prefixIcon: Icon(Icons.delivery_dining_outlined),
+                      ),
+                    ),
+                  ],
                   FilledButton(
                     onPressed: () {
                       setState(() {});
@@ -744,6 +791,9 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
                 items: _items,
                 status: widget.order?.status,
                 incidentDiscount: widget.order?.incidentDiscount ?? 0,
+                packagingCharge:
+                    _hasPackagingEligibleItems ? _packagingCharge : 0,
+                deliveryCharge: _hasDeliveryItems ? _deliveryCharge : 0,
                 createdAt: widget.order?.createdAt,
                 modifiedAt: widget.order?.modifiedAt,
               ),

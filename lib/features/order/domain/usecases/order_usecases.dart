@@ -82,6 +82,21 @@ class UpdatePendingOrderItemUseCase {
       repository.updatePendingItem(orderId, itemId, item);
 }
 
+class UpdateOrderChargesUseCase {
+  final OrderRepository repository;
+  UpdateOrderChargesUseCase(this.repository);
+
+  Future<Either<Failure, Order>> call(
+    int orderId, {
+    required double packagingCharge,
+    required double deliveryCharge,
+  }) => repository.updateCharges(
+    orderId,
+    packagingCharge: packagingCharge,
+    deliveryCharge: deliveryCharge,
+  );
+}
+
 class SplitPendingOrderItemUseCase {
   final OrderRepository repository;
   SplitPendingOrderItemUseCase(this.repository);

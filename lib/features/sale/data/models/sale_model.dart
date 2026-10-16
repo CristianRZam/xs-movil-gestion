@@ -8,6 +8,8 @@ class SaleModel extends Sale {
     super.orderNumber,
     super.notes,
     super.discount,
+    super.packagingCharge,
+    super.deliveryCharge,
     super.status,
     super.createdBy,
     super.createdByName,
@@ -29,6 +31,8 @@ class SaleModel extends Sale {
     orderNumber: json['orderNumber'] as String?,
     notes: json['notes'] as String?,
     discount: _double(json['discount']),
+    packagingCharge: _double(json['packagingCharge']),
+    deliveryCharge: _double(json['deliveryCharge']),
     status: json['status'] as String?,
     createdBy: _int(json['createdBy']),
     createdByName: json['createdByName'] as String?,
@@ -59,6 +63,8 @@ class SaleModel extends Sale {
     orderNumber: sale.orderNumber,
     notes: sale.notes,
     discount: sale.discount,
+    packagingCharge: sale.packagingCharge,
+    deliveryCharge: sale.deliveryCharge,
     status: sale.status,
     createdBy: sale.createdBy,
     createdByName: sale.createdByName,
@@ -78,6 +84,8 @@ class SaleModel extends Sale {
     'orderId': orderId,
     'notes': notes,
     'discount': discount,
+    'packagingCharge': packagingCharge,
+    'deliveryCharge': deliveryCharge,
     'items': items
         .map(
           (i) => {

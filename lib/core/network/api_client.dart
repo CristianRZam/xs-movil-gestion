@@ -13,8 +13,12 @@ class ApiClient {
   static Future<PackageInfo>? _packageInfo;
   late final Dio dio;
   final TokenStorage tokenStorage = getIt<TokenStorage>();
+  late CancelToken _sessionCancelToken;
 
   ApiClient() {
+    _sessionCancelToken = CancelToken();
+    tokenStorage.access.addListener(_syncAuthenticatedRequests);
+    _syncAuthenticatedRequests();
     dio = Dio(
       BaseOptions(
         baseUrl: EnvConfig.baseUrl,
@@ -39,6 +43,11 @@ class ApiClient {
           if (!requiresAuth) {
             return handler.next(options);
           }
+
+          // Todas las solicitudes autenticadas pertenecen a la sesión actual.
+          // Al terminarla se cancelan juntas, para que una respuesta tardía no
+          // intente actualizar widgets de la ruta que ya fue eliminada.
+          options.cancelToken ??= _sessionCancelToken;
 
           final token = await tokenStorage.getToken();
 
@@ -104,6 +113,18 @@ class ApiClient {
       return;
     }
     await tokenStorage.deleteToken();
+  }
+
+  void _syncAuthenticatedRequests() {
+    if (tokenStorage.access.isAuthenticated) {
+      if (_sessionCancelToken.isCancelled) {
+        _sessionCancelToken = CancelToken();
+      }
+      return;
+    }
+    if (!_sessionCancelToken.isCancelled) {
+      _sessionCancelToken.cancel('La sesión finalizó.');
+    }
   }
 
   void _showUnauthorizedAction() {

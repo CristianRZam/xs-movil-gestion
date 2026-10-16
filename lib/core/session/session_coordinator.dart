@@ -42,6 +42,10 @@ class SessionCoordinator {
     _isEndingSession = true;
     _loginNavigationScheduled = true;
     try {
+      // Invalidar primero la sesión en memoria. ApiClient escucha este cambio
+      // y cancela de inmediato las solicitudes autenticadas que seguían en
+      // curso antes de que la navegación retire las pantallas actuales.
+      _access.clear();
       await _tokenStorage.deleteToken();
       _goToLogin();
     } finally {

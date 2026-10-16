@@ -24,6 +24,11 @@ abstract class OrderRepository {
   Future<Either<Failure, Order>> addItem(int orderId, OrderItem item);
   Future<Either<Failure, Order>> addItems(int orderId, List<OrderItem> items);
   Future<Either<Failure, Order>> updatePendingItem(int orderId, int itemId, OrderItem item);
+  Future<Either<Failure, Order>> updateCharges(
+    int orderId, {
+    required double packagingCharge,
+    required double deliveryCharge,
+  });
   Future<Either<Failure, Order>> splitPendingItem(int orderId, int itemId, double quantity, String fulfillmentType);
   Future<Either<Failure, Order>> updateItemStatus(int orderId, int itemId, String status, {String? comment, bool fromKitchen = false});
   Future<Either<Failure, Order>> updateItemsStatus(int orderId, List<int> itemIds, String status, {String? comment, bool fromKitchen = false});

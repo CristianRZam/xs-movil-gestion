@@ -12,6 +12,8 @@ class OrderModel extends Order {
     super.notes,
     required super.items,
     super.incidentDiscount,
+    super.packagingCharge,
+    super.deliveryCharge,
     super.nonChargeableItemIds,
     super.incidentLockedItemIds,
     super.createdAt,
@@ -40,6 +42,8 @@ class OrderModel extends Order {
         .map((item) => OrderItemModel.fromJson(item as Map<String, dynamic>))
         .toList(),
     incidentDiscount: _asDouble(json['incidentDiscount']),
+    packagingCharge: _asDouble(json['packagingCharge']),
+    deliveryCharge: _asDouble(json['deliveryCharge']),
     nonChargeableItemIds: (json['nonChargeableItemIds'] as List<dynamic>? ?? const [])
         .map(_asInt)
         .whereType<int>()
@@ -72,6 +76,8 @@ class OrderModel extends Order {
     notes: order.notes,
     items: order.items,
     incidentDiscount: order.incidentDiscount,
+    packagingCharge: order.packagingCharge,
+    deliveryCharge: order.deliveryCharge,
     nonChargeableItemIds: order.nonChargeableItemIds,
     incidentLockedItemIds: order.incidentLockedItemIds,
     createdAt: order.createdAt,
@@ -93,6 +99,8 @@ class OrderModel extends Order {
     'orderType': orderType,
     'tableNumber': tableNumber,
     'notes': notes,
+    'packagingCharge': packagingCharge,
+    'deliveryCharge': deliveryCharge,
     'items': items
         .map((item) => OrderItemModel.fromEntity(item).toJson())
         .toList(),

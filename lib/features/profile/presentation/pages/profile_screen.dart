@@ -390,12 +390,14 @@ class _PermissionsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final groups = _grouped;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return SizedBox(
-      height: MediaQuery.sizeOf(context).height * .78,
+      height: MediaQuery.sizeOf(context).height * .82,
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -404,7 +406,7 @@ class _PermissionsSheet extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'Mis permisos',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -416,54 +418,177 @@ class _PermissionsSheet extends StatelessWidget {
                   ),
                 ],
               ),
-              Text(
-                '${permissions.length} permiso${permissions.length == 1 ? '' : 's'} asignado${permissions.length == 1 ? '' : 's'} a tu cuenta.',
-                style: Theme.of(context).textTheme.bodyMedium,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.verified_user_outlined,
+                      size: 18,
+                      color: scheme.onPrimaryContainer,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${permissions.length} permiso${permissions.length == 1 ? '' : 's'} asignado${permissions.length == 1 ? '' : 's'}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${groups.length} módulo${groups.length == 1 ? '' : 's'}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: scheme.onPrimaryContainer.withValues(alpha: .78),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Expanded(
                 child: groups.isEmpty
                     ? const Center(
                         child: Text('No tienes permisos asignados.'),
                       )
                     : ListView.separated(
+                        padding: const EdgeInsets.only(bottom: 12),
                         itemCount: groups.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        separatorBuilder: (_, _) => _DottedDivider(
+                          color: scheme.outlineVariant.withValues(alpha: .72),
+                        ),
                         itemBuilder: (_, index) {
                           final entry = groups.entries.elementAt(index);
-                          return Card(
-                            elevation: 0,
-                            child: ExpansionTile(
-                              initiallyExpanded: true,
-                              title: Text(
-                                entry.key,
-                                style: const TextStyle(fontWeight: FontWeight.w700),
+                          return ExpansionTile(
+                              initiallyExpanded: false,
+                              shape: const Border(),
+                              collapsedShape: const Border(),
+                              backgroundColor: Colors.transparent,
+                              collapsedBackgroundColor: Colors.transparent,
+                              dense: true,
+                              visualDensity: VisualDensity.compact,
+                              tilePadding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 2,
                               ),
-                              subtitle: Text('${entry.value.length} permiso(s)'),
+                              childrenPadding: const EdgeInsets.fromLTRB(
+                                4,
+                                0,
+                                4,
+                                8,
+                              ),
+                              leading: Icon(
+                                Icons.folder_outlined,
+                                size: 18,
+                                color: scheme.primary,
+                              ),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      entry.key,
+                                      style: theme.textTheme.labelLarge?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${entry.value.length}',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: scheme.primary,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
                               children: entry.value
                                   .map(
-                                    (permission) => ListTile(
-                                      leading: Icon(
-                                        Icons.verified_user_outlined,
-                                        color: Theme.of(context).colorScheme.primary,
-                                      ),
-                                      title: Text(
-                                        permission.description?.trim().isNotEmpty == true
-                                            ? permission.description!
-                                            : permission.name,
-                                      ),
-                                      subtitle: Text(permission.name),
+                                    (permission) => _PermissionDescriptionTile(
+                                      permission: permission,
                                     ),
                                   )
                                   .toList(),
-                            ),
-                          );
+                            );
                         },
                       ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DottedDivider extends StatelessWidget {
+  const _DottedDivider({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 12,
+    width: double.infinity,
+    child: CustomPaint(painter: _DottedDividerPainter(color)),
+  );
+}
+
+class _DottedDividerPainter extends CustomPainter {
+  const _DottedDividerPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1
+      ..strokeCap = StrokeCap.round;
+    for (double x = 1; x < size.width; x += 5) {
+      canvas.drawLine(
+        Offset(x, size.height / 2),
+        Offset(x + 1.5, size.height / 2),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DottedDividerPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+class _PermissionDescriptionTile extends StatelessWidget {
+  const _PermissionDescriptionTile({required this.permission});
+
+  final ProfilePermission permission;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = permission.description?.trim().isNotEmpty == true
+        ? permission.description!.trim()
+        : permission.name;
+    return ListTile(
+      dense: true,
+      visualDensity: VisualDensity.compact,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      minLeadingWidth: 24,
+      leading: Icon(
+        Icons.check_circle_outline_rounded,
+        size: 16,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      title: Text(
+        label,
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
       ),
     );
   }

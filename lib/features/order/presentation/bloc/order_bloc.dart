@@ -19,6 +19,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
   final AddOrderItemUseCase addOrderItemUseCase;
   final AddOrderItemsUseCase addOrderItemsUseCase;
   final UpdatePendingOrderItemUseCase updatePendingOrderItemUseCase;
+  final UpdateOrderChargesUseCase updateOrderChargesUseCase;
   final SplitPendingOrderItemUseCase splitPendingOrderItemUseCase;
   final UpdateOrderItemStatusUseCase updateOrderItemStatusUseCase;
   final UpdateOrderItemsStatusUseCase updateOrderItemsStatusUseCase;
@@ -38,6 +39,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     this.addOrderItemUseCase,
     this.addOrderItemsUseCase,
     this.updatePendingOrderItemUseCase,
+    this.updateOrderChargesUseCase,
     this.splitPendingOrderItemUseCase,
     this.updateOrderItemStatusUseCase,
     this.updateOrderItemsStatusUseCase,
@@ -62,6 +64,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     on<AddOrderItem>(_addItem);
     on<AddOrderItems>(_addItems);
     on<UpdatePendingOrderItem>(_updatePendingItem);
+    on<UpdateOrderCharges>(_updateCharges);
     on<SplitPendingOrderItem>(_splitPendingItem);
     on<ChangeOrderItemStatus>(_changeItemStatus);
     on<ChangeOrderItemsStatus>(_changeItemsStatus);
@@ -155,6 +158,36 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
           event.completer!.complete(order);
         }
         await _emitMutationSuccess(emit, savedOrder: order, successMessage: 'Producto actualizado correctamente.');
+      },
+    );
+  }
+
+  Future<void> _updateCharges(
+    UpdateOrderCharges event,
+    Emitter<OrderState> emit,
+  ) async {
+    emit(state.copyWith(status: OrderStatus.loading));
+    final result = await updateOrderChargesUseCase(
+      event.orderId,
+      packagingCharge: event.packagingCharge,
+      deliveryCharge: event.deliveryCharge,
+    );
+    await result.fold(
+      (failure) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.completeError(StateError(failure.message));
+        }
+        emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message));
+      },
+      (order) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.complete(order);
+        }
+        await _emitMutationSuccess(
+          emit,
+          savedOrder: order,
+          successMessage: 'Cargos de la orden actualizados correctamente.',
+        );
       },
     );
   }

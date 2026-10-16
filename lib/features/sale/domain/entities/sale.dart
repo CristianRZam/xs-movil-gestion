@@ -36,6 +36,8 @@ class Sale {
   final String? orderNumber;
   final String? notes;
   final double discount;
+  final double packagingCharge;
+  final double deliveryCharge;
   final String? status;
   final int? createdBy;
   final String? createdByName;
@@ -56,6 +58,8 @@ class Sale {
     this.orderNumber,
     this.notes,
     this.discount = 0,
+    this.packagingCharge = 0,
+    this.deliveryCharge = 0,
     this.status,
     this.createdBy,
     this.createdByName,
@@ -71,5 +75,6 @@ class Sale {
     required this.payments,
   });
   double get total => totalAmount ??
-      (items.fold<double>(0, (sum, item) => sum + item.subtotal) - discount);
+      (items.fold<double>(0, (sum, item) => sum + item.subtotal) - discount +
+          packagingCharge + deliveryCharge);
 }

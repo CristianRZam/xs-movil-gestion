@@ -557,6 +557,113 @@ Future<void> _showSplitPendingOrderItemDialog(
   );
 }
 
+Future<void> _showOrderChargesDialog(
+  BuildContext context,
+  Order order, {
+  required bool canChargePackaging,
+  required bool canChargeDelivery,
+  required void Function(Order order) onSaved,
+}) async {
+  if (order.id == null || (!canChargePackaging && !canChargeDelivery)) return;
+  final orderBloc = context.read<OrderBloc>();
+  final packagingController = TextEditingController(
+    text: order.packagingCharge.toStringAsFixed(2),
+  );
+  final deliveryController = TextEditingController(
+    text: order.deliveryCharge.toStringAsFixed(2),
+  );
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Cargos adicionales'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Registre únicamente los montos que correspondan a esta orden.',
+            style: Theme.of(dialogContext).textTheme.bodyMedium,
+          ),
+          if (canChargePackaging) ...[
+            const SizedBox(height: 16),
+            TextField(
+              controller: packagingController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'Cargo por envase',
+                prefixText: 'S/ ',
+                prefixIcon: Icon(Icons.inventory_2_outlined),
+              ),
+            ),
+          ],
+          if (canChargeDelivery) ...[
+            const SizedBox(height: 14),
+            TextField(
+              controller: deliveryController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'Cargo por delivery',
+                prefixText: 'S/ ',
+                prefixIcon: Icon(Icons.delivery_dining_outlined),
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () async {
+            final packaging = canChargePackaging
+                ? double.tryParse(packagingController.text) ?? -1
+                : 0.0;
+            final delivery = canChargeDelivery
+                ? double.tryParse(deliveryController.text) ?? -1
+                : 0.0;
+            if (packaging < 0 || delivery < 0) {
+              _showOrderFlash(
+                dialogContext,
+                FlashMessageType.warning,
+                'Monto no válido',
+                'Ingrese importes iguales o mayores a S/ 0.00.',
+              );
+              return;
+            }
+            final completer = Completer<Order>();
+            orderBloc.add(UpdateOrderCharges(
+              order.id!,
+              packagingCharge: packaging,
+              deliveryCharge: delivery,
+              completer: completer,
+            ));
+            try {
+              final updatedOrder = await completer.future;
+              if (!dialogContext.mounted) return;
+              onSaved(updatedOrder);
+              Navigator.pop(dialogContext);
+            } catch (_) {
+              // El listener global de la pantalla comunica el error.
+            }
+          },
+          child: const Text('Guardar cargos'),
+        ),
+      ],
+    ),
+  );
+  await Future<void>.delayed(const Duration(milliseconds: 300));
+  packagingController.dispose();
+  deliveryController.dispose();
+}
+
 Future<void> _showAddOrderItem(
   BuildContext context,
   Order order,
@@ -1233,6 +1340,7 @@ class _OrderCard extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final color = _statusColor(order.status);
+    final fulfillmentColor = _typeColor(order.orderType);
     final isDark = theme.brightness == Brightness.dark;
     final items = order.activeItemCount ??
         order.items.map((item) => item.productId).toSet().length;
@@ -1252,7 +1360,7 @@ class _OrderCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        splashColor: AppColors.primary.withValues(alpha: .08),
+        splashColor: fulfillmentColor.withValues(alpha: .08),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
@@ -1281,11 +1389,11 @@ class _OrderCard extends StatelessWidget {
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: fulfillmentColor,
                       borderRadius: BorderRadius.circular(13),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withValues(alpha: .22),
+                          color: fulfillmentColor.withValues(alpha: .22),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -1312,12 +1420,12 @@ class _OrderCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: isDark ? .15 : .07),
+                  color: fulfillmentColor.withValues(alpha: isDark ? .15 : .07),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   children: [
-                    Icon(_typeIcon(order.orderType), size: 16, color: AppColors.primary),
+                    Icon(_typeIcon(order.orderType), size: 16, color: fulfillmentColor),
                     const SizedBox(width: 7),
                     Expanded(
                       child: Text(
@@ -1515,6 +1623,16 @@ void _showOrderDetail(
               getIt<AccessControl>().allows(AppCapability.editOrders) &&
               nextBulkStatus != null &&
               !(nextBulkStatus == 'SERVED' && canServeDirectly);
+          final hasTakeawayItem = currentOrder.items.any((item) =>
+              item.status != 'CANCELLED' && item.fulfillmentType == 'TAKEAWAY');
+          final hasDeliveryItem = currentOrder.items.any((item) =>
+              item.status != 'CANCELLED' && item.fulfillmentType == 'DELIVERY');
+          final canEditCharges =
+              currentOrder.id != null &&
+              currentOrder.status != 'CANCELLED' &&
+              currentOrder.status != 'COMPLETED' &&
+              getIt<AccessControl>().allows(AppCapability.editOrders) &&
+              (hasTakeawayItem || hasDeliveryItem);
           return ListView(
         controller: controller,
         padding: EdgeInsets.fromLTRB(
@@ -2009,6 +2127,25 @@ void _showOrderDetail(
                   )),
           ],
           if (currentOrder.status != 'CANCELLED') const Divider(),
+          if (canEditCharges) ...[
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => _showOrderChargesDialog(
+                  context,
+                  currentOrder,
+                  canChargePackaging: hasTakeawayItem || hasDeliveryItem,
+                  canChargeDelivery: hasDeliveryItem,
+                  onSaved: (updatedOrder) => setSheetState(() {
+                    detailOrder = updatedOrder;
+                  }),
+                ),
+                icon: const Icon(Icons.add_card_outlined),
+                label: const Text('Cargos adicionales'),
+              ),
+            ),
+            const SizedBox(height: 4),
+          ],
           if (currentOrder.status != 'CANCELLED') Align(
             alignment: Alignment.centerRight,
             child: Column(
@@ -2018,6 +2155,16 @@ void _showOrderDetail(
                   Text(
                     'Descuento por incidencias: -S/ ${currentOrder.incidentDiscount.toStringAsFixed(2)}',
                     style: TextStyle(color: Colors.green.shade700),
+                  ),
+                if (currentOrder.packagingCharge > 0)
+                  Text(
+                    'Cargo por envase: +S/ ${currentOrder.packagingCharge.toStringAsFixed(2)}',
+                    style: TextStyle(color: Colors.deepOrange.shade700),
+                  ),
+                if (currentOrder.deliveryCharge > 0)
+                  Text(
+                    'Cargo por delivery: +S/ ${currentOrder.deliveryCharge.toStringAsFixed(2)}',
+                    style: TextStyle(color: Colors.teal.shade700),
                   ),
                 Text(
                   'Total: S/ ${currentOrder.total.toStringAsFixed(2)}',
@@ -3019,6 +3166,12 @@ IconData _typeIcon(String type) => switch (type) {
   'TAKEAWAY' => Icons.shopping_bag_outlined,
   'DELIVERY' => Icons.delivery_dining_outlined,
   _ => Icons.receipt_long_outlined,
+};
+Color _typeColor(String type) => switch (type) {
+  'DINE_IN' => AppColors.dineIn,
+  'TAKEAWAY' => AppColors.takeaway,
+  'DELIVERY' => AppColors.delivery,
+  _ => AppColors.grey,
 };
 String _statusLabel(String status) => switch (status) {
   'PENDING' => 'PENDIENTE',

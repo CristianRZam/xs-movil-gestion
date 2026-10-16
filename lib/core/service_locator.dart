@@ -338,6 +338,9 @@ void setupLocator() {
   getIt.registerFactory<UpdatePendingOrderItemUseCase>(
     () => UpdatePendingOrderItemUseCase(getIt<OrderRepository>()),
   );
+  getIt.registerFactory<UpdateOrderChargesUseCase>(
+    () => UpdateOrderChargesUseCase(getIt<OrderRepository>()),
+  );
   getIt.registerFactory<SplitPendingOrderItemUseCase>(
     () => SplitPendingOrderItemUseCase(getIt<OrderRepository>()),
   );
