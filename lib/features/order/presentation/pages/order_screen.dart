@@ -26,6 +26,7 @@ class OrderScreen extends StatelessWidget {
         getIt<AddOrderItemUseCase>(),
         getIt<AddOrderItemsUseCase>(),
         getIt<UpdatePendingOrderItemUseCase>(),
+        getIt<SplitPendingOrderItemUseCase>(),
         getIt<UpdateOrderItemStatusUseCase>(),
         getIt<UpdateOrderItemsStatusUseCase>(),
         getIt<CancelPendingOrderItemUseCase>(),

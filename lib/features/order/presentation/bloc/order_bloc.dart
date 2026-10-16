@@ -19,6 +19,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
   final AddOrderItemUseCase addOrderItemUseCase;
   final AddOrderItemsUseCase addOrderItemsUseCase;
   final UpdatePendingOrderItemUseCase updatePendingOrderItemUseCase;
+  final SplitPendingOrderItemUseCase splitPendingOrderItemUseCase;
   final UpdateOrderItemStatusUseCase updateOrderItemStatusUseCase;
   final UpdateOrderItemsStatusUseCase updateOrderItemsStatusUseCase;
   final CancelPendingOrderItemUseCase cancelPendingOrderItemUseCase;
@@ -37,6 +38,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     this.addOrderItemUseCase,
     this.addOrderItemsUseCase,
     this.updatePendingOrderItemUseCase,
+    this.splitPendingOrderItemUseCase,
     this.updateOrderItemStatusUseCase,
     this.updateOrderItemsStatusUseCase,
     this.cancelPendingOrderItemUseCase,
@@ -60,6 +62,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     on<AddOrderItem>(_addItem);
     on<AddOrderItems>(_addItems);
     on<UpdatePendingOrderItem>(_updatePendingItem);
+    on<SplitPendingOrderItem>(_splitPendingItem);
     on<ChangeOrderItemStatus>(_changeItemStatus);
     on<ChangeOrderItemsStatus>(_changeItemsStatus);
     on<CancelPendingOrderItem>(_cancelPendingItem);
@@ -152,6 +155,37 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
           event.completer!.complete(order);
         }
         await _emitMutationSuccess(emit, savedOrder: order, successMessage: 'Producto actualizado correctamente.');
+      },
+    );
+  }
+
+  Future<void> _splitPendingItem(
+    SplitPendingOrderItem event,
+    Emitter<OrderState> emit,
+  ) async {
+    emit(state.copyWith(status: OrderStatus.loading));
+    final result = await splitPendingOrderItemUseCase(
+      event.orderId,
+      event.itemId,
+      event.quantity,
+      event.fulfillmentType,
+    );
+    await result.fold(
+      (failure) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.completeError(StateError(failure.message));
+        }
+        emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message));
+      },
+      (order) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.complete(order);
+        }
+        await _emitMutationSuccess(
+          emit,
+          savedOrder: order,
+          successMessage: 'Producto dividido correctamente.',
+        );
       },
     );
   }

@@ -237,6 +237,7 @@ Future<void> _showCancelOrderItemDialog(
   int itemId,
   void Function(Order order) onSaved,
 ) async {
+  final orderBloc = context.read<OrderBloc>();
   final reason = TextEditingController();
   var stockDisposition = 'RETURN_TO_STOCK';
   await showDialog<void>(
@@ -284,7 +285,7 @@ Future<void> _showCancelOrderItemDialog(
               if (comment.isEmpty) return;
               Navigator.pop(dialogContext);
               final completer = Completer<Order>();
-              context.read<OrderBloc>().add(CancelPendingOrderItem(
+              orderBloc.add(CancelPendingOrderItem(
                     orderId,
                     itemId,
                     comment: comment,
@@ -292,7 +293,9 @@ Future<void> _showCancelOrderItemDialog(
                     completer: completer,
                   ));
               try {
-                onSaved(await completer.future);
+                final updatedOrder = await completer.future;
+                if (!context.mounted) return;
+                onSaved(updatedOrder);
               } catch (_) {
                 // El Bloc notifica el error mediante el toast global.
               }
@@ -426,6 +429,132 @@ Future<void> _showEditPendingOrderItemDialog(
   await Future<void>.delayed(const Duration(milliseconds: 300));
   quantity.dispose();
   notes.dispose();
+}
+
+Future<void> _showSplitPendingOrderItemDialog(
+  BuildContext context,
+  int orderId,
+  OrderItem item, {
+  required void Function(Order order) onSaved,
+}) async {
+  final currentType = item.fulfillmentType.trim().toUpperCase();
+  final alternatives = ['DINE_IN', 'TAKEAWAY', 'DELIVERY']
+      .where((type) => type != currentType)
+      .toList(growable: false);
+  if (alternatives.isEmpty || item.quantity < 2) return;
+
+  var splitQuantity = 1;
+  var splitFulfillmentType = alternatives.first;
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) => StatefulBuilder(
+      builder: (sheetContext, setSheetState) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20,
+              20 + MediaQuery.viewInsetsOf(sheetContext).bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Dividir entrega',
+                  style: Theme.of(sheetContext).textTheme.titleLarge),
+              const SizedBox(height: 6),
+              Text(
+                'Se separarán unidades pendientes sin modificar el producto, precio ni nota.',
+                style: Theme.of(sheetContext).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 18),
+              Text('Unidades a separar',
+                  style: Theme.of(sheetContext).textTheme.titleSmall),
+              Row(
+                children: [
+                  IconButton.outlined(
+                    tooltip: 'Quitar una unidad',
+                    onPressed: splitQuantity > 1
+                        ? () => setSheetState(() => splitQuantity--)
+                        : null,
+                    icon: const Icon(Icons.remove),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Text('$splitQuantity de ${_quantity(item.quantity)}',
+                          style: Theme.of(sheetContext).textTheme.titleMedium),
+                    ),
+                  ),
+                  IconButton.outlined(
+                    tooltip: 'Agregar una unidad',
+                    onPressed: splitQuantity < item.quantity - 1
+                        ? () => setSheetState(() => splitQuantity++)
+                        : null,
+                    icon: const Icon(Icons.add),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text('Nueva modalidad de entrega',
+                  style: Theme.of(sheetContext).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: alternatives
+                    .map((type) => ChoiceChip(
+                          selected: splitFulfillmentType == type,
+                          avatar: Icon(_typeIcon(type), size: 18),
+                          label: Text(_typeLabel(type)),
+                          onSelected: (_) => setSheetState(
+                            () => splitFulfillmentType = type,
+                          ),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 16),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(sheetContext).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    '${_quantity(item.quantity - splitQuantity)} ${_typeLabel(currentType).toLowerCase()} · '
+                    '$splitQuantity ${_typeLabel(splitFulfillmentType).toLowerCase()}',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    final completer = Completer<Order>();
+                    context.read<OrderBloc>().add(
+                      SplitPendingOrderItem(
+                        orderId,
+                        item.id!,
+                        splitQuantity.toDouble(),
+                        splitFulfillmentType,
+                        completer: completer,
+                      ),
+                    );
+                    try {
+                      final updatedOrder = await completer.future;
+                      if (!sheetContext.mounted) return;
+                      onSaved(updatedOrder);
+                      Navigator.pop(sheetContext);
+                    } catch (_) {}
+                  },
+                  icon: const Icon(Icons.call_split_outlined),
+                  label: const Text('Dividir producto'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 Future<void> _showAddOrderItem(
@@ -634,6 +763,12 @@ class _OrderViewState extends State<OrderView> {
     animation: getIt<AccessControl>(),
     builder: (_, __) => BlocConsumer<OrderBloc, OrderState>(
     listener: (context, state) {
+      // A 401 clears the token and removes this route in the same frame. Do
+      // not look up the overlay or the bloc from a context being deactivated.
+      if (!context.mounted || !getIt<AccessControl>().isAuthenticated) {
+        return;
+      }
+      final bloc = context.read<OrderBloc>();
       if (state.errorMessage != null && state.status == OrderStatus.failure) {
         _showOrderFlash(
           context,
@@ -641,7 +776,7 @@ class _OrderViewState extends State<OrderView> {
           'No se pudo completar la operación',
           state.errorMessage!,
         );
-        context.read<OrderBloc>().add(const ClearOrderError());
+        bloc.add(const ClearOrderError());
       }
       if (state.successMessage != null) {
         _showOrderFlash(
@@ -650,7 +785,7 @@ class _OrderViewState extends State<OrderView> {
           'Acción completada',
           state.successMessage!,
         );
-        context.read<OrderBloc>().add(const ClearOrderAction());
+        bloc.add(const ClearOrderAction());
       }
     },
     builder: (context, state) {
@@ -1356,6 +1491,9 @@ void _showOrderDetail(
           final selectedItems = currentOrder.items
               .where((item) => item.id != null && quickServeSelected.contains(item.id))
               .toList();
+          final areAllSelectableItemsSelected =
+              selectableIds.isNotEmpty &&
+              selectableIds.every(quickServeSelected.contains);
           final selectedState = selectedItems.isEmpty
               ? null
               : selectedItems.first.status;
@@ -1622,6 +1760,20 @@ void _showOrderDetail(
                         }),
                       ),
                     ),
+                  if (canEditPendingItem && item.quantity >= 2)
+                    IconButton(
+                      tooltip: 'Dividir por tipo de entrega',
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.call_split_outlined, size: 19),
+                      onPressed: () => _showSplitPendingOrderItemDialog(
+                        context,
+                        currentOrder.id!,
+                        item,
+                        onSaved: (updatedOrder) => setSheetState(() {
+                          detailOrder = updatedOrder;
+                        }),
+                      ),
+                    ),
                   if (canCancelItem)
                     IconButton(
                       tooltip: 'Cancelar producto',
@@ -1701,11 +1853,25 @@ void _showOrderDetail(
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
-                onPressed: () => setSheetState(() => quickServeSelected
-                  ..clear()
-                  ..addAll(selectableIds)),
-                icon: const Icon(Icons.select_all_rounded),
-                label: const Text('Seleccionar todos'),
+                onPressed: () => setSheetState(() {
+                  if (areAllSelectableItemsSelected) {
+                    quickServeSelected.clear();
+                  } else {
+                    quickServeSelected
+                      ..clear()
+                      ..addAll(selectableIds);
+                  }
+                }),
+                icon: Icon(
+                  areAllSelectableItemsSelected
+                      ? Icons.deselect_rounded
+                      : Icons.select_all_rounded,
+                ),
+                label: Text(
+                  areAllSelectableItemsSelected
+                      ? 'Deseleccionar todos'
+                      : 'Seleccionar todos',
+                ),
               ),
             ),
           if (canServeDirectly && selectableIds.isNotEmpty) ...[

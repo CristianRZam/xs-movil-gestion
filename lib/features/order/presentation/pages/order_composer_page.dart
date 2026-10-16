@@ -251,10 +251,15 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
       };
 
   void _addProduct(Product product) {
-    final index = _items.indexWhere((item) => item.productId == product.id);
+    final index = _items.indexWhere(
+      (item) =>
+          item.productId == product.id &&
+          item.fulfillmentType == _fulfillmentType,
+    );
     final maximum = _maximumQuantity(product.id);
+    final currentTotal = _quantityForProduct(product.id);
     if (maximum <= 0 ||
-        (index >= 0 && _items[index].quantity + 1 > maximum)) {
+        currentTotal + 1 > maximum) {
       FlashMessage.show(
         context,
         type: FlashMessageType.warning,
@@ -290,9 +295,16 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
       };
 
   void _changeOrderType(String value) {
+    final previousFulfillmentType = _fulfillmentType;
+    final hasCustomDeliveries = _items.any(
+      (item) => item.fulfillmentType != previousFulfillmentType,
+    );
     setState(() {
       _orderType = value;
-      if (!_isEditing) {
+      // Antes de dividir, el selector principal conserva su comportamiento:
+      // aplica el tipo elegido a todos los productos. Después de dividir,
+      // pasa a ser solo el tipo predeterminado para nuevos productos.
+      if (!_isEditing && !hasCustomDeliveries) {
         _items = _items
             .map(
               (item) => _copyItem(item, fulfillmentType: _fulfillmentType),
@@ -313,6 +325,20 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
         0;
     return product.availableStock + originalReserved.toInt();
   }
+
+  double _quantityForProduct(int productId, {int? exceptIndex}) => _items
+      .asMap()
+      .entries
+      .where(
+        (entry) =>
+            entry.key != exceptIndex && entry.value.productId == productId,
+      )
+      .fold<double>(0, (sum, entry) => sum + entry.value.quantity);
+
+  bool _fitsProductStock(int index, double quantity) =>
+      _quantityForProduct(_items[index].productId, exceptIndex: index) +
+          quantity <=
+      _maximumQuantity(_items[index].productId);
 
   void _showCart() {
     showModalBottomSheet<void>(
@@ -363,6 +389,11 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
                               onDecrease: () => _changeQuantity(index, -1, setSheetState),
                               onIncrease: () => _changeQuantity(index, 1, setSheetState),
                               onEdit: () => _editItem(index, setSheetState),
+                              onSplit: !_isEditing &&
+                                      !_isAppending &&
+                                      item.quantity >= 2
+                                  ? () => _splitItem(index, setSheetState)
+                                  : null,
                               onRemove: () => _removeItem(index, setSheetState),
                             );
                           },
@@ -409,7 +440,7 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
       _removeItem(index, setSheetState);
       return;
     }
-    if (next > _maximumQuantity(item.productId)) {
+    if (!_fitsProductStock(index, next)) {
       FlashMessage.show(
         context,
         type: FlashMessageType.warning,
@@ -482,7 +513,7 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
               final newPrice = double.tryParse(price.text);
               if (newQuantity == null ||
                   newQuantity <= 0 ||
-                  newQuantity > _maximumQuantity(item.productId) ||
+                  !_fitsProductStock(index, newQuantity.toDouble()) ||
                   newPrice == null ||
                   newPrice <= 0) {
                 return;
@@ -512,6 +543,141 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
     setSheetState(() {});
   }
 
+  Future<void> _splitItem(
+    int index,
+    void Function(void Function()) setSheetState,
+  ) async {
+    final item = _items[index];
+    if (item.quantity < 2) return;
+    final productName =
+        _productsById[item.productId]?.name ?? item.productName ?? 'Producto';
+    final alternatives = _fulfillmentTypes
+        .where((type) => type != item.fulfillmentType)
+        .toList();
+    var quantityToSeparate = 1;
+    var newFulfillmentType = alternatives.first;
+
+    final split = await showModalBottomSheet<_DeliverySplit>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (_, setModalState) => SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              8,
+              20,
+              20 + MediaQuery.viewInsetsOf(sheetContext).bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Dividir entrega',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 4),
+                Text('$productName · ${item.quantity.toInt()} unidades'),
+                const SizedBox(height: 18),
+                Text(
+                  'Cantidad para separar: $quantityToSeparate',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'Reducir cantidad a separar',
+                      onPressed: quantityToSeparate > 1
+                          ? () => setModalState(() => quantityToSeparate--)
+                          : null,
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                    Text(
+                      quantityToSeparate.toString(),
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                    ),
+                    IconButton(
+                      tooltip: 'Aumentar cantidad a separar',
+                      onPressed: quantityToSeparate < item.quantity - 1
+                          ? () => setModalState(() => quantityToSeparate++)
+                          : null,
+                      icon: const Icon(Icons.add_circle_outline),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Entrega de la parte separada',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  segments: alternatives
+                      .map(
+                        (type) => ButtonSegment(
+                          value: type,
+                          icon: Icon(_fulfillmentIcon(type)),
+                          label: Text(_fulfillmentLabel(type)),
+                        ),
+                      )
+                      .toList(),
+                  selected: {newFulfillmentType},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (selection) => setModalState(
+                    () => newFulfillmentType = selection.first,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Quedarán ${item.quantity.toInt() - quantityToSeparate} ${_fulfillmentLabel(item.fulfillmentType).toLowerCase()} '
+                    'y $quantityToSeparate ${_fulfillmentLabel(newFulfillmentType).toLowerCase()}.',
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => Navigator.pop(
+                      sheetContext,
+                      _DeliverySplit(quantityToSeparate, newFulfillmentType),
+                    ),
+                    icon: const Icon(Icons.call_split_rounded),
+                    label: const Text('Dividir producto'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (split == null || !mounted) return;
+    setState(() {
+      _items[index] = _copyItem(
+        item,
+        quantity: item.quantity - split.quantity,
+      );
+      _items.insert(
+        index + 1,
+        _copyItem(
+          item,
+          quantity: split.quantity.toDouble(),
+          fulfillmentType: split.fulfillmentType,
+        ),
+      );
+    });
+    setSheetState(() {});
+  }
+
   Future<void> _save() async {
     if (!_isAppending &&
         _orderType == 'DINE_IN' &&
@@ -534,15 +700,23 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
       );
       return;
     }
+    final quantitiesByProduct = <int, double>{};
     for (final item in _items) {
-      final maximum = _maximumQuantity(item.productId);
-      if (maximum < 0 || item.quantity > maximum) {
+      quantitiesByProduct.update(
+        item.productId,
+        (quantity) => quantity + item.quantity,
+        ifAbsent: () => item.quantity,
+      );
+    }
+    for (final entry in quantitiesByProduct.entries) {
+      final maximum = _maximumQuantity(entry.key);
+      if (maximum < 0 || entry.value > maximum) {
         FlashMessage.show(
           context,
           type: FlashMessageType.warning,
           title: 'Stock insuficiente',
           message:
-              'La cantidad de ${_productsById[item.productId]?.name ?? 'un producto'} supera el stock disponible.',
+              'La cantidad de ${_productsById[entry.key]?.name ?? 'un producto'} supera el stock disponible.',
         );
         return;
       }
@@ -748,6 +922,7 @@ class _CartItemCard extends StatelessWidget {
     required this.onDecrease,
     required this.onIncrease,
     required this.onEdit,
+    required this.onSplit,
     required this.onRemove,
   });
 
@@ -757,6 +932,7 @@ class _CartItemCard extends StatelessWidget {
   final VoidCallback onDecrease;
   final VoidCallback onIncrease;
   final VoidCallback onEdit;
+  final VoidCallback? onSplit;
   final VoidCallback onRemove;
 
   @override
@@ -779,6 +955,12 @@ class _CartItemCard extends StatelessWidget {
                     onPressed: onEdit,
                     icon: const Icon(Icons.edit_outlined),
                   ),
+                  if (onSplit != null)
+                    IconButton(
+                      tooltip: 'Dividir entrega',
+                      onPressed: onSplit,
+                      icon: const Icon(Icons.call_split_rounded),
+                    ),
                   IconButton(
                     tooltip: 'Quitar',
                     onPressed: onRemove,
@@ -788,6 +970,8 @@ class _CartItemCard extends StatelessWidget {
               ),
               if (item.notes?.trim().isNotEmpty == true)
                 Text(item.notes!, style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 6),
+              _FulfillmentChip(type: item.fulfillmentType),
               const SizedBox(height: 6),
               Row(
                 children: [
@@ -816,6 +1000,57 @@ class _CartItemCard extends StatelessWidget {
         ),
       );
 }
+
+class _FulfillmentChip extends StatelessWidget {
+  const _FulfillmentChip({required this.type});
+
+  final String type;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primaryContainer,
+          borderRadius: BorderRadius.circular(99),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _fulfillmentIcon(type),
+              size: 14,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              _fulfillmentLabel(type),
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ],
+        ),
+      );
+}
+
+class _DeliverySplit {
+  const _DeliverySplit(this.quantity, this.fulfillmentType);
+
+  final int quantity;
+  final String fulfillmentType;
+}
+
+const _fulfillmentTypes = <String>['DINE_IN', 'TAKEAWAY', 'DELIVERY'];
+
+String _fulfillmentLabel(String type) => switch (type) {
+  'TAKEAWAY' => 'Para llevar',
+  'DELIVERY' => 'Entrega',
+  _ => 'En local',
+};
+
+IconData _fulfillmentIcon(String type) => switch (type) {
+  'TAKEAWAY' => Icons.shopping_bag_outlined,
+  'DELIVERY' => Icons.delivery_dining_outlined,
+  _ => Icons.table_restaurant_outlined,
+};
 
 String? _nullIfBlank(String value) =>
     value.trim().isEmpty ? null : value.trim();

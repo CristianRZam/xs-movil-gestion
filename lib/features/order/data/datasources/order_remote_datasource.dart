@@ -21,6 +21,7 @@ abstract class OrderRemoteDataSource {
   Future<OrderModel> addItem(int orderId, OrderItemModel item);
   Future<OrderModel> addItems(int orderId, List<OrderItemModel> items);
   Future<OrderModel> updatePendingItem(int orderId, int itemId, OrderItemModel item);
+  Future<OrderModel> splitPendingItem(int orderId, int itemId, double quantity, String fulfillmentType);
   Future<OrderModel> updateItemStatus(int orderId, int itemId, String status, {String? comment, bool fromKitchen = false});
   Future<OrderModel> updateItemsStatus(int orderId, List<int> itemIds, String status, {String? comment, bool fromKitchen = false});
   Future<OrderModel> cancelPendingItem(int orderId, int itemId, {required String comment, required String stockDisposition});

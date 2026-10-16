@@ -97,6 +97,19 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
   );
 
   @override
+  Future<OrderModel> splitPendingItem(
+    int orderId,
+    int itemId,
+    double quantity,
+    String fulfillmentType,
+  ) => _save(
+    apiClient.dio.post(
+      '/orders/$orderId/items/$itemId/split',
+      data: {'quantity': quantity, 'fulfillmentType': fulfillmentType},
+    ),
+  );
+
+  @override
   Future<OrderModel> updateItemStatus(int orderId, int itemId, String status, {String? comment, bool fromKitchen = false}) =>
       _save(apiClient.dio.put(fromKitchen ? '/orders/kitchen/$orderId/items/$itemId/status' : '/orders/$orderId/items/$itemId/status', data: {
         'status': status,

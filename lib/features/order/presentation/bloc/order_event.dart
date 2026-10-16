@@ -134,6 +134,25 @@ class UpdatePendingOrderItem extends OrderEvent {
   List<Object?> get props => [orderId, itemId, item];
 }
 
+class SplitPendingOrderItem extends OrderEvent {
+  const SplitPendingOrderItem(
+    this.orderId,
+    this.itemId,
+    this.quantity,
+    this.fulfillmentType, {
+    this.completer,
+  });
+
+  final int orderId;
+  final int itemId;
+  final double quantity;
+  final String fulfillmentType;
+  final Completer<Order>? completer;
+
+  @override
+  List<Object?> get props => [orderId, itemId, quantity, fulfillmentType];
+}
+
 class ChangeOrderItemStatus extends OrderEvent {
   final int orderId;
   final int itemId;

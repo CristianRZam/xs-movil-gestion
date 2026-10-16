@@ -73,6 +73,20 @@ class OrderRepositoryImpl implements OrderRepository {
     ),
   );
   @override
+  Future<Either<Failure, Order>> splitPendingItem(
+    int orderId,
+    int itemId,
+    double quantity,
+    String fulfillmentType,
+  ) => _handle(
+    () => remoteDataSource.splitPendingItem(
+      orderId,
+      itemId,
+      quantity,
+      fulfillmentType,
+    ),
+  );
+  @override
   Future<Either<Failure, Order>> updateItemStatus(int orderId, int itemId, String status, {String? comment, bool fromKitchen = false}) =>
       _handle(() => remoteDataSource.updateItemStatus(orderId, itemId, status, comment: comment, fromKitchen: fromKitchen));
   @override
