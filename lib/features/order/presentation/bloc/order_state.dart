@@ -19,6 +19,7 @@ class OrderState {
   final Order? savedOrder;
   final bool? deleted;
   final String? errorMessage;
+  final String? successMessage;
   final int totalProducts;
   final bool isLoadingMoreProducts;
   final int ordersPage;
@@ -29,6 +30,8 @@ class OrderState {
   final DateTime? toDate;
   final String orderStatus;
   final String searchQuery;
+  final int? productId;
+  final String? productName;
   final List<OrderItemIncident> incidents;
   final int? incidentsOrderId;
 
@@ -45,6 +48,7 @@ class OrderState {
     this.savedOrder,
     this.deleted,
     this.errorMessage,
+    this.successMessage,
     this.totalProducts = 0,
     this.isLoadingMoreProducts = false,
     this.ordersPage = 0,
@@ -55,6 +59,8 @@ class OrderState {
     this.toDate,
     this.orderStatus = 'ALL',
     this.searchQuery = '',
+    this.productId,
+    this.productName,
     this.incidents = const [],
     this.incidentsOrderId,
   });
@@ -74,6 +80,7 @@ class OrderState {
     Object? savedOrder = _sentinel,
     Object? deleted = _sentinel,
     Object? errorMessage = _sentinel,
+    Object? successMessage = _sentinel,
     int? totalProducts,
     bool? isLoadingMoreProducts,
     int? ordersPage,
@@ -84,6 +91,8 @@ class OrderState {
     Object? toDate = _sentinel,
     String? orderStatus,
     String? searchQuery,
+    Object? productId = _sentinel,
+    Object? productName = _sentinel,
     List<OrderItemIncident>? incidents,
     Object? incidentsOrderId = _sentinel,
   }) => OrderState(
@@ -107,6 +116,9 @@ class OrderState {
     errorMessage: identical(errorMessage, _sentinel)
         ? this.errorMessage
         : errorMessage as String?,
+    successMessage: identical(successMessage, _sentinel)
+        ? this.successMessage
+        : successMessage as String?,
     totalProducts: totalProducts ?? this.totalProducts,
     isLoadingMoreProducts: isLoadingMoreProducts ?? this.isLoadingMoreProducts,
     ordersPage: ordersPage ?? this.ordersPage,
@@ -119,6 +131,8 @@ class OrderState {
     toDate: identical(toDate, _sentinel) ? this.toDate : toDate as DateTime?,
     orderStatus: orderStatus ?? this.orderStatus,
     searchQuery: searchQuery ?? this.searchQuery,
+    productId: identical(productId, _sentinel) ? this.productId : productId as int?,
+    productName: identical(productName, _sentinel) ? this.productName : productName as String?,
     incidents: incidents ?? this.incidents,
     incidentsOrderId: identical(incidentsOrderId, _sentinel) ? this.incidentsOrderId : incidentsOrderId as int?,
   );

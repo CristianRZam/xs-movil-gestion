@@ -29,6 +29,27 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   }
 
   @override
+  Future<List<ProfilePermissionModel>> getMyPermissions() async {
+    final response = await _apiClient.dio.get('/profile/permissions');
+    final api = ApiResponse<List<ProfilePermissionModel>>.fromJson(
+      response.data,
+      (json) => (json as List<dynamic>? ?? const [])
+          .map((item) => item as Map<String, dynamic>)
+          .map(ProfilePermissionModel.fromJson)
+          .where((permission) => permission.name.isNotEmpty)
+          .toList(),
+    );
+    if (!api.success || api.data == null) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+      );
+    }
+    return api.data!;
+  }
+
+  @override
   Future<void> updatePassword({
     required String oldPassword,
     required String newPassword,

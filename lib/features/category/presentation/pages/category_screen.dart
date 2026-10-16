@@ -1,5 +1,9 @@
 import 'package:app_movil_sistema/core/service_locator.dart';
+import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/authorization/access_widgets.dart';
+import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:app_movil_sistema/features/category/domain/entities/category_create_request.dart';
+import 'package:app_movil_sistema/features/category/domain/entities/category_update_request.dart';
 import 'package:app_movil_sistema/features/category/domain/entities/product_category.dart';
 import 'package:app_movil_sistema/features/category/domain/usecases/category_usecases.dart';
 import 'package:app_movil_sistema/features/category/presentation/bloc/category_cubit.dart';
@@ -15,7 +19,9 @@ class CategoryScreen extends StatelessWidget {
   Widget build(BuildContext context) => BlocProvider(
     create: (_) => CategoryCubit(
       getIt<GetCategoriesUseCase>(),
+      getIt<GetCategoryFormUseCase>(),
       getIt<CreateCategoryUseCase>(),
+      getIt<UpdateCategoryUseCase>(),
     )..load(),
     child: const _CategoryView(),
   );
@@ -56,21 +62,57 @@ class _CategoryViewState extends State<_CategoryView> {
     ),
   );
 
+  Future<void> _openEditSheet(ProductCategory category) async {
+    final cubit = context.read<CategoryCubit>();
+    final formCategory = await cubit.loadForEdit(category.id);
+    if (!mounted || formCategory == null) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => BlocProvider.value(
+        value: cubit,
+        child: _EditCategorySheet(category: formCategory),
+      ),
+    );
+  }
+
   @override
   Widget build(
     BuildContext context,
   ) => BlocConsumer<CategoryCubit, CategoryState>(
     listener: (context, state) {
       if (state.errorMessage != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+        // Los 403 activan el toast global y sincronizan los permisos. El
+        // mapper usa este mensaje genérico cuando la respuesta no trae texto,
+        // por lo que no debe mostrarse como un segundo aviso local.
+        if (state.errorMessage != 'Error desconocido') {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+        }
         context.read<CategoryCubit>().clearFeedback();
       }
       if (state.created) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Categoría creada correctamente')),
+        FlashMessage.show(
+          context,
+          type: FlashMessageType.success,
+          title: 'Categoría creada',
+          message: 'La categoría fue creada correctamente.',
+        );
+        final search = state.search;
+        context.read<CategoryCubit>()
+          ..clearFeedback()
+          ..load(search);
+      }
+      if (state.updated) {
+        Navigator.of(context).pop();
+        FlashMessage.show(
+          context,
+          type: FlashMessageType.success,
+          title: 'Categoría actualizada',
+          message: 'Los cambios fueron guardados correctamente.',
         );
         final search = state.search;
         context.read<CategoryCubit>()
@@ -81,10 +123,13 @@ class _CategoryViewState extends State<_CategoryView> {
     builder: (context, state) => Scaffold(
       appBar: const XsAppBar(title: 'Categorías', backIcon: false),
       endDrawer: const XsDrawer(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: state.isSaving ? null : _openCreateSheet,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Nueva categoría'),
+      floatingActionButton: AccessVisibility(
+        capability: AppCapability.createCategories,
+        child: FloatingActionButton.extended(
+          onPressed: state.isSaving ? null : _openCreateSheet,
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Nueva categoría'),
+        ),
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -153,7 +198,10 @@ class _CategoryViewState extends State<_CategoryView> {
                 ...state.categories.map(
                   (category) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: _CategoryCard(category: category),
+                    child: _CategoryCard(
+                      category: category,
+                      onEdit: () => _openEditSheet(category),
+                    ),
                   ),
                 ),
               ],
@@ -166,8 +214,9 @@ class _CategoryViewState extends State<_CategoryView> {
 }
 
 class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({required this.category});
+  const _CategoryCard({required this.category, required this.onEdit});
   final ProductCategory category;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -195,9 +244,13 @@ class _CategoryCard extends StatelessWidget {
       subtitle: category.shortName?.isNotEmpty == true
           ? Text(category.shortName!)
           : const Text('Sin nombre corto'),
-      trailing: Chip(
-        label: Text(category.active ? 'Activa' : 'Inactiva'),
-        visualDensity: VisualDensity.compact,
+      trailing: AccessVisibility(
+        capability: AppCapability.editCategories,
+        child: IconButton(
+          tooltip: 'Editar categoría',
+          onPressed: onEdit,
+          icon: const Icon(Icons.edit_outlined),
+        ),
       ),
     ),
   );
@@ -339,6 +392,138 @@ class _CreateCategorySheetState extends State<_CreateCategorySheet> {
                       : const Icon(Icons.save_rounded),
                   label: Text(
                     state.isSaving ? 'Guardando...' : 'Crear categoría',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _EditCategorySheet extends StatefulWidget {
+  const _EditCategorySheet({required this.category});
+  final ProductCategory category;
+
+  @override
+  State<_EditCategorySheet> createState() => _EditCategorySheetState();
+}
+
+class _EditCategorySheetState extends State<_EditCategorySheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final _nameController = TextEditingController(
+    text: widget.category.name,
+  );
+  late final _shortNameController = TextEditingController(
+    text: widget.category.shortName ?? '',
+  );
+  late final _orderController = TextEditingController(
+    text: widget.category.orderNumber.toString(),
+  );
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _shortNameController.dispose();
+    _orderController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final shortName = _shortNameController.text.trim();
+    context.read<CategoryCubit>().update(
+      CategoryUpdateRequest(
+        category: widget.category,
+        name: _nameController.text.trim(),
+        shortName: shortName.isEmpty ? null : shortName,
+        orderNumber: int.parse(_orderController.text.trim()),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        4,
+        20,
+        20 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: BlocBuilder<CategoryCubit, CategoryState>(
+        builder: (context, state) => Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Editar categoría',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _nameController,
+                maxLength: 255,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre',
+                  prefixIcon: Icon(Icons.category_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Ingrese el nombre de la categoría'
+                    : null,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _shortNameController,
+                maxLength: 255,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre corto',
+                  prefixIcon: Icon(Icons.short_text_rounded),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _orderController,
+                maxLength: 9,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Orden',
+                  prefixIcon: Icon(Icons.format_list_numbered_rounded),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  final order = int.tryParse(value?.trim() ?? '');
+                  return order == null || order < 0
+                      ? 'Ingrese un número entero válido'
+                      : null;
+                },
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: state.isSaving ? null : _submit,
+                  icon: state.isSaving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.save_rounded),
+                  label: Text(
+                    state.isSaving ? 'Guardando...' : 'Guardar cambios',
                   ),
                 ),
               ),

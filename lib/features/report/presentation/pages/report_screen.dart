@@ -2,6 +2,7 @@ import 'package:app_movil_sistema/core/network/api_client.dart';
 import 'package:app_movil_sistema/features/report/data/report_downloader.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -31,8 +32,27 @@ class _ReportScreenState extends State<ReportScreen> {
     try {
       final path = await ReportDownloader(ApiClient()).download(type: type, format: format, start: _range.start, end: _range.end);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Reporte guardado en $path')));
-    } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo descargar el reporte: $error'), backgroundColor: Colors.red));
+    } on DioException catch (error) {
+      // ApiClient ya informa los 403 con el toast global de autorización y
+      // sincroniza los permisos. No mostrar un segundo mensaje técnico
+      // mientras la interfaz todavía refleja los permisos anteriores.
+      if (error.response?.statusCode != 403 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo descargar el reporte. Intenta nuevamente.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo descargar el reporte. Intenta nuevamente.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally { if (mounted) setState(() => _loading = null); }
   }
 

@@ -8,8 +8,11 @@ abstract class SaleRemoteDataSource {
     int size = 20,
     DateTime? from,
     DateTime? to,
+    String? status,
+    int? productId,
   });
   Future<SaleModel> create(SaleModel sale);
+  Future<SaleModel> getById(int id);
   Future<SaleModel> cancel(int saleId, String reason);
   Future<CashSessionSalesSummary> getCashSessionSummary(int id);
 }

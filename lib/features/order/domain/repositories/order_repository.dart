@@ -14,16 +14,18 @@ abstract class OrderRepository {
     DateTime? to,
     String? status,
     String? search,
+    int? productId,
   });
   Future<Either<Failure, OrderPage>> getKitchenQueue({int page = 0, int size = 20});
+  Future<Either<Failure, Order>> getById(int id);
   Future<Either<Failure, Order>> create(Order order);
   Future<Either<Failure, Order>> update(int id, Order order);
   Future<Either<Failure, Order>> updateStatus(int id, String status);
   Future<Either<Failure, Order>> addItem(int orderId, OrderItem item);
   Future<Either<Failure, Order>> addItems(int orderId, List<OrderItem> items);
   Future<Either<Failure, Order>> updatePendingItem(int orderId, int itemId, OrderItem item);
-  Future<Either<Failure, Order>> updateItemStatus(int orderId, int itemId, String status, {String? comment});
-  Future<Either<Failure, Order>> updateItemsStatus(int orderId, List<int> itemIds, String status, {String? comment});
+  Future<Either<Failure, Order>> updateItemStatus(int orderId, int itemId, String status, {String? comment, bool fromKitchen = false});
+  Future<Either<Failure, Order>> updateItemsStatus(int orderId, List<int> itemIds, String status, {String? comment, bool fromKitchen = false});
   Future<Either<Failure, Order>> cancelPendingItem(int orderId, int itemId, {required String comment, required String stockDisposition});
   Future<Either<Failure, Order>> reportIncident(int orderId, int itemId, String resolution, String reason, {double? discountAmount});
   Future<Either<Failure, List<OrderItemIncident>>> getIncidents(int orderId);

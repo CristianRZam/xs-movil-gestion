@@ -169,7 +169,9 @@ class CashSessionCard extends StatelessWidget {
             icon: Icons.person_outline,
             title: "Usuario",
             value:
-            "${session.openedByName}",
+            session.openedByName?.trim().isNotEmpty == true
+                ? session.openedByName!.trim()
+                : "Usuario no disponible",
           ),
 
           if (session.openingComment != null &&

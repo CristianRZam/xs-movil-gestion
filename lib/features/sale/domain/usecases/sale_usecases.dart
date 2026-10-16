@@ -13,13 +13,21 @@ class GetSalesUseCase {
     int size = 20,
     DateTime? from,
     DateTime? to,
-  }) => repository.getAll(page: page, size: size, from: from, to: to);
+    String? status,
+    int? productId,
+  }) => repository.getAll(page: page, size: size, from: from, to: to, status: status, productId: productId);
 }
 
 class CreateSaleUseCase {
   final SaleRepository repository;
   CreateSaleUseCase(this.repository);
   Future<Either<Failure, Sale>> call(Sale sale) => repository.create(sale);
+}
+
+class GetSaleByIdUseCase {
+  GetSaleByIdUseCase(this.repository);
+  final SaleRepository repository;
+  Future<Either<Failure, Sale>> call(int id) => repository.getById(id);
 }
 
 class CancelSaleUseCase {

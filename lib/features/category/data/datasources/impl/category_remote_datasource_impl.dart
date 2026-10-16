@@ -2,6 +2,7 @@ import 'package:app_movil_sistema/core/network/api_client.dart';
 import 'package:app_movil_sistema/core/network/api_response.dart';
 import 'package:app_movil_sistema/features/category/data/datasources/category_remote_datasource.dart';
 import 'package:app_movil_sistema/features/category/data/models/category_create_request_model.dart';
+import 'package:app_movil_sistema/features/category/data/models/category_update_request_model.dart';
 import 'package:app_movil_sistema/features/category/data/models/product_category_model.dart';
 import 'package:dio/dio.dart';
 
@@ -40,6 +41,26 @@ class CategoryRemoteDataSourceImpl implements CategoryRemoteDataSource {
   }
 
   @override
+  Future<ProductCategoryModel> getCategoryForm(int id) async {
+    final response = await _apiClient.dio.post(
+      '/parameter/init-form',
+      data: {'id': id},
+    );
+    final api = ApiResponse<ProductCategoryModel>.fromJson(response.data, (
+      json,
+    ) {
+      final data = json as Map<String, dynamic>? ?? const {};
+      return ProductCategoryModel.fromJson(
+        data['parameter'] as Map<String, dynamic>? ?? const {},
+      );
+    });
+    if (!api.success || api.data == null) {
+      throw _error(response, api.message);
+    }
+    return api.data!;
+  }
+
+  @override
   Future<ProductCategoryModel> createCategory(
     CategoryCreateRequestModel request,
   ) async {
@@ -51,6 +72,30 @@ class CategoryRemoteDataSourceImpl implements CategoryRemoteDataSource {
     });
     final response = await _apiClient.dio.post(
       '/parameter/create',
+      data: formData,
+    );
+    final api = ApiResponse<ProductCategoryModel>.fromJson(
+      response.data,
+      (json) => ProductCategoryModel.fromJson(json as Map<String, dynamic>),
+    );
+    if (!api.success || api.data == null) {
+      throw _error(response, api.message);
+    }
+    return api.data!;
+  }
+
+  @override
+  Future<ProductCategoryModel> updateCategory(
+    CategoryUpdateRequestModel request,
+  ) async {
+    final formData = FormData.fromMap({
+      'data': MultipartFile.fromString(
+        request.toJsonString(),
+        contentType: DioMediaType('application', 'json'),
+      ),
+    });
+    final response = await _apiClient.dio.put(
+      '/parameter/update',
       data: formData,
     );
     final api = ApiResponse<ProductCategoryModel>.fromJson(

@@ -33,6 +33,9 @@ class SaleState {
   final SaleDateFilter dateFilter;
   final DateTime? fromDate;
   final DateTime? toDate;
+  final String? saleStatus;
+  final int? saleProductId;
+  final String? saleProductName;
 
   const SaleState({
     this.status = SaleStatus.initial,
@@ -55,6 +58,9 @@ class SaleState {
     this.dateFilter = SaleDateFilter.all,
     this.fromDate,
     this.toDate,
+    this.saleStatus,
+    this.saleProductId,
+    this.saleProductName,
   });
 
   bool get hasMoreProducts => products.length < totalProducts;
@@ -80,6 +86,9 @@ class SaleState {
     SaleDateFilter? dateFilter,
     Object? fromDate = _sentinel,
     Object? toDate = _sentinel,
+    Object? saleStatus = _sentinel,
+    Object? saleProductId = _sentinel,
+    Object? saleProductName = _sentinel,
   }) => SaleState(
     status: status ?? this.status,
     sales: sales ?? this.sales,
@@ -108,6 +117,9 @@ class SaleState {
         ? this.fromDate
         : fromDate as DateTime?,
     toDate: identical(toDate, _sentinel) ? this.toDate : toDate as DateTime?,
+    saleStatus: identical(saleStatus, _sentinel) ? this.saleStatus : saleStatus as String?,
+    saleProductId: identical(saleProductId, _sentinel) ? this.saleProductId : saleProductId as int?,
+    saleProductName: identical(saleProductName, _sentinel) ? this.saleProductName : saleProductName as String?,
   );
 
   static const _sentinel = Object();
@@ -118,10 +130,16 @@ class LoadSales {
     this.filter = SaleDateFilter.all,
     this.fromDate,
     this.toDate,
+    this.status,
+    this.productId,
+    this.productName,
   });
   final SaleDateFilter filter;
   final DateTime? fromDate;
   final DateTime? toDate;
+  final String? status;
+  final int? productId;
+  final String? productName;
 }
 
 class LoadMoreSales {
@@ -203,6 +221,8 @@ class SaleBloc extends Bloc<Object, SaleState> {
       size: EnvConfig.salesAndOrdersPageSize,
       from: event.fromDate,
       to: event.toDate,
+      status: event.status,
+      productId: event.productId,
     );
     final products = await getProducts(
       ProductViewRequest(
@@ -226,6 +246,9 @@ class SaleBloc extends Bloc<Object, SaleState> {
           dateFilter: event.filter,
           fromDate: event.fromDate,
           toDate: event.toDate,
+          saleStatus: event.status,
+          saleProductId: event.productId,
+          saleProductName: event.productName,
           products: products.fold(
             (_) => state.products,
             (value) => value.products,
@@ -255,6 +278,8 @@ class SaleBloc extends Bloc<Object, SaleState> {
       size: EnvConfig.salesAndOrdersPageSize,
       from: state.fromDate,
       to: state.toDate,
+      status: state.saleStatus,
+      productId: state.saleProductId,
     );
     result.fold(
       (failure) => emit(

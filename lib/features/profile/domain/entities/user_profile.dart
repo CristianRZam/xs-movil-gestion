@@ -21,3 +21,15 @@ class UserProfile {
   final String? avatarUrl;
   final List<String> roles;
 }
+
+class ProfilePermission {
+  const ProfilePermission({
+    required this.name,
+    this.description,
+    this.module,
+  });
+
+  final String name;
+  final String? description;
+  final String? module;
+}

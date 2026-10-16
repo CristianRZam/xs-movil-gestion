@@ -1,4 +1,5 @@
 import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/authorization/permission_sync_service.dart';
 import 'package:app_movil_sistema/core/session/session_coordinator.dart';
 import 'core/storage/token_storage.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
@@ -23,6 +24,7 @@ Future<void> main() async {
   getIt<AccessControl>().updateToken(await getIt<TokenStorage>().getToken());
   getIt<SessionCoordinator>();
   await dotenv.load(fileName: ".env");
+  getIt<PermissionSyncService>().start();
   runApp(
     MultiBlocProvider(
       providers: [
@@ -51,6 +53,7 @@ class MyApp extends StatelessWidget {
           locale: const Locale('es'),
           supportedLocales: const [Locale('es'), Locale('en')],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          navigatorObservers: [getIt<PermissionSyncNavigatorObserver>()],
           routes: AppRoutes.routes,
           home: const SplashScreen(),
         );

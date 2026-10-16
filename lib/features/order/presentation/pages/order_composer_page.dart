@@ -7,6 +7,7 @@ import 'package:app_movil_sistema/features/order/presentation/bloc/order_event.d
 import 'package:app_movil_sistema/features/order/presentation/bloc/order_state.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
 import 'package:app_movil_sistema/features/product/presentation/widgets/product_selector_sheet.dart';
+import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -46,7 +47,14 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
     );
     _notesController = TextEditingController(text: widget.order?.notes ?? '');
     _orderType = widget.order?.orderType ?? 'DINE_IN';
-    _items = _isAppending ? [] : [...?widget.order?.items];
+    // Los ítems cancelados son historial: no se muestran ni se envían en la
+    // edición estructural de los productos activos.
+    _items = _isAppending
+        ? <OrderItem>[]
+        : List<OrderItem>.from(
+            (widget.order?.items ?? const <OrderItem>[])
+                .where((item) => item.status != 'CANCELLED'),
+          );
     _productsById = {
       for (final product in widget.initialProducts) product.id: product,
     };
@@ -247,8 +255,11 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
     final maximum = _maximumQuantity(product.id);
     if (maximum <= 0 ||
         (index >= 0 && _items[index].quantity + 1 > maximum)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Solo hay $maximum unidad(es) disponible(s).')),
+      FlashMessage.show(
+        context,
+        type: FlashMessageType.warning,
+        title: 'Stock disponible',
+        message: 'Solo hay $maximum unidad(es) disponible(s).',
       );
       return;
     }
@@ -296,7 +307,8 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
     if (product == null) return -1;
     if (_isAppending) return product.availableStock;
     final originalReserved = widget.order?.items
-            .where((item) => item.productId == productId)
+            .where((item) =>
+                item.productId == productId && item.status != 'CANCELLED')
             .fold<double>(0, (sum, item) => sum + item.quantity) ??
         0;
     return product.availableStock + originalReserved.toInt();
@@ -398,12 +410,12 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
       return;
     }
     if (next > _maximumQuantity(item.productId)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      FlashMessage.show(
+        context,
+        type: FlashMessageType.warning,
+        title: 'Stock disponible',
+        message:
             'Solo hay ${_maximumQuantity(item.productId)} unidad(es) disponible(s).',
-          ),
-        ),
       );
       return;
     }
@@ -489,6 +501,9 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
         ],
       ),
     );
+    // El cierre del diálogo conserva el TextField durante la animación.
+    // Esperamos a que se desmonte antes de liberar sus controladores.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
     quantity.dispose();
     price.dispose();
     notes.dispose();
@@ -501,27 +516,33 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
     if (!_isAppending &&
         _orderType == 'DINE_IN' &&
         _referenceController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Indique la mesa de la orden.')),
+      FlashMessage.show(
+        context,
+        type: FlashMessageType.warning,
+        title: 'Falta la mesa',
+        message: 'Indique la mesa de la orden.',
       );
       _showOrderDetails();
       return;
     }
     if (_items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Agregue al menos un producto.')),
+      FlashMessage.show(
+        context,
+        type: FlashMessageType.warning,
+        title: 'Carrito vacío',
+        message: 'Agregue al menos un producto.',
       );
       return;
     }
     for (final item in _items) {
       final maximum = _maximumQuantity(item.productId);
       if (maximum < 0 || item.quantity > maximum) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
+        FlashMessage.show(
+          context,
+          type: FlashMessageType.warning,
+          title: 'Stock insuficiente',
+          message:
               'La cantidad de ${_productsById[item.productId]?.name ?? 'un producto'} supera el stock disponible.',
-            ),
-          ),
         );
         return;
       }
@@ -558,13 +579,16 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
     }
 
     try {
-      await completer.future;
-      if (mounted) Navigator.of(context).pop(true);
+      final savedOrder = await completer.future;
+      if (mounted) Navigator.of(context).pop(savedOrder);
     } on StateError catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message.toString())),
+      FlashMessage.show(
+        context,
+        type: FlashMessageType.error,
+        title: 'No se pudo guardar la orden',
+        message: error.message.toString(),
       );
     }
   }

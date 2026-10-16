@@ -71,4 +71,11 @@ class EnvConfig {
     );
     return size != null && size > 0 ? size : 10;
   }
+
+  static int get inventoryCountHistoryLimit {
+    final size = int.tryParse(
+      dotenv.env['INVENTORY_COUNT_HISTORY_LIMIT'] ?? '',
+    );
+    return size != null && size > 0 ? size : 15;
+  }
 }

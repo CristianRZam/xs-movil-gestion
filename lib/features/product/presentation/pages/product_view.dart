@@ -28,6 +28,7 @@ import 'package:app_movil_sistema/features/product/presentation/widgets/product_
 import 'package:app_movil_sistema/features/product/presentation/widgets/xs_product_image_picker.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -229,19 +230,20 @@ class _ProductViewState extends State<ProductView> {
             listener: (context, state) {
               if (state.status == ProductStatus.failure &&
                   state.errorMessage != null) {
-                showDialog<void>(
-                  context: context,
-                  builder: (dialogContext) => AlertDialog(
-                    icon: const Icon(Icons.error_outline_rounded),
-                    title: const Text('No se pudo completar la operación'),
-                    content: Text(state.errorMessage!),
-                    actions: [
-                      FilledButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        child: const Text('Entendido'),
-                      ),
-                    ],
-                  ),
+                // A 403 can be caused by a permission change during an
+                // active session. ApiClient synchronizes permissions and the
+                // route guard will replace this screen with AccessDenied, so
+                // showing an additional error dialog is redundant.
+                if (state.errorCode == 403) {
+                  context.read<ProductBloc>().add(const ClearProductError());
+                  return;
+                }
+                FlashMessage.show(
+                  context,
+                  type: FlashMessageType.error,
+                  title: 'No se pudo completar la operación',
+                  message: state.errorMessage!,
+                  position: FlashMessagePosition.top,
                 );
                 context.read<ProductBloc>().add(const ClearProductError());
               }
@@ -254,6 +256,14 @@ class _ProductViewState extends State<ProductView> {
 
               if (state.product != null) {
                 Navigator.of(context).pop();
+
+                FlashMessage.show(
+                  context,
+                  type: FlashMessageType.success,
+                  title: 'Producto guardado',
+                  message: 'Los datos del producto se actualizaron correctamente.',
+                  position: FlashMessagePosition.top,
+                );
 
                 context.read<ProductBloc>().add(const ClearSavedProduct());
 
@@ -268,10 +278,12 @@ class _ProductViewState extends State<ProductView> {
               }
 
               if (state.deleted == true) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Producto eliminado correctamente"),
-                  ),
+                FlashMessage.show(
+                  context,
+                  type: FlashMessageType.success,
+                  title: 'Producto eliminado',
+                  message: 'El producto se eliminó correctamente.',
+                  position: FlashMessagePosition.top,
                 );
 
                 context.read<ProductBloc>().add(const ClearDeletedProduct());
@@ -287,10 +299,12 @@ class _ProductViewState extends State<ProductView> {
               }
 
               if (state.statusUpdated == true) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Estado del producto actualizado'),
-                  ),
+                FlashMessage.show(
+                  context,
+                  type: FlashMessageType.success,
+                  title: 'Estado actualizado',
+                  message: 'El estado del producto se actualizó correctamente.',
+                  position: FlashMessagePosition.top,
                 );
                 context.read<ProductBloc>().add(
                   const ClearUpdatedProductStatus(),
@@ -309,10 +323,12 @@ class _ProductViewState extends State<ProductView> {
               if (state.inventoryMovement != null) {
                 Navigator.of(context).pop();
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Movimiento registrado correctamente"),
-                  ),
+                FlashMessage.show(
+                  context,
+                  type: FlashMessageType.success,
+                  title: 'Movimiento registrado',
+                  message: 'El inventario se actualizó correctamente.',
+                  position: FlashMessagePosition.top,
                 );
 
                 context.read<ProductBloc>().add(
@@ -876,9 +892,19 @@ void openInventoryMovementDialog(
   showDialog(
     context: parentContext,
     builder: (_) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          return Form(
+      return BlocListener<ProductBloc, ProductState>(
+        bloc: parentContext.read<ProductBloc>(),
+        listener: (context, state) {
+          // Entry, waste and adjustment share this dialog. When the server
+          // rejects one because its permission was revoked, close the form;
+          // ApiClient already displays the authorization toast.
+          if (state.status == ProductStatus.failure && state.errorCode == 403) {
+            Navigator.of(context).pop();
+          }
+        },
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            return Form(
             key: formKey,
             child: XsDialog(
               title: type == "ENTRY"
@@ -900,22 +926,24 @@ void openInventoryMovementDialog(
 
                 final quantity = double.parse(quantityController.text);
                 if (type == "WASTE" && quantity > availableStock) {
-                  ScaffoldMessenger.of(parentContext).showSnackBar(
-                    SnackBar(
-                      content: Text(
+                  FlashMessage.show(
+                    parentContext,
+                    type: FlashMessageType.warning,
+                    title: 'Cantidad no válida',
+                    message:
                         'Solo puede registrar hasta $availableStock unidad(es) de merma. Hay $reservedStock unidad(es) reservada(s) en ordenes activas.',
-                      ),
-                    ),
+                    position: FlashMessagePosition.top,
                   );
                   return;
                 }
                 if (type == "ADJUSTMENT" && quantity < reservedStock) {
-                  ScaffoldMessenger.of(parentContext).showSnackBar(
-                    SnackBar(
-                      content: Text(
+                  FlashMessage.show(
+                    parentContext,
+                    type: FlashMessageType.warning,
+                    title: 'Cantidad no válida',
+                    message:
                         'El stock final no puede ser menor que las $reservedStock unidad(es) reservada(s).',
-                      ),
-                    ),
+                    position: FlashMessagePosition.top,
                   );
                   return;
                 }
@@ -1015,7 +1043,9 @@ void openInventoryMovementDialog(
                   // Cantidad
                   XsNumberField(
                     controller: quantityController,
-                    labelText: "Cantidad",
+                    labelText: type == "ADJUSTMENT"
+                        ? "Stock final"
+                        : "Cantidad",
                     decimal: true,
                     prefixIcon: const Icon(Icons.inventory),
                     validator: (value) {
@@ -1024,8 +1054,12 @@ void openInventoryMovementDialog(
                       ], value);
                       if (required != null) return required;
                       final quantity = double.tryParse(value ?? '');
-                      if (quantity == null || quantity <= 0) {
-                        return 'Ingrese una cantidad válida';
+                      if (quantity == null ||
+                          (type != "ADJUSTMENT" && quantity <= 0) ||
+                          (type == "ADJUSTMENT" && quantity < 0)) {
+                        return type == "ADJUSTMENT"
+                            ? 'Ingrese un stock válido'
+                            : 'Ingrese una cantidad válida';
                       }
                       if (type == "WASTE" && quantity > availableStock) {
                         return 'Máximo para merma: $availableStock';
@@ -1049,8 +1083,9 @@ void openInventoryMovementDialog(
                 ],
               ),
             ),
-          );
-        },
+            );
+          },
+        ),
       );
     },
   );

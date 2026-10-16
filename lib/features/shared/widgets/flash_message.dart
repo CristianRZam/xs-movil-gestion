@@ -15,7 +15,7 @@ class FlashMessage {
     FlashMessageType type = FlashMessageType.error,
     String title = '',
     String message = '',
-    FlashMessagePosition position = FlashMessagePosition.bottom,
+    FlashMessagePosition position = FlashMessagePosition.top,
   }) {
     final overlay = Overlay.maybeOf(context);
     if (overlay == null) return;
@@ -36,7 +36,7 @@ class FlashMessage {
     FlashMessageType type = FlashMessageType.error,
     String title = '',
     String message = '',
-    FlashMessagePosition position = FlashMessagePosition.bottom,
+    FlashMessagePosition position = FlashMessagePosition.top,
   }) {
     if (_currentOverlay?.mounted ?? false) {
       _currentOverlay?.remove();

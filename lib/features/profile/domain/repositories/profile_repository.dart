@@ -4,6 +4,7 @@ import 'package:dartz/dartz.dart';
 
 abstract class ProfileRepository {
   Future<Either<Failure, UserProfile>> getProfile();
+  Future<Either<Failure, List<ProfilePermission>>> getMyPermissions();
   Future<Either<Failure, void>> updatePassword({
     required String oldPassword,
     required String newPassword,

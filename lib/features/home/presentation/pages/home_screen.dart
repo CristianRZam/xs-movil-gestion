@@ -1,5 +1,6 @@
 import 'package:app_movil_sistema/core/authorization/access_control.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:app_movil_sistema/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:app_movil_sistema/features/dashboard/domain/usecases/get_dashboard_summary_usecase.dart';
@@ -8,6 +9,7 @@ import 'package:app_movil_sistema/features/home/presentation/widgets/dashboard_s
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-date-range-picker.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs-filter-button.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-select.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -90,7 +92,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
+    final access = getIt<AccessControl>();
+    return ListenableBuilder(
+      listenable: access,
+      builder: (context, _) => PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) SystemNavigator.pop();
@@ -193,6 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
       ),
+    ),
     );
   }
 
@@ -214,8 +220,9 @@ class _DashboardScopeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    const darkSelectorSurface = Color(0xFF201416);
+    const darkSelectorBorder = Color(0xFF4A282C);
 
     return Row(
       children: [
@@ -224,8 +231,15 @@ class _DashboardScopeSelector extends StatelessWidget {
             height: 52,
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: isDark ? colors.surfaceContainer : colors.surfaceContainerHighest,
+              color: isDark
+                  ? darkSelectorSurface
+                  : AppColors.primary.withValues(alpha: .065),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark
+                    ? darkSelectorBorder
+                    : AppColors.primary.withValues(alpha: .16),
+              ),
             ),
             child: Row(
               children: [
@@ -251,26 +265,9 @@ class _DashboardScopeSelector extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        Tooltip(
-          message: 'Filtros',
-          child: Material(
-            color: Colors.transparent,
-            shape: const CircleBorder(),
-            child: InkWell(
-              onTap: onFilter,
-              customBorder: const CircleBorder(),
-              child: Ink(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: isDark ? colors.surfaceContainer : colors.surface,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: colors.outlineVariant),
-                ),
-                child: Icon(Icons.tune_rounded, color: colors.onSurfaceVariant),
-              ),
-            ),
-          ),
+        XsFilterButton(
+          tooltip: 'Mostrar filtros',
+          onPressed: onFilter,
         ),
       ],
     );
@@ -292,9 +289,12 @@ class _ScopeOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    const darkSelected = Color(0xFF3A1E22);
     return Material(
-      color: selected ? colors.surface : Colors.transparent,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -303,12 +303,17 @@ class _ScopeOption extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           alignment: Alignment.center,
           decoration: BoxDecoration(
+            color: selected
+                ? (isDark ? darkSelected : AppColors.primary)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             boxShadow: selected
                 ? [
                     BoxShadow(
-                      color: colors.shadow.withValues(alpha: .12),
-                      blurRadius: 7,
+                      color: AppColors.primary.withValues(
+                        alpha: isDark ? .28 : .22,
+                      ),
+                      blurRadius: isDark ? 10 : 7,
                       offset: const Offset(0, 2),
                     ),
                   ]
@@ -320,13 +325,13 @@ class _ScopeOption extends StatelessWidget {
               Icon(
                 icon,
                 size: 18,
-                color: selected ? colors.primary : colors.onSurfaceVariant,
+                color: selected ? Colors.white : colors.onSurfaceVariant,
               ),
               const SizedBox(width: 7),
               Text(
                 label,
                 style: TextStyle(
-                  color: selected ? colors.onSurface : colors.onSurfaceVariant,
+                  color: selected ? Colors.white : colors.onSurfaceVariant,
                   fontSize: 12,
                   fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                 ),

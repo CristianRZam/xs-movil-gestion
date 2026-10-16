@@ -12,8 +12,20 @@ class OrderModel extends Order {
     super.notes,
     required super.items,
     super.incidentDiscount,
+    super.nonChargeableItemIds,
+    super.incidentLockedItemIds,
     super.createdAt,
     super.modifiedAt,
+    super.createdByName,
+    super.hasNotes,
+    super.activeItemCount,
+    super.activeUnitCount,
+    super.totalAmount,
+    super.pendingItemCount,
+    super.preparingItemCount,
+    super.readyItemCount,
+    super.servedItemCount,
+    super.cancelledItemCount,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) => OrderModel(
@@ -28,8 +40,26 @@ class OrderModel extends Order {
         .map((item) => OrderItemModel.fromJson(item as Map<String, dynamic>))
         .toList(),
     incidentDiscount: _asDouble(json['incidentDiscount']),
+    nonChargeableItemIds: (json['nonChargeableItemIds'] as List<dynamic>? ?? const [])
+        .map(_asInt)
+        .whereType<int>()
+        .toList(),
+    incidentLockedItemIds: (json['incidentLockedItemIds'] as List<dynamic>? ?? const [])
+        .map(_asInt)
+        .whereType<int>()
+        .toList(),
     createdAt: _asDate(json['createdAt']),
     modifiedAt: _asDate(json['modifiedAt']),
+    createdByName: json['createdByName'] as String?,
+    hasNotes: json['hasNotes'] as bool? ?? false,
+    activeItemCount: _asInt(json['activeItemCount']),
+    activeUnitCount: _asDoubleOrNull(json['activeUnitCount']),
+    totalAmount: _asDoubleOrNull(json['totalAmount']),
+    pendingItemCount: _asInt(json['pendingItemCount']),
+    preparingItemCount: _asInt(json['preparingItemCount']),
+    readyItemCount: _asInt(json['readyItemCount']),
+    servedItemCount: _asInt(json['servedItemCount']),
+    cancelledItemCount: _asInt(json['cancelledItemCount']),
   );
 
   factory OrderModel.fromEntity(Order order) => OrderModel(
@@ -42,8 +72,20 @@ class OrderModel extends Order {
     notes: order.notes,
     items: order.items,
     incidentDiscount: order.incidentDiscount,
+    nonChargeableItemIds: order.nonChargeableItemIds,
+    incidentLockedItemIds: order.incidentLockedItemIds,
     createdAt: order.createdAt,
     modifiedAt: order.modifiedAt,
+    createdByName: order.createdByName,
+    hasNotes: order.hasNotes,
+    activeItemCount: order.activeItemCount,
+    activeUnitCount: order.activeUnitCount,
+    totalAmount: order.totalAmount,
+    pendingItemCount: order.pendingItemCount,
+    preparingItemCount: order.preparingItemCount,
+    readyItemCount: order.readyItemCount,
+    servedItemCount: order.servedItemCount,
+    cancelledItemCount: order.cancelledItemCount,
   );
 
   Map<String, dynamic> toJson() => {
@@ -98,6 +140,7 @@ class OrderItemModel extends OrderItem {
   );
 
   Map<String, dynamic> toJson() => {
+    if (id != null) 'id': id,
     'productId': productId,
     'quantity': quantity,
     'unitPrice': unitPrice,
@@ -111,5 +154,7 @@ int? _asInt(dynamic value) =>
     value is num ? value.toInt() : int.tryParse('$value');
 double _asDouble(dynamic value) =>
     value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+double? _asDoubleOrNull(dynamic value) =>
+    value == null ? null : (value is num ? value.toDouble() : double.tryParse('$value'));
 DateTime? _asDate(dynamic value) =>
     value == null ? null : DateTime.tryParse('$value');

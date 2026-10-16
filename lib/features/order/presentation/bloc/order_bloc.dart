@@ -67,7 +67,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     on<LoadOrderIncidents>(_loadIncidents);
     on<DeleteOrder>(_deleteOrder);
     on<ClearOrderAction>(
-      (_, emit) => emit(state.copyWith(savedOrder: null, deleted: null)),
+      (_, emit) => emit(state.copyWith(savedOrder: null, deleted: null, successMessage: null)),
     );
     on<ClearOrderError>(
       (_, emit) =>
@@ -104,7 +104,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     final result = await addOrderItemUseCase(event.orderId, event.item);
     await result.fold(
       (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
-      (order) => _emitMutationSuccess(emit, savedOrder: order),
+      (order) => _emitMutationSuccess(emit, savedOrder: order, successMessage: 'Producto agregado a la orden correctamente.'),
     );
   }
 
@@ -122,7 +122,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
         if (event.completer?.isCompleted == false) {
           event.completer!.complete(order);
         }
-        await _emitMutationSuccess(emit, savedOrder: order);
+        await _emitMutationSuccess(emit, savedOrder: order, successMessage: 'Productos agregados a la orden correctamente.');
       },
     );
   }
@@ -138,13 +138,21 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       event.item,
     );
     await result.fold(
-      (failure) async => emit(
-        state.copyWith(
+      (failure) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.completeError(StateError(failure.message));
+        }
+        emit(state.copyWith(
           status: OrderStatus.failure,
           errorMessage: failure.message,
-        ),
-      ),
-      (order) => _emitMutationSuccess(emit, savedOrder: order),
+        ));
+      },
+      (order) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.complete(order);
+        }
+        await _emitMutationSuccess(emit, savedOrder: order, successMessage: 'Producto actualizado correctamente.');
+      },
     );
   }
 
@@ -155,10 +163,25 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       event.itemId,
       event.status,
       comment: event.comment,
+      fromKitchen: event.fromKitchen,
     );
     await result.fold(
-      (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
-      (order) => _emitMutationSuccess(emit, savedOrder: order),
+      (failure) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.completeError(StateError(failure.message));
+        }
+        emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message));
+      },
+      (order) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.complete(order);
+        }
+        await _emitMutationSuccess(
+          emit,
+          savedOrder: order,
+          successMessage: 'Estado del producto actualizado correctamente.',
+        );
+      },
     );
   }
 
@@ -169,10 +192,21 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       event.itemIds,
       event.status,
       comment: event.comment,
+      fromKitchen: event.fromKitchen,
     );
     await result.fold(
-      (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
-      (order) => _emitMutationSuccess(emit, savedOrder: order),
+      (failure) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.completeError(StateError(failure.message));
+        }
+        emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message));
+      },
+      (order) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.complete(order);
+        }
+        await _emitMutationSuccess(emit, savedOrder: order, successMessage: 'Estados de los productos actualizados correctamente.');
+      },
     );
   }
 
@@ -180,8 +214,22 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     emit(state.copyWith(status: OrderStatus.loading));
     final result = await cancelPendingOrderItemUseCase(event.orderId, event.itemId, comment: event.comment, stockDisposition: event.stockDisposition);
     await result.fold(
-      (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
-      (order) => _emitMutationSuccess(emit, savedOrder: order),
+      (failure) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.completeError(StateError(failure.message));
+        }
+        emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message));
+      },
+      (order) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.complete(order);
+        }
+        await _emitMutationSuccess(
+          emit,
+          savedOrder: order,
+          successMessage: 'Producto cancelado correctamente.',
+        );
+      },
     );
   }
 
@@ -189,18 +237,33 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     emit(state.copyWith(status: OrderStatus.loading));
     final result = await reportOrderItemIncidentUseCase(event.orderId, event.itemId, event.resolution, event.reason, discountAmount: event.discountAmount);
     await result.fold(
-      (failure) async => emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message)),
+      (failure) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.completeError(StateError(failure.message));
+        }
+        emit(state.copyWith(status: OrderStatus.failure, errorMessage: failure.message));
+      },
       (order) async {
-        await _emitMutationSuccess(emit, savedOrder: order);
+        await _emitMutationSuccess(emit, savedOrder: order, successMessage: 'Incidencia registrada correctamente.');
         final incidents = await getOrderIncidentsUseCase(event.orderId);
         incidents.fold(
           (_) {},
-          (value) => emit(state.copyWith(
-            savedOrder: _withIncidentDiscount(order, value),
-            incidents: value,
-            incidentsOrderId: event.orderId,
-          )),
+          (value) {
+            final updatedOrder = _withIncidentDiscount(order, value);
+            if (event.completer?.isCompleted == false) {
+              event.completer!.complete(updatedOrder);
+            }
+            emit(state.copyWith(
+              savedOrder: updatedOrder,
+              incidents: value,
+              incidentsOrderId: event.orderId,
+              successMessage: null,
+            ));
+          },
         );
+        if (event.completer?.isCompleted == false) {
+          event.completer!.complete(order);
+        }
       },
     );
   }
@@ -240,6 +303,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       to: event.toDate,
       status: event.orderStatus,
       search: event.searchQuery,
+      productId: event.productId,
     );
     result.fold(
       (failure) => emit(
@@ -260,6 +324,8 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
           toDate: event.toDate,
           orderStatus: event.orderStatus,
           searchQuery: event.searchQuery,
+          productId: event.productId,
+          productName: event.productName,
         ),
       ),
     );
@@ -278,6 +344,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       to: state.toDate,
       status: state.orderStatus,
       search: state.searchQuery,
+      productId: state.productId,
     );
     result.fold(
       (failure) => emit(
@@ -506,7 +573,13 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
         if (event.completer?.isCompleted == false) {
           event.completer!.complete(order);
         }
-        await _emitMutationSuccess(emit, savedOrder: order);
+        await _emitMutationSuccess(
+          emit,
+          savedOrder: order,
+          successMessage: event.order.id == null
+              ? 'Orden creada correctamente.'
+              : 'Orden actualizada correctamente.',
+        );
       },
     );
   }
@@ -518,13 +591,27 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     emit(state.copyWith(status: OrderStatus.loading));
     final result = await updateOrderStatusUseCase(event.id, event.status);
     await result.fold(
-      (failure) async => emit(
-        state.copyWith(
+      (failure) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.completeError(StateError(failure.message));
+        }
+        emit(state.copyWith(
           status: OrderStatus.failure,
           errorMessage: failure.message,
-        ),
-      ),
-      (order) => _emitMutationSuccess(emit, savedOrder: order),
+        ));
+      },
+      (order) async {
+        if (event.completer?.isCompleted == false) {
+          event.completer!.complete(order);
+        }
+        await _emitMutationSuccess(
+          emit,
+          savedOrder: order,
+          successMessage: event.status == 'CANCELLED'
+              ? 'Orden cancelada correctamente.'
+              : 'Estado de la orden actualizado correctamente.',
+        );
+      },
     );
   }
 
@@ -538,7 +625,11 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
           errorMessage: failure.message,
         ),
       ),
-      (_) => _emitMutationSuccess(emit, deleted: true),
+      (_) => _emitMutationSuccess(
+        emit,
+        deleted: true,
+        successMessage: 'Orden eliminada correctamente.',
+      ),
     );
   }
 
@@ -556,11 +647,29 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     items: order.items,
     incidentDiscount: incidents
         .where((incident) =>
-            incident.resolution == 'DISCOUNT' &&
             _isApprovedIncident(incident.status) &&
             order.items.any((item) =>
                 item.id == incident.orderItemId && item.status != 'CANCELLED'))
-        .fold(0.0, (total, incident) => total + incident.discountAmount),
+        .fold(0.0, (total, incident) {
+          if (incident.resolution == 'CANCEL_NO_CHARGE') {
+            final matchingItems =
+                order.items.where((item) => item.id == incident.orderItemId);
+            return total +
+                (matchingItems.isEmpty ? 0 : matchingItems.first.subtotal);
+          }
+          return total + (incident.resolution == 'DISCOUNT' ? incident.discountAmount : 0);
+        }),
+    nonChargeableItemIds: incidents
+        .where((incident) => incident.resolution == 'CANCEL_NO_CHARGE' && _isApprovedIncident(incident.status))
+        .map((incident) => incident.orderItemId)
+        .whereType<int>()
+        .toList(),
+    incidentLockedItemIds: incidents
+        .where((incident) => _isApprovedIncident(incident.status))
+        .map((incident) => incident.orderItemId)
+        .whereType<int>()
+        .toSet()
+        .toList(),
     createdAt: order.createdAt,
     modifiedAt: order.modifiedAt,
   );
@@ -576,13 +685,11 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     Emitter<OrderState> emit, {
     Order? savedOrder,
     bool deleted = false,
+    String? successMessage,
   }) async {
     if (savedOrder != null) {
       emit(state.copyWith(
         status: OrderStatus.success,
-        orders: state.orders
-            .map((order) => order.id == savedOrder.id ? savedOrder : order)
-            .toList(),
         savedOrder: savedOrder,
       ));
     }
@@ -593,6 +700,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       to: state.toDate,
       status: state.orderStatus,
       search: state.searchQuery,
+      productId: state.productId,
     );
     final productsFuture = getProductViewUseCase(
       ProductViewRequest(
@@ -608,6 +716,14 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       (_) => state.orders,
       (page) => page.orders,
     );
+    // La consulta de lista usa un DTO resumido y puede llegar antes de que la
+    // transacción de estado sea visible. Conservamos la orden recién mutada si
+    // ya formaba parte de la lista para evitar que su card desaparezca.
+    final synchronizedOrders = savedOrder == null ||
+            refreshedOrders.any((order) => order.id == savedOrder.id) ||
+            !state.orders.any((order) => order.id == savedOrder.id)
+        ? refreshedOrders
+        : [savedOrder!, ...refreshedOrders];
     final refreshedProducts = productsResult.fold(
       (_) => state.products,
       (response) => response.products,
@@ -616,7 +732,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     emit(
       state.copyWith(
         status: OrderStatus.success,
-        orders: refreshedOrders,
+        orders: synchronizedOrders,
         ordersPage: ordersResult.fold(
           (_) => state.ordersPage,
           (page) => page.page,
@@ -632,6 +748,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
         ),
         savedOrder: null,
         deleted: deleted ? true : null,
+        successMessage: successMessage,
       ),
     );
   }

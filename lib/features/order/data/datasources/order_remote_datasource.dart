@@ -11,16 +11,18 @@ abstract class OrderRemoteDataSource {
     DateTime? to,
     String? status,
     String? search,
+    int? productId,
   });
   Future<OrderPageModel> getKitchenQueue({int page = 0, int size = 20});
+  Future<OrderModel> getById(int id);
   Future<OrderModel> create(OrderModel order);
   Future<OrderModel> update(int id, OrderModel order);
   Future<OrderModel> updateStatus(int id, String status);
   Future<OrderModel> addItem(int orderId, OrderItemModel item);
   Future<OrderModel> addItems(int orderId, List<OrderItemModel> items);
   Future<OrderModel> updatePendingItem(int orderId, int itemId, OrderItemModel item);
-  Future<OrderModel> updateItemStatus(int orderId, int itemId, String status, {String? comment});
-  Future<OrderModel> updateItemsStatus(int orderId, List<int> itemIds, String status, {String? comment});
+  Future<OrderModel> updateItemStatus(int orderId, int itemId, String status, {String? comment, bool fromKitchen = false});
+  Future<OrderModel> updateItemsStatus(int orderId, List<int> itemIds, String status, {String? comment, bool fromKitchen = false});
   Future<OrderModel> cancelPendingItem(int orderId, int itemId, {required String comment, required String stockDisposition});
   Future<OrderModel> reportIncident(int orderId, int itemId, String resolution, String reason, {double? discountAmount});
   Future<List<OrderItemIncident>> getIncidents(int orderId);

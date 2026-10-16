@@ -2,6 +2,7 @@ import 'package:app_movil_sistema/features/productimage/data/models/product_imag
 import 'package:json_annotation/json_annotation.dart';
 
 import '../../../parameter/data/models/parameter_model.dart';
+import '../../../parameter/domain/entities/parameter_sort.dart';
 import '../../domain/entities/product_form_response.dart';
 import 'product_model.dart';
 
@@ -40,9 +41,9 @@ class ProductFormResponseModel {
     return ProductFormResponse(
       product: product,
       images: images,
-      categories: categories,
-      unitMeasures: unitMeasures,
-      valuationMethods: valuationMethods,
+      categories: sortParametersByOrderNumber(categories),
+      unitMeasures: sortParametersByOrderNumber(unitMeasures),
+      valuationMethods: sortParametersByOrderNumber(valuationMethods),
     );
   }
 

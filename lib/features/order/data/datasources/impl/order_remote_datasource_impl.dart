@@ -19,6 +19,7 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
     DateTime? to,
     String? status,
     String? search,
+    int? productId,
   }) async {
     String date(DateTime d) =>
         '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -31,6 +32,7 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
         if (to != null) 'toDate': date(to),
         if (status != null && status != 'ALL') 'status': status,
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+        if (productId != null) 'productId': productId,
       },
     );
     final api = ApiResponse<OrderPageModel>.fromJson(
@@ -56,6 +58,9 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
     if (api.data == null) throw Exception('No se recibió la cola de cocina');
     return api.data!;
   }
+
+  @override
+  Future<OrderModel> getById(int id) => _save(apiClient.dio.get('/orders/$id'));
 
   @override
   Future<OrderModel> create(OrderModel order) =>
@@ -92,15 +97,15 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
   );
 
   @override
-  Future<OrderModel> updateItemStatus(int orderId, int itemId, String status, {String? comment}) =>
-      _save(apiClient.dio.put('/orders/$orderId/items/$itemId/status', data: {
+  Future<OrderModel> updateItemStatus(int orderId, int itemId, String status, {String? comment, bool fromKitchen = false}) =>
+      _save(apiClient.dio.put(fromKitchen ? '/orders/kitchen/$orderId/items/$itemId/status' : '/orders/$orderId/items/$itemId/status', data: {
         'status': status,
         if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
       }));
 
   @override
-  Future<OrderModel> updateItemsStatus(int orderId, List<int> itemIds, String status, {String? comment}) =>
-      _save(apiClient.dio.put('/orders/$orderId/items/status', data: {
+  Future<OrderModel> updateItemsStatus(int orderId, List<int> itemIds, String status, {String? comment, bool fromKitchen = false}) =>
+      _save(apiClient.dio.put(fromKitchen ? '/orders/kitchen/$orderId/items/status' : '/orders/$orderId/items/status', data: {
         'itemIds': itemIds,
         'status': status,
         if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
@@ -146,6 +151,7 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
           newStatus: value['newStatus'] as String? ?? 'PENDING',
           comment: value['comment'] as String?,
           changedBy: _asInt(value['changedBy']),
+          changedByName: value['changedByName'] as String?,
           changedAt: _asDate(value['changedAt']),
         );
       }).toList(),

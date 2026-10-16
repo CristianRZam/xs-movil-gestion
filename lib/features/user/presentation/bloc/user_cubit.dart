@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 enum UserStatus { initial, loading, success, failure }
 
+enum UserSuccess { created, updated, activated, deactivated }
+
 class UserState {
   const UserState({
     this.status = UserStatus.initial,
@@ -12,6 +14,7 @@ class UserState {
     this.form,
     this.error,
     this.saved = false,
+    this.success,
     this.saving = false,
   });
   final UserStatus status;
@@ -20,6 +23,7 @@ class UserState {
   final UserFormData? form;
   final String? error;
   final bool saved;
+  final UserSuccess? success;
   final bool saving;
   UserState copyWith({
     UserStatus? status,
@@ -30,6 +34,8 @@ class UserState {
     String? error,
     bool clearError = false,
     bool? saved,
+    UserSuccess? success,
+    bool clearSuccess = false,
     bool? saving,
   }) => UserState(
     status: status ?? this.status,
@@ -38,6 +44,7 @@ class UserState {
     form: clearForm ? null : form ?? this.form,
     error: clearError ? null : error ?? this.error,
     saved: saved ?? this.saved,
+    success: clearSuccess ? null : success ?? this.success,
     saving: saving ?? this.saving,
   );
 }
@@ -72,25 +79,54 @@ class UserCubit extends Cubit<UserState> {
   }
 
   Future<void> save(UserRequest request) async {
-    emit(state.copyWith(saving: true, clearError: true, saved: false));
+    emit(
+      state.copyWith(
+        saving: true,
+        clearError: true,
+        saved: false,
+        clearSuccess: true,
+      ),
+    );
     final r = request.id == null
         ? await _create(request)
         : await _update(request);
     r.fold(
       (x) => emit(state.copyWith(saving: false, error: x.message)),
-      (_) => emit(state.copyWith(saving: false, saved: true)),
+      (_) => emit(
+        state.copyWith(
+          saving: false,
+          saved: true,
+          success: request.id == null
+              ? UserSuccess.created
+              : UserSuccess.updated,
+        ),
+      ),
     );
   }
 
-  Future<void> toggle(int id) async {
-    emit(state.copyWith(saving: true, clearError: true));
-    final r = await _status(id);
+  Future<void> toggle(AppUser user) async {
+    emit(state.copyWith(saving: true, clearError: true, clearSuccess: true));
+    final r = await _status(user.id);
     r.fold(
       (x) => emit(state.copyWith(saving: false, error: x.message)),
-      (_) => emit(state.copyWith(saving: false, saved: true)),
+      (_) => emit(
+        state.copyWith(
+          saving: false,
+          saved: true,
+          success: user.active
+              ? UserSuccess.deactivated
+              : UserSuccess.activated,
+        ),
+      ),
     );
   }
 
-  void clearFeedback() =>
-      emit(state.copyWith(clearError: true, saved: false, clearForm: true));
+  void clearFeedback({bool clearForm = false}) => emit(
+    state.copyWith(
+      clearError: true,
+      saved: false,
+      clearSuccess: true,
+      clearForm: clearForm,
+    ),
+  );
 }

@@ -6,6 +6,7 @@ class OrderItemStatusHistory {
     required this.newStatus,
     this.comment,
     this.changedBy,
+    this.changedByName,
     required this.changedAt,
   });
 
@@ -15,5 +16,6 @@ class OrderItemStatusHistory {
   final String newStatus;
   final String? comment;
   final int? changedBy;
+  final String? changedByName;
   final DateTime? changedAt;
 }

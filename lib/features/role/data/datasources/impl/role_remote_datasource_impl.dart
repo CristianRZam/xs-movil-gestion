@@ -2,6 +2,7 @@
 import 'package:app_movil_sistema/core/network/api_response.dart';
 import 'package:app_movil_sistema/features/role/data/datasources/role_remote_datasource.dart';
 import 'package:app_movil_sistema/features/role/data/models/role_model.dart';
+import 'package:app_movil_sistema/features/role/domain/entities/role.dart';
 import 'package:dio/dio.dart';
 
 class RoleRemoteDataSourceImpl implements RoleRemoteDataSource {
@@ -19,6 +20,47 @@ class RoleRemoteDataSourceImpl implements RoleRemoteDataSource {
     });
     if (!api.success || api.data == null) throw _error(response, api.message);
     return api.data!;
+  }
+
+  @override
+  Future<AppRoleModel> create(RoleRequest request) =>
+      _save('/role/create', request, false);
+
+  @override
+  Future<AppRoleModel> update(RoleRequest request) =>
+      _save('/role/update', request, true);
+
+  Future<AppRoleModel> _save(
+    String path,
+    RoleRequest request,
+    bool update,
+  ) async {
+    final response = update
+        ? await _client.dio.put(path, data: _body(request))
+        : await _client.dio.post(path, data: _body(request));
+    final api = ApiResponse<AppRoleModel>.fromJson(
+      response.data,
+      (json) => AppRoleModel.fromJson(json as Map<String, dynamic>),
+    );
+    if (!api.success || api.data == null) throw _error(response, api.message);
+    return api.data!;
+  }
+
+  Map<String, dynamic> _body(RoleRequest request) => {
+    if (request.id != null) 'id': request.id,
+    'name': request.name.trim(),
+    if (request.description?.trim().isNotEmpty == true)
+      'description': request.description!.trim(),
+  };
+
+  @override
+  Future<void> updateStatus(int id) async {
+    final response = await _client.dio.put('/role/update-status', data: id);
+    final api = ApiResponse<bool>.fromJson(
+      response.data,
+      (json) => json as bool? ?? false,
+    );
+    if (!api.success) throw _error(response, api.message);
   }
 
   @override

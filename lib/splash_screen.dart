@@ -1,5 +1,6 @@
 import 'package:app_movil_sistema/core/authorization/access_widgets.dart';
 import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/authorization/permission_sync_service.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/home/presentation/pages/home_screen.dart';
 import 'package:app_movil_sistema/features/login/presentation/pages/login_screen.dart';
@@ -47,6 +48,7 @@ class _SplashScreenState extends State<SplashScreen> {
       final bool isExpired = !getIt<AccessControl>().isAuthenticated;
 
       if (!isExpired) {
+        await getIt<PermissionSyncService>().refresh();
         return AccessGuard(
           capability: AppCapability.operate,
           builder: (_) => const HomeScreen(),

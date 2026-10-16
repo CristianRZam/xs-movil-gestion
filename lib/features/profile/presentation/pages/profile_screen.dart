@@ -1,7 +1,10 @@
 import 'package:app_movil_sistema/core/service_locator.dart';
+import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/profile/domain/entities/user_profile.dart';
 import 'package:app_movil_sistema/features/profile/domain/usecases/profile_usecases.dart';
 import 'package:app_movil_sistema/features/profile/presentation/bloc/profile_cubit.dart';
+import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:app_movil_sistema/routes/routes.dart';
@@ -14,6 +17,7 @@ class ProfileScreen extends StatelessWidget {
     create: (_) => ProfileCubit(
       getIt<GetProfileUseCase>(),
       getIt<UpdateProfilePasswordUseCase>(),
+      getIt<GetMyPermissionsUseCase>(),
     )..load(),
     child: const _ProfileView(),
   );
@@ -50,23 +54,46 @@ class _ProfileViewState extends State<_ProfileView> {
     );
   }
 
+  Future<void> _openPermissions() async {
+    if (!getIt<AccessControl>().allows(AppCapability.viewOwnPermissions)) {
+      return;
+    }
+    final cubit = context.read<ProfileCubit>();
+    final loaded = await cubit.loadMyPermissions();
+    if (!mounted || !loaded) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _PermissionsSheet(permissions: cubit.state.permissions),
+    );
+  }
+
   @override
   Widget build(
     BuildContext context,
   ) => BlocConsumer<ProfileCubit, ProfileState>(
     listener: (context, state) {
       if (state.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(state.error!), backgroundColor: Colors.red),
-        );
+        if (state.errorCode != 403 && state.error != 'Error desconocido') {
+          FlashMessage.show(
+            context,
+            type: FlashMessageType.error,
+            title: 'No se pudo completar la operación',
+            message: state.error!,
+          );
+        }
         context.read<ProfileCubit>().clearMessage();
       }
       if (state.passwordUpdated) {
         _oldPassword.clear();
         _newPassword.clear();
         _confirmation.clear();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contraseña actualizada correctamente')),
+        FlashMessage.show(
+          context,
+          type: FlashMessageType.success,
+          title: 'Contraseña actualizada',
+          message: 'La contraseña fue actualizada correctamente.',
         );
         context.read<ProfileCubit>().clearMessage();
       }
@@ -105,22 +132,35 @@ class _ProfileViewState extends State<_ProfileView> {
                       _Header(profile: state.profile!),
                       const SizedBox(height: 20),
                       _InformationCard(profile: state.profile!),
+                      if (getIt<AccessControl>().allows(
+                        AppCapability.viewOwnPermissions,
+                      )) ...[
+                        const SizedBox(height: 20),
+                        _PermissionsCard(
+                          isLoading: state.isLoadingPermissions,
+                          onOpen: _openPermissions,
+                        ),
+                      ],
                     ] else
                       _Unavailable(
                         onRetry: () => context.read<ProfileCubit>().load(),
                       ),
-                    const SizedBox(height: 20),
-                    _PasswordCard(
-                      formKey: _formKey,
-                      oldPassword: _oldPassword,
-                      newPassword: _newPassword,
-                      confirmation: _confirmation,
-                      hidePassword: _hidePassword,
-                      isUpdating: state.isUpdatingPassword,
-                      onVisibilityChanged: () =>
-                          setState(() => _hidePassword = !_hidePassword),
-                      onSubmit: _submitPassword,
-                    ),
+                    if (getIt<AccessControl>().allows(
+                      AppCapability.updateProfile,
+                    )) ...[
+                      const SizedBox(height: 20),
+                      _PasswordCard(
+                        formKey: _formKey,
+                        oldPassword: _oldPassword,
+                        newPassword: _newPassword,
+                        confirmation: _confirmation,
+                        hidePassword: _hidePassword,
+                        isUpdating: state.isUpdatingPassword,
+                        onVisibilityChanged: () =>
+                            setState(() => _hidePassword = !_hidePassword),
+                        onSubmit: _submitPassword,
+                      ),
+                    ],
                     const SizedBox(height: 28),
                   ],
                 ),
@@ -285,6 +325,148 @@ class _Info extends StatelessWidget {
       ],
     ),
   );
+}
+
+class _PermissionsCard extends StatelessWidget {
+  const _PermissionsCard({required this.isLoading, required this.onOpen});
+
+  final bool isLoading;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) => _Card(
+    title: 'Mis permisos',
+    child: Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.secondaryContainer,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(
+            Icons.admin_panel_settings_outlined,
+            color: Theme.of(context).colorScheme.onSecondaryContainer,
+          ),
+        ),
+        const SizedBox(width: 14),
+        const Expanded(
+          child: Text(
+            'Consulta las acciones que tienes habilitadas en el sistema.',
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton.filledTonal(
+          tooltip: 'Ver mis permisos',
+          onPressed: isLoading ? null : onOpen,
+          icon: isLoading
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.chevron_right_rounded),
+        ),
+      ],
+    ),
+  );
+}
+
+class _PermissionsSheet extends StatelessWidget {
+  const _PermissionsSheet({required this.permissions});
+
+  final List<ProfilePermission> permissions;
+
+  Map<String, List<ProfilePermission>> get _grouped {
+    final groups = <String, List<ProfilePermission>>{};
+    for (final permission in permissions) {
+      final module = permission.module?.trim();
+      (groups[module?.isNotEmpty == true ? module! : 'Otros'] ??= [])
+          .add(permission);
+    }
+    return groups;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = _grouped;
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * .78,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Mis permisos',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Cerrar',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              Text(
+                '${permissions.length} permiso${permissions.length == 1 ? '' : 's'} asignado${permissions.length == 1 ? '' : 's'} a tu cuenta.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: groups.isEmpty
+                    ? const Center(
+                        child: Text('No tienes permisos asignados.'),
+                      )
+                    : ListView.separated(
+                        itemCount: groups.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        itemBuilder: (_, index) {
+                          final entry = groups.entries.elementAt(index);
+                          return Card(
+                            elevation: 0,
+                            child: ExpansionTile(
+                              initiallyExpanded: true,
+                              title: Text(
+                                entry.key,
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              subtitle: Text('${entry.value.length} permiso(s)'),
+                              children: entry.value
+                                  .map(
+                                    (permission) => ListTile(
+                                      leading: Icon(
+                                        Icons.verified_user_outlined,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                      title: Text(
+                                        permission.description?.trim().isNotEmpty == true
+                                            ? permission.description!
+                                            : permission.name,
+                                      ),
+                                      subtitle: Text(permission.name),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _PasswordCard extends StatelessWidget {

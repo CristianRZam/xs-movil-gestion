@@ -4,6 +4,9 @@ import 'package:dartz/dartz.dart';
 
 abstract class RoleRepository {
   Future<Either<Failure, List<AppRole>>> getRoles();
+  Future<Either<Failure, AppRole>> create(RoleRequest request);
+  Future<Either<Failure, AppRole>> update(RoleRequest request);
+  Future<Either<Failure, void>> updateStatus(int id);
   Future<Either<Failure, RolePermissions>> getRolePermissions(int roleId);
   Future<Either<Failure, void>> updateRolePermissions({
     required int roleId,

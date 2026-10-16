@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:app_movil_sistema/core/authorization/authorization_feedback_service.dart';
+import 'package:app_movil_sistema/core/authorization/permission_sync_service.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/core/config/env_config.dart';
 import 'package:app_movil_sistema/core/session/session_coordinator.dart';
@@ -84,6 +87,9 @@ class ApiClient {
           if (requiresAuth && e.response?.statusCode == 401) {
             await _endSession();
           } else if (requiresAuth && e.response?.statusCode == 403) {
+            if (getIt.isRegistered<PermissionSyncService>()) {
+              unawaited(getIt<PermissionSyncService>().refresh(force: true));
+            }
             _showUnauthorizedAction();
           }
           handler.reject(e);

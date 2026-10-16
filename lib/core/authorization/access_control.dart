@@ -26,7 +26,7 @@ enum AppCapability {
   viewOrders,
   createOrders,
   editOrders,
-  updateOrderStatus,
+  cancelOrders,
   addOrderItem,
   editPendingOrderItem,
   cancelOrderItem,
@@ -43,8 +43,15 @@ enum AppCapability {
   // Conservada para compatibilidad de pruebas y flujos aún no migrados.
   manageInventory,
   manageCategories,
+  createCategories,
+  editCategories,
   manageUsers,
+  createUsers,
+  editUsers,
   manageRoles,
+  viewRolePermissions,
+  createRoles,
+  editRoles,
   assignRolePermissions,
   inventoryCount,
   reports,
@@ -53,6 +60,8 @@ enum AppCapability {
   notifications,
   cancelSales,
   viewProfile,
+  updateProfile,
+  viewOwnPermissions,
 }
 
 /// JWT claims only drive client UX. The API must enforce authorization itself.
@@ -79,6 +88,9 @@ class AccessControl extends ChangeNotifier {
 
   bool hasAnyPermission(Iterable<String> permissions) =>
       isAuthenticated && permissions.any(_permissions.contains);
+
+  /// Effective permissions last confirmed by the API for the current session.
+  Set<String> get permissions => Set.unmodifiable(_permissions);
 
   bool allows(AppCapability capability) {
     if (!isAuthenticated || _permissions.isEmpty) return false;
@@ -112,6 +124,17 @@ class AccessControl extends ChangeNotifier {
     } catch (_) {
       // Malformed or missing tokens never grant access.
     }
+    notifyListeners();
+  }
+
+  /// Replaces the permissions decoded from the JWT with the current server-side
+  /// permissions. The token remains the session credential; this set only
+  /// controls the reactive client UX.
+  void updatePermissions(Iterable<String> permissions) {
+    if (!isAuthenticated) return;
+    final updated = permissions.where((value) => value.isNotEmpty).toSet();
+    if (setEquals(_permissions, updated)) return;
+    _permissions = updated;
     notifyListeners();
   }
 

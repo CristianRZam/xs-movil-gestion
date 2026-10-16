@@ -16,6 +16,10 @@ class ProfileRepositoryImpl implements ProfileRepository {
       _handle(_remoteDataSource.getProfile);
 
   @override
+  Future<Either<Failure, List<ProfilePermission>>> getMyPermissions() =>
+      _handle(_remoteDataSource.getMyPermissions);
+
+  @override
   Future<Either<Failure, void>> updatePassword({
     required String oldPassword,
     required String newPassword,

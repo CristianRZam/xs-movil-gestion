@@ -1,4 +1,5 @@
 import 'package:app_movil_sistema/features/parameter/data/models/parameter_model.dart';
+import 'package:app_movil_sistema/features/parameter/domain/entities/parameter_sort.dart';
 import 'package:app_movil_sistema/features/product/data/models/product_model.dart';
 
 import '../../domain/entities/product_view_response.dart';
@@ -26,17 +27,23 @@ class ProductViewResponseModel extends ProductViewResponse {
       inactiveProducts: json['inactiveProducts'] as int,
       totalStock: json['totalStock'] as int,
 
-      categories: (json['categories'] as List)
-          .map((e) => ParameterModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      categories: sortParametersByOrderNumber(
+        (json['categories'] as List).map(
+          (e) => ParameterModel.fromJson(e as Map<String, dynamic>),
+        ),
+      ),
 
-      unitMeasures: (json['unitMeasures'] as List)
-          .map((e) => ParameterModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      unitMeasures: sortParametersByOrderNumber(
+        (json['unitMeasures'] as List).map(
+          (e) => ParameterModel.fromJson(e as Map<String, dynamic>),
+        ),
+      ),
 
-      valuationMethods: (json['valuationMethods'] as List)
-          .map((e) => ParameterModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      valuationMethods: sortParametersByOrderNumber(
+        (json['valuationMethods'] as List).map(
+          (e) => ParameterModel.fromJson(e as Map<String, dynamic>),
+        ),
+      ),
     );
   }
 }

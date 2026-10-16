@@ -11,10 +11,12 @@ class XsDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final access = getIt<AccessControl>();
+    return ListenableBuilder(
+      listenable: access,
+      builder: (context, _) {
     final bool isDarkMode =
         Theme.of(context).brightness == Brightness.dark;
-
-    final access = getIt<AccessControl>();
 
     final canProducts =
     access.allows(AppCapability.viewProducts);
@@ -381,6 +383,8 @@ class XsDrawer extends StatelessWidget {
           ],
         ),
       ),
+    );
+      },
     );
   }
 

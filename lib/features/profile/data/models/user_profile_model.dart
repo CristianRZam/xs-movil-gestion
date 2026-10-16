@@ -30,3 +30,18 @@ class UserProfileModel extends UserProfile {
     );
   }
 }
+
+class ProfilePermissionModel extends ProfilePermission {
+  const ProfilePermissionModel({
+    required super.name,
+    super.description,
+    super.module,
+  });
+
+  factory ProfilePermissionModel.fromJson(Map<String, dynamic> json) =>
+      ProfilePermissionModel(
+        name: json['name'] as String? ?? '',
+        description: json['description'] as String?,
+        module: json['module'] as String?,
+      );
+}

@@ -1,6 +1,9 @@
 import 'package:app_movil_sistema/core/service_locator.dart';
+import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/authorization/access_widgets.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:app_movil_sistema/features/user/domain/entities/app_user.dart';
 import 'package:app_movil_sistema/features/user/domain/usecases/user_usecases.dart';
 import 'package:app_movil_sistema/features/user/presentation/bloc/user_cubit.dart';
@@ -46,14 +49,15 @@ class _UserViewState extends State<_UserView> {
   Future<void> _openForm([AppUser? user]) async {
     final cubit = context.read<UserCubit>();
     await cubit.loadForm(user?.id);
-    if (!mounted || cubit.state.form == null) return;
+    final form = cubit.state.form;
+    if (!mounted || form == null) return;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => BlocProvider.value(
         value: cubit,
-        child: _UserForm(data: cubit.state.form!),
+        child: _UserForm(data: form),
       ),
     );
   }
@@ -61,29 +65,53 @@ class _UserViewState extends State<_UserView> {
   @override
   Widget build(BuildContext context) => BlocConsumer<UserCubit, UserState>(
     listener: (context, state) {
-      if (state.error != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(state.error!)));
+      final error = state.error;
+      if (error != null) {
+        // El 403 ya muestra el toast global y sincroniza los permisos. No
+        // duplicar ese aviso con el texto genérico del mapper.
+        if (error != 'Error desconocido') {
+          FlashMessage.show(
+            context,
+            type: FlashMessageType.error,
+            title: 'No se pudo completar la operación',
+            message: error,
+          );
+        }
         context.read<UserCubit>().clearFeedback();
       }
       if (state.saved) {
-        Navigator.of(context).maybePop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Usuario actualizado correctamente')),
+        if (state.success == UserSuccess.created ||
+            state.success == UserSuccess.updated) {
+          Navigator.of(context).maybePop();
+        }
+        final message = switch (state.success) {
+          UserSuccess.created => 'El usuario se creó correctamente.',
+          UserSuccess.updated => 'El usuario se editó correctamente.',
+          UserSuccess.activated => 'El usuario se activó correctamente.',
+          UserSuccess.deactivated => 'El usuario se desactivó correctamente.',
+          null => 'Los cambios se guardaron correctamente.',
+        };
+        FlashMessage.show(
+          context,
+          type: FlashMessageType.success,
+          title: 'Operación completada',
+          message: message,
         );
         context.read<UserCubit>()
-          ..clearFeedback()
+          ..clearFeedback(clearForm: true)
           ..load();
       }
     },
     builder: (context, state) => Scaffold(
       appBar: const XsAppBar(title: 'Usuarios', backIcon: false),
       endDrawer: const XsDrawer(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: state.saving ? null : () => _openForm(),
-        icon: const Icon(Icons.person_add_alt_1_rounded),
-        label: const Text('Nuevo usuario'),
+      floatingActionButton: AccessVisibility(
+        capability: AppCapability.createUsers,
+        child: FloatingActionButton.extended(
+          onPressed: state.saving ? null : () => _openForm(),
+          icon: const Icon(Icons.person_add_alt_1_rounded),
+          label: const Text('Nuevo usuario'),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: () => context.read<UserCubit>().load(),
@@ -209,7 +237,7 @@ class _UserViewState extends State<_UserView> {
         ],
       ),
     );
-    if (ok == true && mounted) context.read<UserCubit>().toggle(user.id);
+    if (ok == true && mounted) context.read<UserCubit>().toggle(user);
   }
 }
 
@@ -242,15 +270,18 @@ class _UserCard extends StatelessWidget {
           '@${user.username} · ${user.email}\n${user.roleNames.join(', ')}',
         ),
         isThreeLine: user.roleNames.isNotEmpty,
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) => value == 'edit' ? onEdit() : onStatus(),
-          itemBuilder: (_) => [
-            const PopupMenuItem(value: 'edit', child: Text('Editar')),
-            PopupMenuItem(
-              value: 'status',
-              child: Text(user.active ? 'Desactivar' : 'Activar'),
-            ),
-          ],
+        trailing: AccessVisibility(
+          capability: AppCapability.editUsers,
+          child: PopupMenuButton<String>(
+            onSelected: (value) => value == 'edit' ? onEdit() : onStatus(),
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'edit', child: Text('Editar')),
+              PopupMenuItem(
+                value: 'status',
+                child: Text(user.active ? 'Desactivar' : 'Activar'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -297,15 +328,15 @@ class _UserFormState extends State<_UserForm> {
   }
 
   void _save() {
+    final typeDocument = _type;
     if (!(_key.currentState?.validate() ?? false) ||
-        _type == null ||
+        typeDocument == null ||
         _roles.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Completa los campos obligatorios y selecciona un rol.',
-          ),
-        ),
+      FlashMessage.show(
+        context,
+        type: FlashMessageType.warning,
+        title: 'Datos incompletos',
+        message: 'Completa los campos obligatorios y selecciona un rol.',
       );
       return;
     }
@@ -314,7 +345,7 @@ class _UserFormState extends State<_UserForm> {
         id: widget.data.user?.id,
         username: _username.text,
         email: _email.text,
-        typeDocument: _type!,
+        typeDocument: typeDocument,
         document: _document.text,
         fullName: _name.text,
         phone: _phone.text,

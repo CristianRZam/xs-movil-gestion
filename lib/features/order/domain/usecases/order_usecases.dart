@@ -17,6 +17,7 @@ class GetOrdersUseCase {
     DateTime? to,
     String? status,
     String? search,
+    int? productId,
   }) => repository.getAll(
     page: page,
     size: size,
@@ -24,6 +25,7 @@ class GetOrdersUseCase {
     to: to,
     status: status,
     search: search,
+    productId: productId,
   );
 }
 
@@ -32,6 +34,12 @@ class GetKitchenQueueUseCase {
   GetKitchenQueueUseCase(this.repository);
   Future<Either<Failure, OrderPage>> call({int page = 0, int size = 20}) =>
       repository.getKitchenQueue(page: page, size: size);
+}
+
+class GetOrderByIdUseCase {
+  final OrderRepository repository;
+  GetOrderByIdUseCase(this.repository);
+  Future<Either<Failure, Order>> call(int id) => repository.getById(id);
 }
 
 class CreateOrderUseCase {
@@ -77,15 +85,15 @@ class UpdatePendingOrderItemUseCase {
 class UpdateOrderItemStatusUseCase {
   final OrderRepository repository;
   UpdateOrderItemStatusUseCase(this.repository);
-  Future<Either<Failure, Order>> call(int orderId, int itemId, String status, {String? comment}) =>
-      repository.updateItemStatus(orderId, itemId, status, comment: comment);
+  Future<Either<Failure, Order>> call(int orderId, int itemId, String status, {String? comment, bool fromKitchen = false}) =>
+      repository.updateItemStatus(orderId, itemId, status, comment: comment, fromKitchen: fromKitchen);
 }
 
 class UpdateOrderItemsStatusUseCase {
   final OrderRepository repository;
   UpdateOrderItemsStatusUseCase(this.repository);
-  Future<Either<Failure, Order>> call(int orderId, List<int> itemIds, String status, {String? comment}) =>
-      repository.updateItemsStatus(orderId, itemIds, status, comment: comment);
+  Future<Either<Failure, Order>> call(int orderId, List<int> itemIds, String status, {String? comment, bool fromKitchen = false}) =>
+      repository.updateItemsStatus(orderId, itemIds, status, comment: comment, fromKitchen: fromKitchen);
 }
 
 class CancelPendingOrderItemUseCase {

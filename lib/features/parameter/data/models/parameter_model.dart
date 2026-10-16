@@ -5,32 +5,29 @@ part 'parameter_model.g.dart';
 
 @JsonSerializable()
 class ParameterModel extends Parameter {
-
   const ParameterModel({
     required super.id,
     required super.parameterId,
     super.parentParameterId,
     required super.name,
     required super.shortName,
+    super.orderNumber = 0,
     required super.active,
   });
 
-  factory ParameterModel.fromJson(
-      Map<String, dynamic> json,
-      ) => _$ParameterModelFromJson(json);
+  factory ParameterModel.fromJson(Map<String, dynamic> json) =>
+      _$ParameterModelFromJson(json);
 
-  Map<String, dynamic> toJson() =>
-      _$ParameterModelToJson(this);
+  Map<String, dynamic> toJson() => _$ParameterModelToJson(this);
 
-  factory ParameterModel.fromEntity(
-      Parameter entity,
-      ) {
+  factory ParameterModel.fromEntity(Parameter entity) {
     return ParameterModel(
       id: entity.id,
       parameterId: entity.parameterId,
       parentParameterId: entity.parentParameterId,
       name: entity.name,
       shortName: entity.shortName,
+      orderNumber: entity.orderNumber,
       active: entity.active,
     );
   }

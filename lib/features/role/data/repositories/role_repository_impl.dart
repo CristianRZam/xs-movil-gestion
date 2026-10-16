@@ -22,6 +22,40 @@ class RoleRepositoryImpl implements RoleRepository {
   }
 
   @override
+  Future<Either<Failure, AppRole>> create(RoleRequest request) async {
+    try {
+      return Right(await _remoteDataSource.create(request));
+    } on DioException catch (error) {
+      return Left(FailureMapper.fromDioException(error));
+    } catch (_) {
+      return Left(UnexpectedFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, AppRole>> update(RoleRequest request) async {
+    try {
+      return Right(await _remoteDataSource.update(request));
+    } on DioException catch (error) {
+      return Left(FailureMapper.fromDioException(error));
+    } catch (_) {
+      return Left(UnexpectedFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateStatus(int id) async {
+    try {
+      await _remoteDataSource.updateStatus(id);
+      return const Right(null);
+    } on DioException catch (error) {
+      return Left(FailureMapper.fromDioException(error));
+    } catch (_) {
+      return Left(UnexpectedFailure());
+    }
+  }
+
+  @override
   Future<Either<Failure, RolePermissions>> getRolePermissions(int roleId) async {
     try {
       return Right(await _remoteDataSource.getRolePermissions(roleId));

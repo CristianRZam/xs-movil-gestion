@@ -23,6 +23,7 @@ class OrderRepositoryImpl implements OrderRepository {
     DateTime? to,
     String? status,
     String? search,
+    int? productId,
   }) => _handle(
     () async => (await remoteDataSource.getAll(
       page: page,
@@ -31,11 +32,14 @@ class OrderRepositoryImpl implements OrderRepository {
       to: to,
       status: status,
       search: search,
+      productId: productId,
     )).toEntity(),
   );
   @override
   Future<Either<Failure, OrderPage>> getKitchenQueue({int page = 0, int size = 20}) =>
       _handle(() async => (await remoteDataSource.getKitchenQueue(page: page, size: size)).toEntity());
+  @override
+  Future<Either<Failure, Order>> getById(int id) => _handle(() => remoteDataSource.getById(id));
   @override
   Future<Either<Failure, Order>> create(Order order) =>
       _handle(() => remoteDataSource.create(OrderModel.fromEntity(order)));
@@ -69,11 +73,11 @@ class OrderRepositoryImpl implements OrderRepository {
     ),
   );
   @override
-  Future<Either<Failure, Order>> updateItemStatus(int orderId, int itemId, String status, {String? comment}) =>
-      _handle(() => remoteDataSource.updateItemStatus(orderId, itemId, status, comment: comment));
+  Future<Either<Failure, Order>> updateItemStatus(int orderId, int itemId, String status, {String? comment, bool fromKitchen = false}) =>
+      _handle(() => remoteDataSource.updateItemStatus(orderId, itemId, status, comment: comment, fromKitchen: fromKitchen));
   @override
-  Future<Either<Failure, Order>> updateItemsStatus(int orderId, List<int> itemIds, String status, {String? comment}) =>
-      _handle(() => remoteDataSource.updateItemsStatus(orderId, itemIds, status, comment: comment));
+  Future<Either<Failure, Order>> updateItemsStatus(int orderId, List<int> itemIds, String status, {String? comment, bool fromKitchen = false}) =>
+      _handle(() => remoteDataSource.updateItemsStatus(orderId, itemIds, status, comment: comment, fromKitchen: fromKitchen));
   @override
   Future<Either<Failure, Order>> cancelPendingItem(int orderId, int itemId, {required String comment, required String stockDisposition}) =>
       _handle(() => remoteDataSource.cancelPendingItem(orderId, itemId, comment: comment, stockDisposition: stockDisposition));

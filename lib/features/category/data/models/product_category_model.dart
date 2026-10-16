@@ -8,6 +8,9 @@ class ProductCategoryModel extends ProductCategory {
     required super.shortName,
     required super.orderNumber,
     required super.active,
+    super.parentParameterId,
+    super.type,
+    super.code,
   });
 
   factory ProductCategoryModel.fromJson(Map<String, dynamic> json) =>
@@ -18,6 +21,9 @@ class ProductCategoryModel extends ProductCategory {
         shortName: json['shortName'] as String?,
         orderNumber: (json['orderNumber'] as num?)?.toInt() ?? 0,
         active: json['active'] as bool? ?? false,
+        parentParameterId: (json['parentParameterId'] as num?)?.toInt(),
+        type: (json['type'] as num?)?.toInt() ?? 2,
+        code: json['code'] as String? ?? 'CATEGORIA_PRODUCTO',
       );
 
   ProductCategory toEntity() => ProductCategory(
@@ -27,5 +33,8 @@ class ProductCategoryModel extends ProductCategory {
     shortName: shortName,
     orderNumber: orderNumber,
     active: active,
+    parentParameterId: parentParameterId,
+    type: type,
+    code: code,
   );
 }

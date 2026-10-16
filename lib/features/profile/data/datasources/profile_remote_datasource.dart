@@ -2,6 +2,7 @@ import 'package:app_movil_sistema/features/profile/data/models/user_profile_mode
 
 abstract class ProfileRemoteDataSource {
   Future<UserProfileModel> getProfile();
+  Future<List<ProfilePermissionModel>> getMyPermissions();
   Future<void> updatePassword({
     required String oldPassword,
     required String newPassword,

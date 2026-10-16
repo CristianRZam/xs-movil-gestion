@@ -48,6 +48,16 @@ void main() {
     expect(access.hasAnyPermission(['EDIT_PRODUCT', 'VIEW_PRODUCT']), isTrue);
   });
 
+  test('server permissions replace stale JWT permissions during a session', () {
+    access.updateToken(token(claims(['VIEW_PRODUCT'])));
+    expect(access.allows(AppCapability.viewProducts), isTrue);
+
+    access.updatePermissions(const ['VIEW_PRODUCT_MOVEMENT']);
+
+    expect(access.allows(AppCapability.viewProducts), isFalse);
+    expect(access.allows(AppCapability.viewProductMovements), isTrue);
+  });
+
   test('a capability requiring multiple permissions requires all of them', () {
     final protected = AccessControl(
       permissionRequirements: const {

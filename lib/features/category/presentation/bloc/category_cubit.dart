@@ -1,4 +1,5 @@
 import 'package:app_movil_sistema/features/category/domain/entities/category_create_request.dart';
+import 'package:app_movil_sistema/features/category/domain/entities/category_update_request.dart';
 import 'package:app_movil_sistema/features/category/domain/entities/product_category.dart';
 import 'package:app_movil_sistema/features/category/domain/usecases/category_usecases.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,6 +13,7 @@ class CategoryState {
     this.search,
     this.errorMessage,
     this.created = false,
+    this.updated = false,
     this.isSaving = false,
   });
 
@@ -20,6 +22,7 @@ class CategoryState {
   final String? search;
   final String? errorMessage;
   final bool created;
+  final bool updated;
   final bool isSaving;
 
   CategoryState copyWith({
@@ -30,6 +33,7 @@ class CategoryState {
     String? errorMessage,
     bool clearError = false,
     bool? created,
+    bool? updated,
     bool? isSaving,
   }) => CategoryState(
     status: status ?? this.status,
@@ -37,16 +41,23 @@ class CategoryState {
     search: clearSearch ? null : search ?? this.search,
     errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     created: created ?? this.created,
+    updated: updated ?? this.updated,
     isSaving: isSaving ?? this.isSaving,
   );
 }
 
 class CategoryCubit extends Cubit<CategoryState> {
-  CategoryCubit(this._getCategories, this._createCategory)
-    : super(const CategoryState());
+  CategoryCubit(
+    this._getCategories,
+    this._getCategoryForm,
+    this._createCategory,
+    this._updateCategory,
+  ) : super(const CategoryState());
 
   final GetCategoriesUseCase _getCategories;
+  final GetCategoryFormUseCase _getCategoryForm;
   final CreateCategoryUseCase _createCategory;
+  final UpdateCategoryUseCase _updateCategory;
 
   Future<void> load([String? search]) async {
     final normalizedSearch = search?.trim();
@@ -75,7 +86,14 @@ class CategoryCubit extends Cubit<CategoryState> {
   }
 
   Future<void> create(CategoryCreateRequest request) async {
-    emit(state.copyWith(isSaving: true, clearError: true, created: false));
+    emit(
+      state.copyWith(
+        isSaving: true,
+        clearError: true,
+        created: false,
+        updated: false,
+      ),
+    );
     final result = await _createCategory(request);
     result.fold(
       (failure) =>
@@ -84,6 +102,31 @@ class CategoryCubit extends Cubit<CategoryState> {
     );
   }
 
+  Future<ProductCategory?> loadForEdit(int id) async {
+    final result = await _getCategoryForm(id);
+    return result.fold((failure) {
+      emit(state.copyWith(errorMessage: failure.message));
+      return null;
+    }, (category) => category);
+  }
+
+  Future<void> update(CategoryUpdateRequest request) async {
+    emit(
+      state.copyWith(
+        isSaving: true,
+        clearError: true,
+        created: false,
+        updated: false,
+      ),
+    );
+    final result = await _updateCategory(request);
+    result.fold(
+      (failure) =>
+          emit(state.copyWith(isSaving: false, errorMessage: failure.message)),
+      (_) => emit(state.copyWith(isSaving: false, updated: true)),
+    );
+  }
+
   void clearFeedback() =>
-      emit(state.copyWith(clearError: true, created: false));
+      emit(state.copyWith(clearError: true, created: false, updated: false));
 }

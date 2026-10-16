@@ -11,7 +11,17 @@ class ApiAccessPolicy {
     final resource = segments.first;
     if (resource == 'reports') return AppCapability.reports;
     if (resource == 'notifications') return AppCapability.notifications;
-    if (resource == 'profile') return AppCapability.viewProfile;
+    if (resource == 'profile') {
+      if (segments.length >= 2 && segments[1] == 'permissions') {
+        return AppCapability.viewOwnPermissions;
+      }
+      if (segments.length >= 2 &&
+          {'init-form', 'update', 'update-password', 'disable-account', 'upload-avatar', 'delete-avatar'}
+              .contains(segments[1])) {
+        return AppCapability.updateProfile;
+      }
+      return AppCapability.viewProfile;
+    }
     if (resource == 'dashboard' &&
         segments.length == 1 &&
         method.toUpperCase() == 'GET') {
@@ -41,11 +51,22 @@ class ApiAccessPolicy {
     }
     if (resource == 'parameter') return AppCapability.manageCategories;
     if (resource == 'user') return AppCapability.manageUsers;
-    if (resource == 'role') return AppCapability.manageRoles;
+    if (resource == 'role') {
+      final verb = method.toUpperCase();
+      if (verb == 'POST' && segments.length >= 2 && segments[1] == 'create') {
+        return AppCapability.createRoles;
+      }
+      if (verb == 'PUT' &&
+          segments.length >= 2 &&
+          (segments[1] == 'update' || segments[1] == 'update-status')) {
+        return AppCapability.editRoles;
+      }
+      return AppCapability.manageRoles;
+    }
     if (resource == 'permission') {
       return method.toUpperCase() == 'PUT'
           ? AppCapability.assignRolePermissions
-          : AppCapability.manageRoles;
+          : AppCapability.viewRolePermissions;
     }
     if (resource == 'product') {
       final verb = method.toUpperCase();
@@ -116,10 +137,12 @@ class ApiAccessPolicy {
         return AppCapability.createOrders;
       }
       if (verb == 'PUT' && segments.length >= 3 && segments[2] == 'status') {
-        return AppCapability.updateOrderStatus;
+        return AppCapability.cancelOrders;
       }
       if (verb == 'PUT' && segments.length >= 5 && segments[2] == 'items' && segments[4] == 'status') {
-        return AppCapability.updateOrderStatus;
+        // El permiso depende del estado solicitado: cocina, entrega o
+        // corrección. No existe una única capacidad cliente para esta ruta.
+        return AppCapability.operate;
       }
       if (verb == 'POST' && segments.length >= 3 && segments[2] == 'items') {
         return AppCapability.editOrders;

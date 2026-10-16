@@ -18,17 +18,24 @@ class SaleRepositoryImpl implements SaleRepository {
     int size = 20,
     DateTime? from,
     DateTime? to,
+    String? status,
+    int? productId,
   }) => _handle(
     () async => (await remote.getAll(
       page: page,
       size: size,
       from: from,
       to: to,
+      status: status,
+      productId: productId,
     )).toEntity(),
   );
   @override
   Future<Either<Failure, Sale>> create(Sale sale) =>
       _handle(() => remote.create(SaleModel.fromEntity(sale)));
+  @override
+  Future<Either<Failure, Sale>> getById(int id) =>
+      _handle(() => remote.getById(id));
   @override
   Future<Either<Failure, Sale>> cancel(int saleId, String reason) =>
       _handle(() => remote.cancel(saleId, reason));

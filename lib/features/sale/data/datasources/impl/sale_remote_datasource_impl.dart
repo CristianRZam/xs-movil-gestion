@@ -15,6 +15,8 @@ class SaleRemoteDataSourceImpl implements SaleRemoteDataSource {
     int size = 20,
     DateTime? from,
     DateTime? to,
+    String? status,
+    int? productId,
   }) async {
     final response = await apiClient.dio.get(
       '/sales',
@@ -23,6 +25,8 @@ class SaleRemoteDataSourceImpl implements SaleRemoteDataSource {
         'size': size,
         if (from != null) 'fromDate': _date(from),
         if (to != null) 'toDate': _date(to),
+        if (status != null) 'status': status,
+        if (productId != null) 'productId': productId,
       },
     );
     final api = ApiResponse<SalePageModel>.fromJson(
@@ -39,6 +43,18 @@ class SaleRemoteDataSourceImpl implements SaleRemoteDataSource {
   @override
   Future<SaleModel> create(SaleModel sale) async {
     final response = await apiClient.dio.post('/sales', data: sale.toJson());
+    final api = ApiResponse<SaleModel>.fromJson(
+      response.data,
+      (json) => SaleModel.fromJson(json as Map<String, dynamic>),
+    );
+    _success(api.success, api.message, response);
+    if (api.data == null) throw Exception('No se recibió la venta');
+    return api.data!;
+  }
+
+  @override
+  Future<SaleModel> getById(int id) async {
+    final response = await apiClient.dio.get('/sales/$id');
     final api = ApiResponse<SaleModel>.fromJson(
       response.data,
       (json) => SaleModel.fromJson(json as Map<String, dynamic>),

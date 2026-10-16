@@ -9,6 +9,26 @@ class GetRolesUseCase {
   Future<Either<Failure, List<AppRole>>> call() => _repository.getRoles();
 }
 
+class CreateRoleUseCase {
+  const CreateRoleUseCase(this._repository);
+  final RoleRepository _repository;
+  Future<Either<Failure, AppRole>> call(RoleRequest request) =>
+      _repository.create(request);
+}
+
+class UpdateRoleUseCase {
+  const UpdateRoleUseCase(this._repository);
+  final RoleRepository _repository;
+  Future<Either<Failure, AppRole>> call(RoleRequest request) =>
+      _repository.update(request);
+}
+
+class UpdateRoleStatusUseCase {
+  const UpdateRoleStatusUseCase(this._repository);
+  final RoleRepository _repository;
+  Future<Either<Failure, void>> call(int id) => _repository.updateStatus(id);
+}
+
 class GetRolePermissionsUseCase {
   const GetRolePermissionsUseCase(this._repository);
   final RoleRepository _repository;

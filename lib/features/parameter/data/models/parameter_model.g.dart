@@ -13,6 +13,7 @@ ParameterModel _$ParameterModelFromJson(Map<String, dynamic> json) =>
       parentParameterId: (json['parentParameterId'] as num?)?.toInt(),
       name: json['name'] as String,
       shortName: json['shortName'] as String,
+      orderNumber: (json['orderNumber'] as num?)?.toInt() ?? 0,
       active: json['active'] as bool,
     );
 
@@ -23,5 +24,6 @@ Map<String, dynamic> _$ParameterModelToJson(ParameterModel instance) =>
       'parentParameterId': instance.parentParameterId,
       'name': instance.name,
       'shortName': instance.shortName,
+      'orderNumber': instance.orderNumber,
       'active': instance.active,
     };

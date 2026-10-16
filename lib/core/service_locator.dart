@@ -1,5 +1,6 @@
 import 'package:app_movil_sistema/core/authorization/access_control.dart';
 import 'package:app_movil_sistema/core/authorization/authorization_feedback_service.dart';
+import 'package:app_movil_sistema/core/authorization/permission_sync_service.dart';
 import 'package:app_movil_sistema/core/session/session_coordinator.dart';
 import 'package:app_movil_sistema/features/cash_session/data/datasources/cash_session_remote_datasource.dart';
 import 'package:app_movil_sistema/features/cash_session/data/datasources/impl/cash_session_remote_datasource_impl.dart';
@@ -17,6 +18,7 @@ import 'package:app_movil_sistema/features/inventory_movement/domain/repositorie
 import 'package:app_movil_sistema/features/inventory_movement/domain/usecases/create_inventory_movement_usecase.dart';
 import 'package:app_movil_sistema/features/inventory_movement/domain/usecases/get_inventory_movements_usecase.dart';
 import 'package:app_movil_sistema/features/product/data/datasources/impl/product_remote_datasource_impl.dart';
+import 'package:app_movil_sistema/features/product/data/services/product_lookup_service.dart';
 import 'package:app_movil_sistema/features/product/domain/usecases/create_product_usecase.dart';
 import 'package:app_movil_sistema/features/product/domain/usecases/delete_product_usecase.dart';
 import 'package:app_movil_sistema/features/product/domain/usecases/get_product_form_usecase.dart';
@@ -113,7 +115,7 @@ void setupLocator() {
         AppCapability.viewOrders: {'VIEW_ORDER'},
         AppCapability.createOrders: {'CREATE_ORDER'},
         AppCapability.editOrders: {'EDIT_ORDER'},
-        AppCapability.updateOrderStatus: {'UPDATE_ORDER_STATUS'},
+        AppCapability.cancelOrders: {'CANCEL_ORDER'},
         AppCapability.addOrderItem: {'ADD_ORDER_ITEM'},
         AppCapability.editPendingOrderItem: {'EDIT_PENDING_ORDER_ITEM'},
         AppCapability.cancelOrderItem: {'CANCEL_ORDER_ITEM'},
@@ -130,11 +132,20 @@ void setupLocator() {
         AppCapability.createSales: {'CREATE_SALE'},
         AppCapability.cancelSales: {'CANCEL_SALE'},
         AppCapability.viewProfile: {'VIEW_PROFILE'},
+        AppCapability.updateProfile: {'UPDATE_PROFILE'},
+        AppCapability.viewOwnPermissions: {'PERMISSION_PROFILE'},
         AppCapability.reports: {'VIEW_REPORT'},
         AppCapability.notifications: {'VIEW_NOTIFICATION'},
         AppCapability.manageCategories: {'VIEW_PARAMETER'},
+        AppCapability.createCategories: {'CREATE_PARAMETER'},
+        AppCapability.editCategories: {'EDIT_PARAMETER'},
         AppCapability.manageUsers: {'VIEW_USER'},
-        AppCapability.manageRoles: {'VIEW_ROLE', 'VIEW_PERMISSION'},
+        AppCapability.createUsers: {'CREATE_USER'},
+        AppCapability.editUsers: {'EDIT_USER'},
+        AppCapability.manageRoles: {'VIEW_ROLE'},
+        AppCapability.viewRolePermissions: {'VIEW_PERMISSION'},
+        AppCapability.createRoles: {'CREATE_ROLE'},
+        AppCapability.editRoles: {'EDIT_ROLE'},
         AppCapability.assignRolePermissions: {'ASSIGN_PERMISSION'},
       },
     ),
@@ -144,6 +155,9 @@ void setupLocator() {
   // ============================
 
   getIt.registerLazySingleton<ApiClient>(() => ApiClient());
+  getIt.registerLazySingleton<ProductLookupService>(
+    () => ProductLookupService(getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<AppVersionService>(
     () => AppVersionService(getIt<ApiClient>()),
   );
@@ -157,6 +171,12 @@ void setupLocator() {
   );
   getIt.registerLazySingleton<AuthorizationFeedbackService>(
     () => AuthorizationFeedbackService(getIt<SessionCoordinator>()),
+  );
+  getIt.registerLazySingleton<PermissionSyncService>(
+    () => PermissionSyncService(getIt<ApiClient>(), getIt<AccessControl>()),
+  );
+  getIt.registerLazySingleton<PermissionSyncNavigatorObserver>(
+    () => PermissionSyncNavigatorObserver(getIt<PermissionSyncService>()),
   );
 
   // ============================
@@ -297,6 +317,9 @@ void setupLocator() {
   getIt.registerFactory<GetKitchenQueueUseCase>(
     () => GetKitchenQueueUseCase(getIt<OrderRepository>()),
   );
+  getIt.registerFactory<GetOrderByIdUseCase>(
+    () => GetOrderByIdUseCase(getIt<OrderRepository>()),
+  );
   getIt.registerFactory<CreateOrderUseCase>(
     () => CreateOrderUseCase(getIt<OrderRepository>()),
   );
@@ -330,6 +353,9 @@ void setupLocator() {
   getIt.registerFactory<GetOrderIncidentsUseCase>(
     () => GetOrderIncidentsUseCase(getIt<OrderRepository>()),
   );
+  getIt.registerFactory<GetOrderItemStatusHistoryUseCase>(
+    () => GetOrderItemStatusHistoryUseCase(getIt<OrderRepository>()),
+  );
   getIt.registerFactory<DeleteOrderUseCase>(
     () => DeleteOrderUseCase(getIt<OrderRepository>()),
   );
@@ -348,6 +374,9 @@ void setupLocator() {
   );
   getIt.registerFactory<CreateSaleUseCase>(
     () => CreateSaleUseCase(getIt<SaleRepository>()),
+  );
+  getIt.registerFactory<GetSaleByIdUseCase>(
+    () => GetSaleByIdUseCase(getIt<SaleRepository>()),
   );
   getIt.registerFactory<CancelSaleUseCase>(
     () => CancelSaleUseCase(getIt<SaleRepository>()),
@@ -409,6 +438,9 @@ void setupLocator() {
   getIt.registerFactory<UpdateProfilePasswordUseCase>(
     () => UpdateProfilePasswordUseCase(getIt<ProfileRepository>()),
   );
+  getIt.registerFactory<GetMyPermissionsUseCase>(
+    () => GetMyPermissionsUseCase(getIt<ProfileRepository>()),
+  );
 
   // ============================
   // CATEGORIAS DE PRODUCTOS
@@ -424,6 +456,12 @@ void setupLocator() {
   );
   getIt.registerFactory<CreateCategoryUseCase>(
     () => CreateCategoryUseCase(getIt<CategoryRepository>()),
+  );
+  getIt.registerFactory<GetCategoryFormUseCase>(
+    () => GetCategoryFormUseCase(getIt<CategoryRepository>()),
+  );
+  getIt.registerFactory<UpdateCategoryUseCase>(
+    () => UpdateCategoryUseCase(getIt<CategoryRepository>()),
   );
   getIt.registerLazySingleton<UserRemoteDataSource>(
     () => UserRemoteDataSourceImpl(getIt<ApiClient>()),
@@ -460,6 +498,15 @@ void setupLocator() {
   );
   getIt.registerFactory<UpdateRolePermissionsUseCase>(
     () => UpdateRolePermissionsUseCase(getIt<RoleRepository>()),
+  );
+  getIt.registerFactory<CreateRoleUseCase>(
+    () => CreateRoleUseCase(getIt<RoleRepository>()),
+  );
+  getIt.registerFactory<UpdateRoleUseCase>(
+    () => UpdateRoleUseCase(getIt<RoleRepository>()),
+  );
+  getIt.registerFactory<UpdateRoleStatusUseCase>(
+    () => UpdateRoleStatusUseCase(getIt<RoleRepository>()),
   );
   getIt.registerLazySingleton<NotificationCubit>(
     () => NotificationCubit(

@@ -33,6 +33,7 @@ class Sale {
   final int? id;
   final String saleNumber;
   final int? orderId;
+  final String? orderNumber;
   final String? notes;
   final double discount;
   final String? status;
@@ -42,12 +43,17 @@ class Sale {
   final int? cancelledBy;
   final String? cancelledByName;
   final DateTime? cancelledAt;
+  final DateTime? createdAt;
+  final int? itemCount;
+  final double? totalQuantity;
+  final double? totalAmount;
   final List<SaleItem> items;
   final List<SalePayment> payments;
   const Sale({
     this.id,
     required this.saleNumber,
     this.orderId,
+    this.orderNumber,
     this.notes,
     this.discount = 0,
     this.status,
@@ -57,9 +63,13 @@ class Sale {
     this.cancelledBy,
     this.cancelledByName,
     this.cancelledAt,
+    this.createdAt,
+    this.itemCount,
+    this.totalQuantity,
+    this.totalAmount,
     required this.items,
     required this.payments,
   });
-  double get total =>
-      items.fold<double>(0, (sum, item) => sum + item.subtotal) - discount;
+  double get total => totalAmount ??
+      (items.fold<double>(0, (sum, item) => sum + item.subtotal) - discount);
 }

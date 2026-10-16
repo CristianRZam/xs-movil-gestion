@@ -8,6 +8,7 @@ import 'package:app_movil_sistema/features/order/presentation/bloc/order_bloc.da
 import 'package:app_movil_sistema/features/order/presentation/bloc/order_event.dart';
 import 'package:app_movil_sistema/features/order/presentation/bloc/order_state.dart';
 import 'package:app_movil_sistema/features/product/domain/usecases/get_product_view_usecase.dart';
+import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:app_movil_sistema/features/shared/widgets/loading_overlay.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
@@ -40,8 +41,11 @@ class KitchenQueueScreen extends StatelessWidget {
         child: BlocConsumer<OrderBloc, OrderState>(
           listener: (context, state) {
             if (state.errorMessage != null && state.status == OrderStatus.failure) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.errorMessage!)),
+              FlashMessage.show(
+                context,
+                type: FlashMessageType.error,
+                title: 'No se pudo actualizar la cocina',
+                message: state.errorMessage!,
               );
               context.read<OrderBloc>().add(const ClearOrderError());
             }
@@ -238,6 +242,7 @@ class _KitchenStageOrderCard extends StatelessWidget {
                           order.id!,
                           items.map((item) => item.id!).toList(),
                           nextStatus!,
+                          fromKitchen: true,
                         ),
                       ),
                   icon: const Icon(Icons.done_all_outlined),
@@ -312,6 +317,7 @@ class _KitchenStageItem extends StatelessWidget {
                         order.id!,
                         item.id!,
                         nextStatus!,
+                        fromKitchen: true,
                       ),
                     ),
                 child: Text(
@@ -399,7 +405,12 @@ class _KitchenItemAction extends StatelessWidget {
           if (canChange)
             FilledButton.tonal(
               onPressed: () => context.read<OrderBloc>().add(
-                    ChangeOrderItemStatus(order.id!, item.id!, nextStatus),
+                    ChangeOrderItemStatus(
+                      order.id!,
+                      item.id!,
+                      nextStatus,
+                      fromKitchen: true,
+                    ),
                   ),
               child: Text(nextStatus == 'PREPARING' ? 'Preparar' : 'Listo'),
             )

@@ -18,6 +18,7 @@ import 'package:app_movil_sistema/features/shared/widgets/xs-dialog.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-number-field.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-textfield.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:flutter/material.dart';
 import 'package:app_movil_sistema/core/theme/payment_method_style.dart';
 import 'package:flutter/services.dart';
@@ -68,12 +69,18 @@ class CashSessionView extends StatelessWidget {
                 }
 
                 if (session.status == "OPEN") {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Caja abierta correctamente")),
+                  FlashMessage.show(
+                    context,
+                    type: FlashMessageType.success,
+                    title: 'Caja abierta',
+                    message: 'La caja se abrió correctamente.',
                   );
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Caja cerrada correctamente")),
+                  FlashMessage.show(
+                    context,
+                    type: FlashMessageType.success,
+                    title: 'Caja cerrada',
+                    message: 'La caja se cerró correctamente.',
                   );
                 }
 
@@ -92,9 +99,7 @@ class CashSessionView extends StatelessWidget {
 
               if (state.status == CashSessionStatus.failure &&
                   state.errorMessage != null) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+                _showCashError(context, state.errorMessage!);
 
                 context.read<CashSessionBloc>().add(
                   const ClearCashSessionError(),
@@ -421,9 +426,7 @@ Future<void> _openCashSalesHistory(BuildContext context, int sessionId) async {
   if (!context.mounted) return;
 
   result.fold(
-    (failure) => ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(failure.message))),
+    (failure) => _showCashError(context, failure.message),
     (summary) => showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -709,6 +712,18 @@ String _cashPaymentLabel(String method) => switch (method) {
   _ => method,
 };
 
+/// Los 403 ya muestran el toast global de autorización desde ApiClient.
+/// No dupliquemos ese aviso con el texto técnico/genérico del mapper.
+void _showCashError(BuildContext context, String message) {
+  if (message == 'Error desconocido') return;
+  FlashMessage.show(
+    context,
+    type: FlashMessageType.error,
+    title: 'No se pudo completar la operación',
+    message: message,
+  );
+}
+
 Future<void> openCloseCashSessionDialog(
   BuildContext parentContext,
   CashSession session,
@@ -721,13 +736,7 @@ Future<void> openCloseCashSessionDialog(
     if (!parentContext.mounted) return;
 
     summaryResult.fold(
-      (failure) => ScaffoldMessenger.of(parentContext).showSnackBar(
-        SnackBar(
-          content: Text(
-            'No se pudo cargar el detalle de ventas: ${failure.message}',
-          ),
-        ),
-      ),
+      (failure) => _showCashError(parentContext, failure.message),
       (summary) => salesSummary = summary,
     );
   }

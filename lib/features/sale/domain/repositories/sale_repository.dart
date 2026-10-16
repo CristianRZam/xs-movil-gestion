@@ -10,8 +10,11 @@ abstract class SaleRepository {
     int size = 20,
     DateTime? from,
     DateTime? to,
+    String? status,
+    int? productId,
   });
   Future<Either<Failure, Sale>> create(Sale sale);
+  Future<Either<Failure, Sale>> getById(int id);
   Future<Either<Failure, Sale>> cancel(int saleId, String reason);
   Future<Either<Failure, CashSessionSalesSummary>> getCashSessionSummary(
     int cashSessionId,

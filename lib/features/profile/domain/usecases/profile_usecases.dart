@@ -9,6 +9,13 @@ class GetProfileUseCase {
   Future<Either<Failure, UserProfile>> call() => _repository.getProfile();
 }
 
+class GetMyPermissionsUseCase {
+  const GetMyPermissionsUseCase(this._repository);
+  final ProfileRepository _repository;
+  Future<Either<Failure, List<ProfilePermission>>> call() =>
+      _repository.getMyPermissions();
+}
+
 class UpdateProfilePasswordUseCase {
   const UpdateProfilePasswordUseCase(this._repository);
   final ProfileRepository _repository;

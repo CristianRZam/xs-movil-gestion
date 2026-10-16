@@ -19,12 +19,16 @@ class LoadOrders extends OrderEvent {
   final DateTime? toDate;
   final String orderStatus;
   final String searchQuery;
+  final int? productId;
+  final String? productName;
   const LoadOrders({
     this.filter = OrderDateFilter.all,
     this.fromDate,
     this.toDate,
     this.orderStatus = 'ALL',
     this.searchQuery = '',
+    this.productId,
+    this.productName,
   });
   @override
   List<Object?> get props => [
@@ -33,6 +37,8 @@ class LoadOrders extends OrderEvent {
     toDate,
     orderStatus,
     searchQuery,
+    productId,
+    productName,
   ];
 }
 
@@ -91,7 +97,8 @@ class SaveOrder extends OrderEvent {
 class ChangeOrderStatus extends OrderEvent {
   final int id;
   final String status;
-  const ChangeOrderStatus(this.id, this.status);
+  final Completer<Order>? completer;
+  const ChangeOrderStatus(this.id, this.status, {this.completer});
   @override
   List<Object?> get props => [id, status];
 }
@@ -116,11 +123,12 @@ class AddOrderItems extends OrderEvent {
 }
 
 class UpdatePendingOrderItem extends OrderEvent {
-  const UpdatePendingOrderItem(this.orderId, this.itemId, this.item);
+  const UpdatePendingOrderItem(this.orderId, this.itemId, this.item, {this.completer});
 
   final int orderId;
   final int itemId;
   final OrderItem item;
+  final Completer<Order>? completer;
 
   @override
   List<Object?> get props => [orderId, itemId, item];
@@ -131,9 +139,20 @@ class ChangeOrderItemStatus extends OrderEvent {
   final int itemId;
   final String status;
   final String? comment;
-  const ChangeOrderItemStatus(this.orderId, this.itemId, this.status, {this.comment});
+  final bool fromKitchen;
+  final Completer<Order>? completer;
+
+  const ChangeOrderItemStatus(
+    this.orderId,
+    this.itemId,
+    this.status, {
+    this.comment,
+    this.fromKitchen = false,
+    this.completer,
+  });
+
   @override
-  List<Object?> get props => [orderId, itemId, status, comment];
+  List<Object?> get props => [orderId, itemId, status, comment, fromKitchen];
 }
 
 class ChangeOrderItemsStatus extends OrderEvent {
@@ -141,9 +160,11 @@ class ChangeOrderItemsStatus extends OrderEvent {
   final List<int> itemIds;
   final String status;
   final String? comment;
-  const ChangeOrderItemsStatus(this.orderId, this.itemIds, this.status, {this.comment});
+  final bool fromKitchen;
+  final Completer<Order>? completer;
+  const ChangeOrderItemsStatus(this.orderId, this.itemIds, this.status, {this.comment, this.fromKitchen = false, this.completer});
   @override
-  List<Object?> get props => [orderId, itemIds, status, comment];
+  List<Object?> get props => [orderId, itemIds, status, comment, fromKitchen];
 }
 
 class CancelPendingOrderItem extends OrderEvent {
@@ -151,7 +172,16 @@ class CancelPendingOrderItem extends OrderEvent {
   final int itemId;
   final String comment;
   final String stockDisposition;
-  const CancelPendingOrderItem(this.orderId, this.itemId, {required this.comment, required this.stockDisposition});
+  final Completer<Order>? completer;
+
+  const CancelPendingOrderItem(
+    this.orderId,
+    this.itemId, {
+    required this.comment,
+    required this.stockDisposition,
+    this.completer,
+  });
+
   @override
   List<Object?> get props => [orderId, itemId, comment, stockDisposition];
 }
@@ -162,7 +192,15 @@ class ReportOrderItemIncident extends OrderEvent {
   final String resolution;
   final String reason;
   final double? discountAmount;
-  const ReportOrderItemIncident(this.orderId, this.itemId, this.resolution, this.reason, {this.discountAmount});
+  final Completer<Order>? completer;
+  const ReportOrderItemIncident(
+    this.orderId,
+    this.itemId,
+    this.resolution,
+    this.reason, {
+    this.discountAmount,
+    this.completer,
+  });
   @override
   List<Object?> get props => [orderId, itemId, resolution, reason, discountAmount];
 }

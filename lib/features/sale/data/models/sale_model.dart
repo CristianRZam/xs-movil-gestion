@@ -5,6 +5,7 @@ class SaleModel extends Sale {
     super.id,
     required super.saleNumber,
     super.orderId,
+    super.orderNumber,
     super.notes,
     super.discount,
     super.status,
@@ -14,6 +15,10 @@ class SaleModel extends Sale {
     super.cancelledBy,
     super.cancelledByName,
     super.cancelledAt,
+    super.createdAt,
+    super.itemCount,
+    super.totalQuantity,
+    super.totalAmount,
     required super.items,
     required super.payments,
   });
@@ -21,6 +26,7 @@ class SaleModel extends Sale {
     id: _int(json['id']),
     saleNumber: json['saleNumber'] as String? ?? '',
     orderId: _int(json['orderId']),
+    orderNumber: json['orderNumber'] as String?,
     notes: json['notes'] as String?,
     discount: _double(json['discount']),
     status: json['status'] as String?,
@@ -30,6 +36,10 @@ class SaleModel extends Sale {
     cancelledBy: _int(json['cancelledBy']),
     cancelledByName: json['cancelledByName'] as String?,
     cancelledAt: _date(json['cancelledAt']),
+    createdAt: _date(json['createdAt']),
+    itemCount: _int(json['itemCount']),
+    totalQuantity: json['totalQuantity'] == null ? null : _double(json['totalQuantity']),
+    totalAmount: json['total'] == null ? null : _double(json['total']),
     items: (json['items'] as List<dynamic>? ?? []).map((e) {
       final v = e as Map<String, dynamic>;
       return SaleItem(
@@ -40,23 +50,13 @@ class SaleModel extends Sale {
         discount: _double(v['discount']),
       );
     }).toList(),
-    payments: (json['payments'] as List<dynamic>? ?? []).map((e) {
-      final v = e as Map<String, dynamic>;
-      return SalePayment(
-        paymentMethod: v['paymentMethod'] as String? ?? '',
-        amount: _double(v['amount']),
-        receivedAmount: v['receivedAmount'] == null
-            ? null
-            : _double(v['receivedAmount']),
-        changeAmount: v['changeAmount'] == null ? null : _double(v['changeAmount']),
-        reference: v['reference'] as String?,
-      );
-    }).toList(),
+    payments: _payments(json),
   );
   factory SaleModel.fromEntity(Sale sale) => SaleModel(
     id: sale.id,
     saleNumber: sale.saleNumber,
     orderId: sale.orderId,
+    orderNumber: sale.orderNumber,
     notes: sale.notes,
     discount: sale.discount,
     status: sale.status,
@@ -66,6 +66,10 @@ class SaleModel extends Sale {
     cancelledBy: sale.cancelledBy,
     cancelledByName: sale.cancelledByName,
     cancelledAt: sale.cancelledAt,
+    createdAt: sale.createdAt,
+    itemCount: sale.itemCount,
+    totalQuantity: sale.totalQuantity,
+    totalAmount: sale.totalAmount,
     items: sale.items,
     payments: sale.payments,
   );
@@ -101,5 +105,26 @@ int? _int(dynamic value) =>
     value is num ? value.toInt() : int.tryParse('$value');
 double _double(dynamic value) =>
     value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+
+List<SalePayment> _payments(Map<String, dynamic> json) {
+  final payments = json['payments'] as List<dynamic>? ?? const [];
+  if (payments.isNotEmpty) {
+    return payments.map((entry) {
+      final value = entry as Map<String, dynamic>;
+      return SalePayment(
+        paymentMethod: value['paymentMethod'] as String? ?? '',
+        amount: _double(value['amount']),
+        receivedAmount:
+            value['receivedAmount'] == null ? null : _double(value['receivedAmount']),
+        changeAmount:
+            value['changeAmount'] == null ? null : _double(value['changeAmount']),
+        reference: value['reference'] as String?,
+      );
+    }).toList();
+  }
+  return (json['paymentMethods'] as List<dynamic>? ?? const [])
+      .map((method) => SalePayment(paymentMethod: '$method', amount: 0))
+      .toList();
+}
 
 DateTime? _date(dynamic value) => value == null ? null : DateTime.tryParse('$value');

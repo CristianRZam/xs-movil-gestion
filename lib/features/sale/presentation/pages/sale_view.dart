@@ -1,15 +1,23 @@
 import 'package:app_movil_sistema/core/authorization/access_control.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/features/order/domain/entities/order.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
+import 'package:app_movil_sistema/features/product/domain/entities/product_lookup.dart';
+import 'package:app_movil_sistema/features/product/data/services/product_lookup_service.dart';
 import 'package:app_movil_sistema/features/product/presentation/widgets/product_selector_sheet.dart';
 import 'package:app_movil_sistema/features/sale/domain/entities/sale.dart';
+import 'package:app_movil_sistema/features/sale/domain/usecases/sale_usecases.dart';
 import 'package:app_movil_sistema/features/sale/presentation/bloc/sale_bloc.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs-filter-button.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs-async-lookup-field.dart';
+import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 
 class SaleView extends StatelessWidget {
   final Order? order;
@@ -36,15 +44,26 @@ class SaleView extends StatelessWidget {
         (!previous.cancelled && current.cancelled),
     listener: (context, state) {
       if (state.error != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(state.error!)));
+        // Un 403 ya muestra el toast global de autorización. Cuando la
+        // respuesta del servidor no trae detalle, el mapper usa este texto
+        // genérico; no debe aparecer como un segundo mensaje confuso.
+        if (state.error != 'Error desconocido') {
+          FlashMessage.show(
+            context,
+            type: FlashMessageType.error,
+            title: 'No se pudo registrar la venta',
+            message: state.error!,
+          );
+        }
         context.read<SaleBloc>().add(const ClearSaleMessage());
       }
       if (state.saved) {
         Navigator.of(context, rootNavigator: true).maybePop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Venta registrada correctamente')),
+        FlashMessage.show(
+          context,
+          type: FlashMessageType.success,
+          title: 'Venta registrada',
+          message: 'Venta registrada correctamente',
         );
         context.read<SaleBloc>().add(const ClearSaleMessage());
       }
@@ -68,15 +87,16 @@ class SaleView extends StatelessWidget {
         backIcon: false,
       ),
       endDrawer: const XsDrawer(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _canCreateSale &&
-                state.cashOpen == true &&
-                (order == null || _isOrderReadyToCharge)
-            ? () => _openSaleForm(context, state.products, order: order)
-            : null,
-        icon: const Icon(Icons.point_of_sale),
-        label: Text(order == null ? 'Nueva venta' : 'Cobrar orden'),
-      ),
+      floatingActionButton: _canCreateSale
+          ? FloatingActionButton.extended(
+              onPressed: state.cashOpen == true &&
+                      (order == null || _isOrderReadyToCharge)
+                  ? () => _openSaleForm(context, state.products, order: order)
+                  : null,
+              icon: const Icon(Icons.point_of_sale),
+              label: Text(order == null ? 'Nueva venta' : 'Cobrar orden'),
+            )
+          : null,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -101,7 +121,13 @@ class SaleView extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 10),
-          _SaleDateFilters(state: state),
+          Row(
+            children: [
+              Expanded(child: _SaleFilterSummary(state: state)),
+              const SizedBox(width: 10),
+              XsFilterButton(onPressed: () => _showSaleFilters(context, state)),
+            ],
+          ),
           const SizedBox(height: 12),
           if (state.sales.isEmpty && state.status != SaleStatus.loading)
             const Padding(
@@ -110,48 +136,13 @@ class SaleView extends StatelessWidget {
                 child: Text('No se encontraron ventas en este período.'),
               ),
             ),
-          ...state.sales.map(
-            (sale) => Card(
-              child: ListTile(
-                isThreeLine: sale.notes?.trim().isNotEmpty == true,
-                title: Row(
-                  children: [
-                    Expanded(child: Text(sale.saleNumber)),
-                    const SizedBox(width: 8),
-                    _SaleStatusBadge(status: sale.status),
-                  ],
+          ...state.sales.map((sale) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _SaleListCard(
+                  sale: sale,
+                  onTap: () => _openSaleDetail(context, sale, state.products),
                 ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${sale.payments.map((p) => p.paymentMethod).join(' + ')} · '
-                      '${sale.items.length} producto(s)',
-                    ),
-                    if (sale.notes?.trim().isNotEmpty == true) ...[
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          const Icon(Icons.note_alt_outlined, size: 14),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              sale.notes!.trim(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-                trailing: Text('S/ ${sale.total.toStringAsFixed(2)}'),
-                onTap: () => _showSaleDetail(context, sale, state.products),
-              ),
-            ),
-          ),
+              )),
           if (state.hasMoreSales || state.isLoadingMoreSales)
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -179,21 +170,282 @@ class SaleView extends StatelessWidget {
   );
 }
 
+class _SaleListCard extends StatelessWidget {
+  const _SaleListCard({required this.sale, required this.onTap});
+
+  final Sale sale;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isCancelled = sale.status == 'CANCELLED';
+    final accent = isCancelled ? scheme.error : AppColors.primary;
+    final itemCount = sale.itemCount ?? sale.items.length;
+    final quantity = sale.totalQuantity;
+    final dateLabel = sale.createdAt == null
+        ? 'Fecha no disponible'
+        : DateFormat('dd/MM · HH:mm').format(sale.createdAt!);
+    return Material(
+      color: scheme.surface,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(Icons.receipt_long_rounded, color: accent),
+                ),
+                const SizedBox(width: 10),
+                Expanded(child: Text(sale.saleNumber, style: const TextStyle(fontWeight: FontWeight.w800))),
+                _SaleStatusBadge(status: sale.status),
+              ]),
+              const SizedBox(height: 11),
+              Row(children: [
+                Icon(Icons.schedule_outlined, size: 15, color: scheme.onSurfaceVariant),
+                const SizedBox(width: 4),
+                Text(dateLabel, style: Theme.of(context).textTheme.bodySmall),
+                const SizedBox(width: 10),
+                Icon(Icons.person_outline_rounded, size: 15, color: scheme.onSurfaceVariant),
+                const SizedBox(width: 4),
+                Expanded(child: Text(sale.createdByName?.trim().isNotEmpty == true ? sale.createdByName!.trim() : 'Vendedor no disponible', maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall)),
+              ]),
+              if (sale.orderNumber?.trim().isNotEmpty == true) ...[
+                const SizedBox(height: 9),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.only(left: 8, right: 3, top: 3, bottom: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: .10),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.receipt_outlined, size: 14, color: AppColors.primary),
+                      const SizedBox(width: 5),
+                      Text('Orden ${sale.orderNumber!.trim()}', style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w700)),
+                      IconButton(
+                        tooltip: 'Copiar número de orden',
+                        visualDensity: VisualDensity.compact,
+                        iconSize: 16,
+                        padding: const EdgeInsets.all(4),
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: sale.orderNumber!.trim()));
+                          if (!context.mounted) return;
+                          FlashMessage.show(context, type: FlashMessageType.success, title: 'Número copiado', message: 'El número de orden fue copiado al portapapeles.');
+                        },
+                        icon: const Icon(Icons.copy_rounded, color: AppColors.primary),
+                      ),
+                    ]),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: sale.payments.map((payment) => _PaymentMethodChip(payment: payment)).toList(),
+              ),
+              const SizedBox(height: 11),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest.withValues(alpha: .5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(children: [
+                  Expanded(child: Text('$itemCount producto(s)${quantity == null ? '' : ' · ${_quantityLabel(quantity)} und.'}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+                  Text('S/ ${sale.total.toStringAsFixed(2)}', style: TextStyle(color: accent, fontWeight: FontWeight.w800, fontSize: 16)),
+                ]),
+              ),
+              if (sale.notes?.trim().isNotEmpty == true)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(sale.notes!.trim(), maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentMethodChip extends StatelessWidget {
+  const _PaymentMethodChip({required this.payment});
+  final SalePayment payment;
+
+  @override
+  Widget build(BuildContext context) {
+    final visual = _paymentVisual(payment.paymentMethod);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(color: visual.$2.withValues(alpha: .11), borderRadius: BorderRadius.circular(99)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(visual.$1, size: 14, color: visual.$2),
+        const SizedBox(width: 4),
+        Text(visual.$3, style: TextStyle(color: visual.$2, fontSize: 11, fontWeight: FontWeight.w700)),
+      ]),
+    );
+  }
+}
+
+(IconData, Color, String) _paymentVisual(String method) => switch (method) {
+  'CASH' => (Icons.payments_outlined, const Color(0xFF16803C), 'Efectivo'),
+  'YAPE' => (Icons.phone_android_rounded, const Color(0xFF6A1B9A), 'Yape'),
+  'PLIN' => (Icons.phone_android_rounded, const Color(0xFF0089A8), 'Plin'),
+  'CARD' => (Icons.credit_card_rounded, const Color(0xFF2563EB), 'Tarjeta'),
+  'TRANSFER' => (Icons.account_balance_outlined, const Color(0xFF0F766E), 'Transferencia'),
+  _ => (Icons.account_balance_wallet_outlined, AppColors.primary, _paymentLabel(method)),
+};
+
+String _quantityLabel(double value) => value % 1 == 0
+    ? value.toInt().toString()
+    : value.toStringAsFixed(2);
+
+class _SaleFilterSummary extends StatelessWidget {
+  const _SaleFilterSummary({required this.state});
+  final SaleState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch (state.dateFilter) {
+      SaleDateFilter.today => 'Hoy',
+      SaleDateFilter.week => 'Esta semana',
+      SaleDateFilter.month => 'Este mes',
+      SaleDateFilter.custom => 'Periodo personalizado',
+      _ => 'Todas las ventas',
+    };
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(children: [
+        const Icon(Icons.tune_rounded, size: 19),
+        const SizedBox(width: 8),
+        Expanded(child: Text(state.saleStatus == null && state.saleProductId == null ? label : '$label · Filtros activos', overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600))),
+      ]),
+    );
+  }
+}
+
+Future<void> _showSaleFilters(BuildContext context, SaleState state) async {
+  var filter = state.dateFilter;
+  var status = state.saleStatus;
+  ProductLookup? product = state.saleProductId == null
+      ? null
+      : ProductLookup(
+          id: state.saleProductId!,
+          name: state.saleProductName ?? 'Producto seleccionado',
+          code: '',
+          active: true,
+          deleted: false,
+        );
+  var from = state.fromDate;
+  var to = state.toDate;
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (sheetContext) => StatefulBuilder(
+      builder: (_, setSheetState) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(20, 8, 20, 20 + MediaQuery.viewInsetsOf(sheetContext).bottom),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Filtrar ventas', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 16),
+            Wrap(spacing: 8, runSpacing: 8, children: SaleDateFilter.values.map((value) => ChoiceChip(label: Text(_saleFilterLabel(value)), selected: filter == value, onSelected: (_) async {
+              if (value == SaleDateFilter.custom) {
+                final now = DateUtils.dateOnly(DateTime.now());
+                final range = await showDateRangePicker(
+                  context: sheetContext,
+                  firstDate: DateTime(2020),
+                  lastDate: now,
+                  initialEntryMode: DatePickerEntryMode.calendarOnly,
+                  initialDateRange: from != null && to != null
+                      ? DateTimeRange(start: from!, end: to!)
+                      : null,
+                );
+                if (range == null) return;
+                setSheetState(() { filter = value; from = DateUtils.dateOnly(range.start); to = DateUtils.dateOnly(range.end); });
+              } else {
+                final now = DateUtils.dateOnly(DateTime.now());
+                setSheetState(() { filter = value; from = value == SaleDateFilter.today ? now : value == SaleDateFilter.week ? now.subtract(Duration(days: now.weekday - 1)) : value == SaleDateFilter.month ? DateTime(now.year, now.month) : null; to = value == SaleDateFilter.all ? null : now; });
+              }
+            })).toList()),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<String?>(value: status, decoration: const InputDecoration(labelText: 'Estado'), items: const [DropdownMenuItem(value: null, child: Text('Todos los estados')), DropdownMenuItem(value: 'COMPLETED', child: Text('Completada')), DropdownMenuItem(value: 'CANCELLED', child: Text('Anulada'))], onChanged: (value) => setSheetState(() => status = value)),
+            const SizedBox(height: 12),
+            XsAsyncLookupField<ProductLookup>(
+              selected: product,
+              labelText: 'Producto',
+              hintText: 'Escribe al menos 2 letras',
+              search: getIt<ProductLookupService>().search,
+              itemLabel: (item) {
+                final label = item.code.isEmpty ? item.name : '${item.name} (${item.code})';
+                if (item.deleted) return '$label · Eliminado';
+                return '$label${item.active ? '' : ' · Inactivo'}';
+              },
+              onSelected: (item) => setSheetState(() => product = item),
+              onCleared: () => setSheetState(() => product = null),
+            ),
+            const SizedBox(height: 20),
+            Row(children: [Expanded(child: OutlinedButton(onPressed: () { context.read<SaleBloc>().add(const LoadSales()); Navigator.pop(sheetContext); }, child: const Text('Limpiar'))), const SizedBox(width: 10), Expanded(child: FilledButton(onPressed: () { context.read<SaleBloc>().add(LoadSales(filter: filter, fromDate: from, toDate: to, status: status, productId: product?.id, productName: product?.name)); Navigator.pop(sheetContext); }, child: const Text('Aplicar filtros')))]),
+          ]),
+        ),
+      ),
+    ),
+  );
+}
+
+String _saleFilterLabel(SaleDateFilter filter) => switch (filter) { SaleDateFilter.all => 'Todos', SaleDateFilter.today => 'Hoy', SaleDateFilter.week => 'Semana', SaleDateFilter.month => 'Mes', SaleDateFilter.custom => 'Personalizado' };
+
 class _SaleDateFilters extends StatelessWidget {
   const _SaleDateFilters({required this.state});
   final SaleState state;
 
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: Row(
-      children: [
-        _chip(context, 'Todos', SaleDateFilter.all),
-        _chip(context, 'Hoy', SaleDateFilter.today),
-        _chip(context, 'Esta semana', SaleDateFilter.week),
-        _chip(context, 'Este mes', SaleDateFilter.month),
-        _chip(context, 'Personalizado', SaleDateFilter.custom),
-      ],
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerLowest,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+    ),
+    child: SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(left: 4, right: 6),
+            child: Icon(Icons.calendar_month_outlined, size: 18),
+          ),
+          _chip(context, 'Todos', SaleDateFilter.all),
+          _chip(context, 'Hoy', SaleDateFilter.today),
+          _chip(context, 'Esta semana', SaleDateFilter.week),
+          _chip(context, 'Este mes', SaleDateFilter.month),
+          _chip(context, 'Personalizado', SaleDateFilter.custom),
+        ],
+      ),
     ),
   );
 
@@ -225,6 +477,7 @@ class _SaleDateFilters extends StatelessWidget {
         context: context,
         firstDate: DateTime(2020),
         lastDate: now,
+        initialEntryMode: DatePickerEntryMode.calendarOnly,
         initialDateRange: state.fromDate != null && state.toDate != null
             ? DateTimeRange(start: state.fromDate!, end: state.toDate!)
             : null,
@@ -238,6 +491,22 @@ class _SaleDateFilters extends StatelessWidget {
       LoadSales(filter: filter, fromDate: from, toDate: to),
     );
   }
+}
+
+Future<void> _openSaleDetail(
+  BuildContext context,
+  Sale sale,
+  List<Product> products,
+) async {
+  if (sale.id == null) return;
+  final result = await getIt<GetSaleByIdUseCase>()(sale.id!);
+  if (!context.mounted) return;
+  result.fold(
+    (failure) => ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(failure.message)),
+    ),
+    (detail) => _showSaleDetail(context, detail, products),
+  );
 }
 
 void _showSaleDetail(BuildContext context, Sale sale, List<Product> products) {
@@ -265,7 +534,7 @@ void _showSaleDetail(BuildContext context, Sale sale, List<Product> products) {
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
-            Text('Estado: ${sale.status ?? 'COMPLETED'}'),
+            Text('Estado: ${_saleStatusLabel(sale.status)}'),
             const SizedBox(height: 4),
             Text(
               'Registrada por: ${sale.createdByName ?? 'Usuario no disponible'}',
@@ -636,6 +905,13 @@ String _paymentLabel(String method) => switch (method) {
   _ => method,
 };
 
+String _saleStatusLabel(String? status) => switch (status) {
+  'CANCELLED' => 'Anulada',
+  'COMPLETED' => 'Completada',
+  null => 'Completada',
+  _ => status,
+};
+
 Future<void> _openSaleForm(
   BuildContext context,
   List<Product> products, {
@@ -681,7 +957,10 @@ class _SaleFormState extends State<_SaleForm> {
     _payments.add(_PaymentDraft());
     final order = widget.order;
     if (order != null) {
-      for (final item in order.items.where((item) => item.status != 'CANCELLED')) {
+      for (final item in order.items.where(
+        (item) => item.status != 'CANCELLED' &&
+            !order.nonChargeableItemIds.contains(item.id),
+      )) {
         final index = _items.indexWhere((saleItem) =>
             saleItem.productId == item.productId &&
             saleItem.unitPrice == item.unitPrice &&
@@ -708,7 +987,14 @@ class _SaleFormState extends State<_SaleForm> {
   double get _subtotal =>
       _items.fold<double>(0, (sum, item) => sum + item.subtotal);
   double get _discountAmount => double.tryParse(_discount.text) ?? 0;
-  double get _incidentDiscount => widget.order?.incidentDiscount ?? 0;
+  double get _incidentDiscount {
+    final order = widget.order;
+    if (order == null) return 0;
+    final noChargeAmount = order.items
+        .where((item) => order.nonChargeableItemIds.contains(item.id))
+        .fold<double>(0, (sum, item) => sum + item.subtotal);
+    return (order.incidentDiscount - noChargeAmount).clamp(0, double.infinity);
+  }
   double get _totalDiscount => _discountAmount + _incidentDiscount;
   double get _total => (_subtotal - _totalDiscount).clamp(0, double.infinity);
   double get _paid => _payments.fold<double>(
