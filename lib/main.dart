@@ -1,6 +1,7 @@
 import 'package:app_movil_sistema/core/authorization/access_control.dart';
 import 'package:app_movil_sistema/core/authorization/permission_sync_service.dart';
 import 'package:app_movil_sistema/core/session/session_coordinator.dart';
+import 'package:app_movil_sistema/core/session/session_expiry_warning_service.dart';
 import 'core/storage/token_storage.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/splash_screen.dart';
@@ -34,6 +35,7 @@ Future<void> main() async {
       child: const MyApp(),
     ),
   );
+  getIt<SessionExpiryWarningService>().start();
 }
 
 class MyApp extends StatelessWidget {

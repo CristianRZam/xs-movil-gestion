@@ -730,7 +730,7 @@ class _DrawerFooter extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDarkMode
             ? AppColors.darkBody
-            : const Color(0xFFF7F7F8),
+            : AppColors.lightSurface,
         border: Border(
           top: BorderSide(
             color: isDarkMode

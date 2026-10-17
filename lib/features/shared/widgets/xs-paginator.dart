@@ -51,7 +51,7 @@ class XsPaginator extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: isDark
-                ? const Color(0xFF2A2F3A)
+                ? AppColors.darkPaginator
                 : Colors.white,
             borderRadius: BorderRadius.circular(20),
           ),
@@ -116,7 +116,7 @@ class _PageButton extends StatelessWidget {
           color: enabled
               ? AppColors.primary
               : isDark
-              ? const Color(0xFF333842)
+              ? AppColors.darkPaginatorSelected
               : Colors.grey.shade200,
           shape: BoxShape.circle,
         ),

@@ -12,6 +12,8 @@ import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:app_movil_sistema/features/shared/widgets/loading_overlay.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_segmented_tabs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -61,7 +63,9 @@ class KitchenQueueScreen extends StatelessWidget {
             child: Scaffold(
               appBar: const XsAppBar(title: 'Cocina', backIcon: false),
               endDrawer: const XsDrawer(),
-              body: _KitchenWorkflowBoard(orders: state.kitchenOrders),
+              body: XsResponsiveBody(
+                child: _KitchenWorkflowBoard(orders: state.kitchenOrders),
+              ),
             ),
           ),
         ),
@@ -99,31 +103,29 @@ class _KitchenWorkflowBoardState extends State<_KitchenWorkflowBoard> {
         Container(
           color: colorScheme.surfaceContainerLow,
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: SegmentedButton<_KitchenStage>(
-              segments: const [
-                ButtonSegment(
+          child: SizedBox(
+            width: double.infinity,
+            child: XsSegmentedTabs<_KitchenStage>(
+              tabs: const [
+                XsSegmentedTab(
                   value: _KitchenStage.pending,
-                  icon: Icon(Icons.receipt_long_outlined, size: 18),
-                  label: Text('Pendientes', softWrap: false),
+                  icon: Icons.receipt_long_outlined,
+                  label: 'Pendientes',
                 ),
-                ButtonSegment(
+                XsSegmentedTab(
                   value: _KitchenStage.preparing,
-                  icon: Icon(Icons.soup_kitchen_outlined, size: 18),
-                  label: Text('Preparando', softWrap: false),
+                  icon: Icons.soup_kitchen_outlined,
+                  label: 'Preparando',
                 ),
-                ButtonSegment(
+                XsSegmentedTab(
                   value: _KitchenStage.ready,
-                  icon: Icon(Icons.room_service_outlined, size: 18),
-                  label: Text('Entrega', softWrap: false),
+                  icon: Icons.room_service_outlined,
+                  label: 'Entrega',
                 ),
               ],
-              selected: {_stage},
-              showSelectedIcon: false,
-              style: const ButtonStyle(visualDensity: VisualDensity.compact),
-              onSelectionChanged: (selection) =>
-                  setState(() => _stage = selection.first),
+              selected: _stage,
+              compact: true,
+              onSelected: (selection) => setState(() => _stage = selection),
             ),
           ),
         ),

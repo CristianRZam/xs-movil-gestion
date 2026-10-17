@@ -1,11 +1,13 @@
 ﻿import 'package:app_movil_sistema/core/authorization/access_control.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/features/role/domain/entities/role.dart';
 import 'package:app_movil_sistema/features/role/domain/usecases/role_usecases.dart';
 import 'package:app_movil_sistema/features/role/presentation/bloc/role_cubit.dart';
 import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -132,7 +134,9 @@ class _RoleView extends StatelessWidget {
           : null,
       body: RefreshIndicator(
         onRefresh: () => context.read<RoleCubit>().loadRoles(),
-        child: ListView(
+        child: XsResponsiveBody(
+          maxWidth: 720,
+          child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
           children: [
             Text(
@@ -171,6 +175,7 @@ class _RoleView extends StatelessWidget {
                 ),
               ),
           ],
+          ),
         ),
       ),
     ),
@@ -195,7 +200,7 @@ class _RoleCard extends StatelessWidget {
     final access = getIt<AccessControl>();
     final canViewPermissions = access.allows(AppCapability.viewRolePermissions);
     final canEdit = access.allows(AppCapability.editRoles);
-    final statusColor = role.active ? Colors.green : Colors.red;
+    final statusColor = role.active ? AppColors.success : AppColors.danger;
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       leading: CircleAvatar(child: const Icon(Icons.badge_outlined)),

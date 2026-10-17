@@ -23,6 +23,7 @@ import 'package:app_movil_sistema/features/shared/widgets/xs-async-lookup-field.
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-filter-button.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
 import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:app_movil_sistema/routes/routes.dart';
 import 'package:flutter/material.dart';
@@ -83,7 +84,7 @@ class _OrderItemTrailingAction extends StatelessWidget {
         if (canUpdate)
           TextButton.icon(
             style: TextButton.styleFrom(
-              foregroundColor: Colors.blue.shade700,
+              foregroundColor: AppColors.infoDark,
               visualDensity: VisualDensity.compact,
               padding: const EdgeInsets.symmetric(horizontal: 6),
             ),
@@ -113,7 +114,7 @@ class _OrderItemTrailingAction extends StatelessWidget {
           IconButton(
             tooltip: 'Registrar incidencia',
             visualDensity: VisualDensity.compact,
-            color: Colors.red.shade700,
+            color: AppColors.dangerDark,
             icon: const Icon(Icons.add_alert_outlined, size: 20),
             onPressed: () => _showIncidentDialog(
               context,
@@ -911,7 +912,8 @@ class _OrderViewState extends State<OrderView> {
               )
             : null,
         body: SafeArea(
-          child: RefreshIndicator(
+          child: XsResponsiveBody(
+            child: RefreshIndicator(
             onRefresh: () async {
               context.read<OrderBloc>().add(
                 LoadOrders(
@@ -1031,6 +1033,7 @@ class _OrderViewState extends State<OrderView> {
                     ),
                   ),
               ],
+            ),
             ),
           ),
         ),
@@ -1679,7 +1682,7 @@ void _showOrderDetail(
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 34),
+                    Icon(Icons.cancel_outlined, color: AppColors.danger, size: 34),
                     SizedBox(height: 8),
                     Text(
                       'Esta orden fue cancelada.',
@@ -1705,7 +1708,7 @@ void _showOrderDetail(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(
                       Icons.cancel_outlined,
-                      color: Colors.redAccent,
+                      color: AppColors.danger,
                     ),
                     title: Row(
                       children: [
@@ -1822,7 +1825,7 @@ void _showOrderDetail(
                               message: 'Producto servido',
                               child: Icon(
                                 Icons.check_box_rounded,
-                                color: Colors.teal,
+                                color: AppColors.teal,
                               ),
                             )
                           : null,
@@ -1832,9 +1835,9 @@ void _showOrderDetail(
                     _typeIcon(item.fulfillmentType),
                     size: 18,
                     color: switch (item.fulfillmentType) {
-                      'TAKEAWAY' => Colors.deepOrange.shade700,
-                      'DELIVERY' => Colors.teal.shade700,
-                      _ => Colors.indigo.shade700,
+                      'TAKEAWAY' => AppColors.takeaway,
+                      'DELIVERY' => AppColors.delivery,
+                      _ => AppColors.dineIn,
                     },
                   ),
                   const SizedBox(width: 6),
@@ -1857,7 +1860,7 @@ void _showOrderDetail(
                         message: 'Producto con incidencia registrada',
                         child: Icon(
                           Icons.assignment_late_outlined,
-                          color: Colors.deepOrange,
+                          color: AppColors.takeaway,
                           size: 19,
                         ),
                       ),
@@ -1896,7 +1899,7 @@ void _showOrderDetail(
                     IconButton(
                       tooltip: 'Cancelar producto',
                       visualDensity: VisualDensity.compact,
-                      color: Colors.red.shade700,
+                      color: AppColors.dangerDark,
                       icon: const Icon(Icons.cancel_outlined, size: 19),
                       onPressed: () => _showCancelOrderItemDialog(
                         context,
@@ -2154,17 +2157,17 @@ void _showOrderDetail(
                 if (currentOrder.incidentDiscount > 0)
                   Text(
                     'Descuento por incidencias: -S/ ${currentOrder.incidentDiscount.toStringAsFixed(2)}',
-                    style: TextStyle(color: Colors.green.shade700),
+                    style: TextStyle(color: AppColors.successDark),
                   ),
                 if (currentOrder.packagingCharge > 0)
                   Text(
                     'Cargo por envase: +S/ ${currentOrder.packagingCharge.toStringAsFixed(2)}',
-                    style: TextStyle(color: Colors.deepOrange.shade700),
+                    style: TextStyle(color: AppColors.takeaway),
                   ),
                 if (currentOrder.deliveryCharge > 0)
                   Text(
                     'Cargo por delivery: +S/ ${currentOrder.deliveryCharge.toStringAsFixed(2)}',
-                    style: TextStyle(color: Colors.teal.shade700),
+                    style: TextStyle(color: AppColors.dineIn),
                   ),
                 Text(
                   'Total: S/ ${currentOrder.total.toStringAsFixed(2)}',
@@ -2383,7 +2386,7 @@ Future<void> _showBulkStatusDialog(
                     padding: EdgeInsets.only(top: 8),
                     child: Text(
                       'Cada producto volverá al estado que tenía antes de su último cambio. No modifica stock ni importes.',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF5F6368)),
+                      style: TextStyle(fontSize: 12, color: AppColors.mutedText),
                     ),
                   ),
                 if (targetStatus.startsWith('CORRECT_TO_'))
@@ -2391,7 +2394,7 @@ Future<void> _showBulkStatusDialog(
                     padding: EdgeInsets.only(top: 8),
                     child: Text(
                       'Acción de estado directo: no modifica stock ni importes.',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF5F6368)),
+                      style: TextStyle(fontSize: 12, color: AppColors.mutedText),
                     ),
                   ),
                 if (targetStatus == 'RESTORE_PREVIOUS' ||
@@ -2531,7 +2534,7 @@ void _confirmCancel(
   showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      icon: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+      icon: const Icon(Icons.warning_amber_rounded, color: AppColors.warning),
       title: const Text('¿Cancelar orden?'),
       content: Text(
         'Se liberará el stock reservado de ${order.orderNumber}. Esta acción no se puede deshacer.',
@@ -2556,7 +2559,7 @@ void _confirmCancel(
               // El BLoC muestra el toast de error correspondiente.
             }
           },
-          style: FilledButton.styleFrom(backgroundColor: Colors.red),
+          style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
           child: const Text('Sí, cancelar'),
         ),
       ],
@@ -3125,7 +3128,7 @@ class _PriceVariationHint extends StatelessWidget {
     }
 
     final isIncrease = difference > 0;
-    final color = isIncrease ? Colors.orange.shade800 : Colors.green.shade700;
+    final color = isIncrease ? AppColors.warningDark : AppColors.successDark;
     final prefix = isIncrease ? '+' : '-';
     return Text(
       'Precio vigente: S/ ${referencePrice.toStringAsFixed(2)} · $prefix S/ ${difference.abs().toStringAsFixed(2)}',
@@ -3184,11 +3187,11 @@ String _statusLabel(String status) => switch (status) {
 bool _canEditActiveOrder(String? status) =>
     status == 'PENDING' || status == 'PREPARING' || status == 'READY';
 Color _statusColor(String? status) => switch (status) {
-  'PENDING' => Colors.orange,
-  'PREPARING' => Colors.blue,
-  'READY' => Colors.green,
-  'COMPLETED' => Colors.teal,
-  'CANCELLED' => Colors.red,
+  'PENDING' => AppColors.warning,
+  'PREPARING' => AppColors.info,
+  'READY' => AppColors.success,
+  'COMPLETED' => AppColors.teal,
+  'CANCELLED' => AppColors.danger,
   _ => AppColors.primary,
 };
 String? _nextStatus(String? status) => switch (status) {
@@ -3214,11 +3217,11 @@ String _itemStatusLabel(String status) => switch (status) {
 };
 
 Color _itemStatusColor(String status) => switch (status) {
-  'PENDING' => Colors.orange.shade800,
-  'PREPARING' => Colors.blue.shade700,
-  'READY' => Colors.green.shade700,
-  'SERVED' => Colors.teal.shade700,
-  'CANCELLED' => Colors.red.shade700,
+  'PENDING' => AppColors.warningDark,
+  'PREPARING' => AppColors.infoDark,
+  'READY' => AppColors.successDark,
+  'SERVED' => AppColors.dineIn,
+  'CANCELLED' => AppColors.dangerDark,
   _ => AppColors.primary,
 };
 

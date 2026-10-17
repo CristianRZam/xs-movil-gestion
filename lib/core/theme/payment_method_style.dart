@@ -5,9 +5,9 @@ class PaymentMethodStyle {
   static Color color(String method) => switch (method.toUpperCase()) {
     'YAPE' => AppColors.yapePrimary,
     'PLIN' => AppColors.plinPrimary,
-    'CASH' => Colors.green,
-    'CARD' => Colors.blue,
-    'TRANSFER' => Colors.teal,
+    'CASH' => AppColors.success,
+    'CARD' => AppColors.info,
+    'TRANSFER' => AppColors.teal,
     _ => AppColors.grey,
   };
 

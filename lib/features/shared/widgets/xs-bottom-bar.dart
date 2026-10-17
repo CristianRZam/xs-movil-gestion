@@ -48,7 +48,7 @@ class XsBottomBar extends StatelessWidget {
               final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (dialogContext) => AlertDialog(
-                  icon: const Icon(Icons.logout_rounded, color: Colors.red),
+                  icon: const Icon(Icons.logout_rounded, color: AppColors.danger),
                   title: const Text('¿Cerrar sesión?'),
                   content: const Text(
                     'Tendrás que ingresar nuevamente para acceder al sistema.',

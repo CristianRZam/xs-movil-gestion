@@ -18,6 +18,7 @@ import 'package:app_movil_sistema/features/shared/widgets/xs-dialog.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-number-field.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-textfield.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
 import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:flutter/material.dart';
 import 'package:app_movil_sistema/core/theme/payment_method_style.dart';
@@ -132,7 +133,8 @@ class CashSessionView extends StatelessWidget {
                     : null,
 
                 body: SafeArea(
-                  child: SingleChildScrollView(
+                  child: XsResponsiveBody(
+                    child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
 
                     padding: const EdgeInsets.fromLTRB(16, 18, 16, 40),
@@ -207,7 +209,7 @@ class CashSessionView extends StatelessWidget {
                                 icon: const Icon(Icons.lock_rounded),
                                 label: const Text("Cerrar caja"),
                                 style: FilledButton.styleFrom(
-                                  backgroundColor: Colors.red,
+                                  backgroundColor: AppColors.danger,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,
                                   ),
@@ -242,6 +244,7 @@ class CashSessionView extends StatelessWidget {
                           ),
                         ],
                       ],
+                    ),
                     ),
                   ),
                 ),
@@ -775,8 +778,8 @@ Future<void> openCloseCashSessionDialog(
           final isBalanced = calculatedDifference.abs() < .005;
           final isSurplus = calculatedDifference > 0;
           final differenceColor = isBalanced
-              ? Colors.blue
-              : (isSurplus ? Colors.green : Colors.red);
+              ? AppColors.info
+              : (isSurplus ? AppColors.success : AppColors.danger);
           final differenceLabel = isBalanced
               ? 'Caja cuadrada'
               : (isSurplus ? 'Sobrante detectado' : 'Faltante detectado');

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app_movil_sistema/features/dashboard/domain/entities/dashboard_summary.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 
 class DashboardCard extends StatelessWidget {
   final IconData icon;
@@ -14,7 +15,7 @@ class DashboardCard extends StatelessWidget {
     required this.title,
     required this.value,
     required this.subtitle,
-    this.color = const Color(0xFF208e60),
+    this.color = AppColors.success,
   });
 
   @override
@@ -96,14 +97,14 @@ class DashboardGrid extends StatelessWidget {
         title: 'Venta de hoy',
         value: 'S/ ${summary.todaySales.toStringAsFixed(2)}',
         subtitle: 'Cobros completados',
-        color: const Color(0xFF208e60),
+        color: AppColors.success,
       ),
       DashboardCard(
         icon: Icons.receipt_long_rounded,
         title: 'Órdenes de hoy',
         value: '${summary.todayOrders}',
         subtitle: 'Órdenes creadas',
-        color: const Color(0xFF2E86AB),
+        color: AppColors.info,
       ),
     ];
 

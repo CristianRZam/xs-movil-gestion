@@ -1,7 +1,9 @@
 import 'package:app_movil_sistema/core/network/api_client.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/features/report/data/report_downloader.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -40,7 +42,7 @@ class _ReportScreenState extends State<ReportScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('No se pudo descargar el reporte. Intenta nuevamente.'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.danger,
           ),
         );
       }
@@ -49,7 +51,7 @@ class _ReportScreenState extends State<ReportScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('No se pudo descargar el reporte. Intenta nuevamente.'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.danger,
           ),
         );
       }
@@ -58,7 +60,7 @@ class _ReportScreenState extends State<ReportScreen> {
 
   @override Widget build(BuildContext context) {
     final date = DateFormat('dd/MM/yyyy');
-    return Scaffold(appBar: const XsAppBar(title: 'Reportes'), endDrawer: const XsDrawer(), body: ListView(padding: const EdgeInsets.all(20), children: [
+    return Scaffold(appBar: const XsAppBar(title: 'Reportes'), endDrawer: const XsDrawer(), body: XsResponsiveBody(child: ListView(padding: const EdgeInsets.all(20), children: [
       Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
@@ -79,6 +81,6 @@ class _ReportScreenState extends State<ReportScreen> {
       ),
       const SizedBox(height: 18),
       ..._reports.map((report) => Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [CircleAvatar(child: Icon(report.$4)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(report.$2, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), Text(report.$3)]))]), const SizedBox(height: 14), Row(children: [Expanded(child: OutlinedButton.icon(onPressed: _loading == null ? () => _download(report.$1, 'pdf') : null, icon: _loading == '${report.$1}-pdf' ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.picture_as_pdf_rounded), label: const Text('PDF'))), const SizedBox(width: 10), Expanded(child: FilledButton.icon(onPressed: _loading == null ? () => _download(report.$1, 'excel') : null, icon: _loading == '${report.$1}-excel' ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.table_chart_rounded), label: const Text('Excel')))] )])))),
-    ]));
+    ])));
   }
 }

@@ -133,7 +133,7 @@ class CashSessionCard extends StatelessWidget {
                 ),
 
                 decoration: BoxDecoration(
-                  color: Colors.green
+                  color: AppColors.success
                       .withValues(
                     alpha: .10,
                   ),
@@ -144,7 +144,7 @@ class CashSessionCard extends StatelessWidget {
                 child: const Text(
                   "ABIERTA",
                   style: TextStyle(
-                    color: Colors.green,
+                    color: AppColors.success,
                     fontWeight:
                     FontWeight.bold,
                     fontSize: 11,

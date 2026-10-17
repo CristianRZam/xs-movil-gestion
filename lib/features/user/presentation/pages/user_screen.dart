@@ -4,6 +4,7 @@ import 'package:app_movil_sistema/core/authorization/access_widgets.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
 import 'package:app_movil_sistema/features/user/domain/entities/app_user.dart';
 import 'package:app_movil_sistema/features/user/domain/usecases/user_usecases.dart';
 import 'package:app_movil_sistema/features/user/presentation/bloc/user_cubit.dart';
@@ -115,7 +116,9 @@ class _UserViewState extends State<_UserView> {
       ),
       body: RefreshIndicator(
         onRefresh: () => context.read<UserCubit>().load(),
-        child: ListView(
+        child: XsResponsiveBody(
+          maxWidth: 720,
+          child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 96),
           children: [
             Text(
@@ -184,6 +187,7 @@ class _UserViewState extends State<_UserView> {
                 ),
               ),
           ],
+          ),
         ),
       ),
     ),

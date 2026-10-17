@@ -9,6 +9,7 @@ import 'package:app_movil_sistema/features/category/domain/usecases/category_use
 import 'package:app_movil_sistema/features/category/presentation/bloc/category_cubit.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -134,7 +135,8 @@ class _CategoryViewState extends State<_CategoryView> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () => context.read<CategoryCubit>().load(state.search),
-          child: ListView(
+          child: XsResponsiveBody(
+            child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 96),
             children: [
               Text(
@@ -206,6 +208,7 @@ class _CategoryViewState extends State<_CategoryView> {
                 ),
               ],
             ],
+            ),
           ),
         ),
       ),

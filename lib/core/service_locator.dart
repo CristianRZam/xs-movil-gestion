@@ -2,6 +2,7 @@ import 'package:app_movil_sistema/core/authorization/access_control.dart';
 import 'package:app_movil_sistema/core/authorization/authorization_feedback_service.dart';
 import 'package:app_movil_sistema/core/authorization/permission_sync_service.dart';
 import 'package:app_movil_sistema/core/session/session_coordinator.dart';
+import 'package:app_movil_sistema/core/session/session_expiry_warning_service.dart';
 import 'package:app_movil_sistema/features/cash_session/data/datasources/cash_session_remote_datasource.dart';
 import 'package:app_movil_sistema/features/cash_session/data/datasources/impl/cash_session_remote_datasource_impl.dart';
 import 'package:app_movil_sistema/features/cash_session/data/repositories/cash_session_repository_impl.dart';
@@ -168,6 +169,12 @@ void setupLocator() {
 
   getIt.registerLazySingleton<SessionCoordinator>(
     () => SessionCoordinator(getIt<AccessControl>(), getIt<TokenStorage>()),
+  );
+  getIt.registerLazySingleton<SessionExpiryWarningService>(
+    () => SessionExpiryWarningService(
+      getIt<AccessControl>(),
+      getIt<SessionCoordinator>(),
+    ),
   );
   getIt.registerLazySingleton<AuthorizationFeedbackService>(
     () => AuthorizationFeedbackService(getIt<SessionCoordinator>()),

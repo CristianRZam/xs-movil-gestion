@@ -12,6 +12,7 @@ import 'package:app_movil_sistema/features/sale/presentation/bloc/sale_bloc.dart
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-filter-button.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-async-lookup-field.dart';
 import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:flutter/material.dart';
@@ -97,7 +98,8 @@ class SaleView extends StatelessWidget {
               label: Text(order == null ? 'Nueva venta' : 'Cobrar orden'),
             )
           : null,
-      body: ListView(
+      body: XsResponsiveBody(
+        child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           if (state.cashOpen != true)
@@ -165,6 +167,7 @@ class SaleView extends StatelessWidget {
               ),
             ),
         ],
+        ),
       ),
     ),
   );
@@ -305,11 +308,11 @@ class _PaymentMethodChip extends StatelessWidget {
 }
 
 (IconData, Color, String) _paymentVisual(String method) => switch (method) {
-  'CASH' => (Icons.payments_outlined, const Color(0xFF16803C), 'Efectivo'),
-  'YAPE' => (Icons.phone_android_rounded, const Color(0xFF6A1B9A), 'Yape'),
-  'PLIN' => (Icons.phone_android_rounded, const Color(0xFF0089A8), 'Plin'),
-  'CARD' => (Icons.credit_card_rounded, const Color(0xFF2563EB), 'Tarjeta'),
-  'TRANSFER' => (Icons.account_balance_outlined, const Color(0xFF0F766E), 'Transferencia'),
+  'CASH' => (Icons.payments_outlined, AppColors.successDark, 'Efectivo'),
+  'YAPE' => (Icons.phone_android_rounded, AppColors.yapePrimary, 'Yape'),
+  'PLIN' => (Icons.phone_android_rounded, AppColors.plinPrimary, 'Plin'),
+  'CARD' => (Icons.credit_card_rounded, AppColors.infoDark, 'Tarjeta'),
+  'TRANSFER' => (Icons.account_balance_outlined, AppColors.dineIn, 'Transferencia'),
   _ => (Icons.account_balance_wallet_outlined, AppColors.primary, _paymentLabel(method)),
 };
 
@@ -700,21 +703,21 @@ class _SaleStatusBadge extends StatelessWidget {
     final isCompleted = status == null || status == 'COMPLETED';
     final foreground = isCancelled
         ? (theme.brightness == Brightness.dark
-              ? const Color(0xFFFFB4AB)
-              : const Color(0xFFB42318))
+              ? AppColors.dangerLight
+              : AppColors.dangerDark)
         : (isCompleted
               ? (theme.brightness == Brightness.dark
-                    ? const Color(0xFF9FF5C7)
-                    : const Color(0xFF087443))
+                    ? AppColors.successLight
+                    : AppColors.successDark)
               : theme.colorScheme.onSurfaceVariant);
     final background = isCancelled
         ? (theme.brightness == Brightness.dark
-              ? const Color(0xFF3B1E22)
-              : const Color(0xFFFFF4F4))
+              ? AppColors.darkSelected
+              : AppColors.primarySoft)
         : (isCompleted
               ? (theme.brightness == Brightness.dark
-                    ? const Color(0xFF173B2B)
-                    : const Color(0xFFEAF8F0))
+                    ? AppColors.successDark
+                    : AppColors.successLight)
               : theme.colorScheme.surfaceContainerHighest);
     final label = isCancelled
         ? 'Anulada'
@@ -874,9 +877,9 @@ class _SaleCancellationCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final background = isDark
-        ? const Color(0xFF3B1E22)
-        : const Color(0xFFFFF4F4);
-    final accent = isDark ? const Color(0xFFFFB4AB) : const Color(0xFFB42318);
+        ? AppColors.darkSelected
+        : AppColors.primarySoft;
+    final accent = isDark ? AppColors.dangerLight : AppColors.dangerDark;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1146,7 +1149,7 @@ class _SaleFormState extends State<_SaleForm> {
                 const SizedBox(height: 8),
                 Text(
                   'Descuento por incidencias: -S/ ${_incidentDiscount.toStringAsFixed(2)}',
-                  style: TextStyle(color: Colors.green.shade700),
+                  style: TextStyle(color: AppColors.successDark),
                 ),
               ],
               if (widget.order == null) ...[
@@ -1912,7 +1915,7 @@ class _SalePriceVariationHint extends StatelessWidget {
     }
 
     final isIncrease = difference > 0;
-    final color = isIncrease ? Colors.orange.shade800 : Colors.green.shade700;
+    final color = isIncrease ? AppColors.warningDark : AppColors.successDark;
     final prefix = isIncrease ? '+' : '-';
     return Text(
       'Precio vigente: S/ ${referencePrice.toStringAsFixed(2)} / $prefix S/ ${difference.abs().toStringAsFixed(2)}',
@@ -2006,8 +2009,8 @@ class _PaymentSummary extends StatelessWidget {
     final complete = (paid - total).abs() < .01;
     final pending = total - paid;
     final color = complete
-        ? Colors.green
-        : Theme.of(context).colorScheme.primary;
+        ? AppColors.success
+        : AppColors.danger;
     final progress = total <= 0
         ? 0.0
         : (paid / total).clamp(0.0, 1.0).toDouble();
@@ -2118,7 +2121,10 @@ class _PaymentRow extends StatelessWidget {
       final selector = DropdownButtonFormField<String>(
         value: draft.method,
         isExpanded: true,
-        decoration: const InputDecoration(labelText: 'Método'),
+        decoration: const InputDecoration(
+          labelText: 'Método',
+          helper: SizedBox(height: 14),
+        ),
         items: const [
           DropdownMenuItem(value: 'CASH', child: Text('Efectivo')),
           DropdownMenuItem(value: 'YAPE', child: Text('Yape')),
@@ -2172,6 +2178,34 @@ class _PaymentRow extends StatelessWidget {
               onPressed: onRemove,
             )
           : null;
+      final receivedAmount = double.tryParse(draft.received.text) ?? 0;
+      final appliedAmount = double.tryParse(draft.amount.text) ?? 0;
+      final canShowChange = received != null && receivedAmount >= appliedAmount;
+      final changeSummary = Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: AppColors.success.withValues(alpha: .10),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.currency_exchange_rounded,
+              color: AppColors.successDark,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Vuelto a entregar: S/ ${(receivedAmount - appliedAmount).toStringAsFixed(2)}',
+              style: const TextStyle(
+                color: AppColors.successDark,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      );
 
       if (constraints.maxWidth < 380) {
         return Card(
@@ -2192,14 +2226,10 @@ class _PaymentRow extends StatelessWidget {
                 if (received != null) ...[
                   const SizedBox(height: 8),
                   received,
-                  if ((double.tryParse(draft.received.text) ?? 0) >=
-                      (double.tryParse(draft.amount.text) ?? 0))
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Vuelto: S/ ${((double.tryParse(draft.received.text) ?? 0) - (double.tryParse(draft.amount.text) ?? 0)).toStringAsFixed(2)}',
-                      ),
-                    ),
+                  if (canShowChange) ...[
+                    const SizedBox(height: 10),
+                    changeSummary,
+                  ],
                 ],
               ],
             ),
@@ -2212,16 +2242,24 @@ class _PaymentRow extends StatelessWidget {
         margin: const EdgeInsets.only(top: 12),
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Row(
+          child: Column(
             children: [
-              Expanded(child: selector),
-              const SizedBox(width: 8),
-              Expanded(child: amount),
-              if (received != null) ...[
-                const SizedBox(width: 8),
-                Expanded(child: received),
+              Row(
+                children: [
+                  Expanded(child: selector),
+                  const SizedBox(width: 8),
+                  Expanded(child: amount),
+                  if (received != null) ...[
+                    const SizedBox(width: 8),
+                    Expanded(child: received),
+                  ],
+                  if (remove != null) remove,
+                ],
+              ),
+              if (canShowChange) ...[
+                const SizedBox(height: 10),
+                changeSummary,
               ],
-              if (remove != null) remove,
             ],
           ),
         ),

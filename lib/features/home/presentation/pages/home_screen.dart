@@ -1,6 +1,5 @@
 import 'package:app_movil_sistema/core/authorization/access_control.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
-import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:app_movil_sistema/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:app_movil_sistema/features/dashboard/domain/usecases/get_dashboard_summary_usecase.dart';
@@ -10,6 +9,8 @@ import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-date-range-picker.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-filter-button.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_segmented_tabs.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-select.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -32,6 +33,9 @@ class _HomeScreenState extends State<HomeScreen> {
   ]);
   bool get _canViewGlobal => getIt<AccessControl>().hasAnyPermission(const [
     'VIEW_DASHBOARD',
+  ]);
+  bool get _canViewOwn => getIt<AccessControl>().hasAnyPermission(const [
+    'VIEW_OWN_DASHBOARD',
   ]);
 
   @override
@@ -104,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: const XsAppBar(title: 'Inicio', backIcon: false),
         endDrawer: const XsDrawer(),
         body: !_canViewDashboard
-            ? const _DashboardAccessDenied()
+            ? const _DashboardWelcome()
             : FutureBuilder<DashboardSummary?>(
           future: _dashboardFuture,
           builder: (context, snapshot) {
@@ -135,7 +139,9 @@ class _HomeScreenState extends State<HomeScreen> {
             }
             return SafeArea(
               top: false,
-              child: RefreshIndicator(
+              child: XsResponsiveBody(
+                maxWidth: 720,
+                child: RefreshIndicator(
                 onRefresh: _refresh,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -172,19 +178,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    _DashboardScopeSelector(
-                      selectedScope: _filter.scope,
-                      canViewGlobal: _canViewGlobal,
-                      onSelected: (scope) {
-                        setState(() {
-                          _filter = _filter.copyWith(
-                            scope: scope,
-                            clearSeller: true,
-                          );
-                        });
-                        _refresh();
-                      },
-                      onFilter: _showFilters,
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 560),
+                        child: _DashboardScopeSelector(
+                          selectedScope: _filter.scope,
+                          canViewGlobal: _canViewGlobal,
+                          canViewOwn: _canViewOwn,
+                          onSelected: (scope) {
+                            setState(() {
+                              _filter = _filter.copyWith(
+                                scope: scope,
+                                clearSeller: true,
+                              );
+                            });
+                            _refresh();
+                          },
+                          onFilter: _showFilters,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     OwnerDashboard(summary: summary),
@@ -193,6 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+                ),
               ),
             );
           },
@@ -208,60 +222,39 @@ class _DashboardScopeSelector extends StatelessWidget {
   const _DashboardScopeSelector({
     required this.selectedScope,
     required this.canViewGlobal,
+    required this.canViewOwn,
     required this.onSelected,
     required this.onFilter,
   });
 
   final String selectedScope;
   final bool canViewGlobal;
+  final bool canViewOwn;
   final ValueChanged<String> onSelected;
   final VoidCallback onFilter;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    const darkSelectorSurface = Color(0xFF201416);
-    const darkSelectorBorder = Color(0xFF4A282C);
-
     return Row(
       children: [
         Expanded(
-          child: Container(
-            height: 52,
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? darkSelectorSurface
-                  : AppColors.primary.withValues(alpha: .065),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark
-                    ? darkSelectorBorder
-                    : AppColors.primary.withValues(alpha: .16),
-              ),
-            ),
-            child: Row(
-              children: [
-                if (canViewGlobal)
-                  Expanded(
-                    child: _ScopeOption(
-                      selected: selectedScope == 'GLOBAL',
-                      icon: Icons.grid_view_rounded,
-                      label: 'General',
-                      onTap: () => onSelected('GLOBAL'),
-                    ),
-                  ),
-                Expanded(
-                  child: _ScopeOption(
-                    selected: selectedScope == 'MY_SALES',
-                    icon: Icons.person_outline_rounded,
-                    label: 'Mis ventas',
-                    onTap: () => onSelected('MY_SALES'),
-                  ),
+          child: XsSegmentedTabs<String>(
+            tabs: [
+              if (canViewGlobal)
+                const XsSegmentedTab(
+                  value: 'GLOBAL',
+                  icon: Icons.grid_view_rounded,
+                  label: 'General',
                 ),
-              ],
-            ),
+              if (canViewOwn)
+                const XsSegmentedTab(
+                  value: 'MY_SALES',
+                  icon: Icons.person_outline_rounded,
+                  label: 'Mis ventas',
+                ),
+            ],
+            selected: selectedScope,
+            onSelected: onSelected,
           ),
         ),
         const SizedBox(width: 10),
@@ -270,76 +263,6 @@ class _DashboardScopeSelector extends StatelessWidget {
           onPressed: onFilter,
         ),
       ],
-    );
-  }
-}
-
-class _ScopeOption extends StatelessWidget {
-  const _ScopeOption({
-    required this.selected,
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final bool selected;
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    const darkSelected = Color(0xFF3A1E22);
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected
-                ? (isDark ? darkSelected : AppColors.primary)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(
-                        alpha: isDark ? .28 : .22,
-                      ),
-                      blurRadius: isDark ? 10 : 7,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: selected ? Colors.white : colors.onSurfaceVariant,
-              ),
-              const SizedBox(width: 7),
-              Text(
-                label,
-                style: TextStyle(
-                  color: selected ? Colors.white : colors.onSurfaceVariant,
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -502,8 +425,8 @@ class _DashboardSellerOption {
   final String label;
 }
 
-class _DashboardAccessDenied extends StatelessWidget {
-  const _DashboardAccessDenied();
+class _DashboardWelcome extends StatelessWidget {
+  const _DashboardWelcome();
 
   @override
   Widget build(BuildContext context) {
@@ -513,9 +436,9 @@ class _DashboardAccessDenied extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.lock_outline_rounded, size: 48),
+            Icon(Icons.waving_hand_outlined, size: 48),
             SizedBox(height: 12),
-            Text('No tienes permiso para visualizar el dashboard.'),
+            Text('Bienvenido al sistema.'),
           ],
         ),
       ),

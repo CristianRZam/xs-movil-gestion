@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:app_movil_sistema/core/config/env_config.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/features/product/domain/entities/product_save_request.dart';
 import 'package:app_movil_sistema/features/productimage/domain/entities/product_image.dart';
 import 'package:flutter/material.dart';
@@ -338,7 +339,7 @@ class _ImageTile extends StatelessWidget {
                     ),
                     style: IconButton.styleFrom(
                       backgroundColor: isMain
-                          ? Colors.amber.shade700
+                          ? AppColors.warningDark
                           : colorScheme.primary,
                     ),
                     icon: Icon(isMain ? Icons.star : Icons.star_border),
@@ -382,7 +383,7 @@ class _DeleteBackground extends StatelessWidget {
     return Container(
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.red.shade700,
+        color: AppColors.dangerDark,
         borderRadius: BorderRadius.circular(16),
       ),
       child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),

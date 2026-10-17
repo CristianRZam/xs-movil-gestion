@@ -29,6 +29,7 @@ import 'package:app_movil_sistema/features/product/presentation/widgets/xs_produ
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
 import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -385,7 +386,11 @@ class _ProductViewState extends State<ProductView> {
                       ),
 
                 body: SafeArea(
-                  child: SingleChildScrollView(
+                  child: XsResponsiveBody(
+                    // La lista de productos se lee mejor como contenido de
+                    // consulta: en tablet no debe estirarse como un formulario.
+                    maxWidth: 720,
+                    child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(16, 18, 16, 90),
                     child: Column(
@@ -398,7 +403,7 @@ class _ProductViewState extends State<ProductView> {
                                 title: "Productos",
                                 value: "${response?.totalProducts ?? 0}",
                                 icon: Icons.inventory_2_outlined,
-                                color: Colors.blue,
+                                color: AppColors.info,
                               ),
                             ),
 
@@ -409,7 +414,7 @@ class _ProductViewState extends State<ProductView> {
                                 title: "Activos",
                                 value: "${response?.activeProducts ?? 0}",
                                 icon: Icons.check_circle_outline,
-                                color: Colors.green,
+                                color: AppColors.success,
                               ),
                             ),
 
@@ -420,7 +425,7 @@ class _ProductViewState extends State<ProductView> {
                                 title: "Stock",
                                 value: "${response?.totalStock ?? 0}",
                                 icon: Icons.inventory,
-                                color: Colors.orange,
+                                color: AppColors.warning,
                               ),
                             ),
                           ],
@@ -668,6 +673,7 @@ class _ProductViewState extends State<ProductView> {
                           ),
                         ],
                       ],
+                    ),
                     ),
                   ),
                 ),
@@ -1026,7 +1032,7 @@ void openInventoryMovementDialog(
                                 Text(
                                   'Reservado: $reservedStock · Disponible: $availableStock',
                                   style: TextStyle(
-                                    color: Colors.orange.shade800,
+                                    color: AppColors.warningDark,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -1252,7 +1258,7 @@ class _MovementCard extends StatelessWidget {
 
     switch (type) {
       case "ENTRY":
-        color = Colors.green;
+        color = AppColors.success;
         icon = Icons.inventory_2_outlined;
         title = "Entrada de inventario";
         badge = "ENTRADA";
@@ -1260,7 +1266,7 @@ class _MovementCard extends StatelessWidget {
         break;
 
       case "SALE":
-        color = Colors.blue;
+        color = AppColors.info;
         icon = Icons.shopping_bag_outlined;
         title = "Venta";
         badge = "VENTA";
@@ -1268,7 +1274,7 @@ class _MovementCard extends StatelessWidget {
         break;
 
       case "SALE_RETURN":
-        color = Colors.deepPurple;
+        color = AppColors.purple;
         icon = Icons.assignment_return_outlined;
         title = "Devolución";
         badge = "DEVOLUCIÓN";
@@ -1276,7 +1282,7 @@ class _MovementCard extends StatelessWidget {
         break;
 
       case "WASTE":
-        color = Colors.red;
+        color = AppColors.danger;
         icon = Icons.delete_outline;
         title = "Merma";
         badge = "MERMA";
@@ -1284,7 +1290,7 @@ class _MovementCard extends StatelessWidget {
         break;
 
       case "ADJUSTMENT":
-        color = Colors.orange;
+        color = AppColors.warning;
         icon = Icons.tune;
         title = "Ajuste";
         badge = "AJUSTE";

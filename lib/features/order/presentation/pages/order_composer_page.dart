@@ -8,6 +8,7 @@ import 'package:app_movil_sistema/features/order/presentation/bloc/order_state.d
 import 'package:app_movil_sistema/features/product/domain/entities/product.dart';
 import 'package:app_movil_sistema/features/product/presentation/widgets/product_selector_sheet.dart';
 import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_segmented_tabs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -199,28 +200,28 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 16),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(
+                  XsSegmentedTabs<String>(
+                    tabs: const [
+                      XsSegmentedTab(
                         value: 'DINE_IN',
-                        icon: Icon(Icons.table_restaurant_outlined),
-                        label: Text('En local'),
+                        icon: Icons.table_restaurant_outlined,
+                        label: 'En local',
                       ),
-                      ButtonSegment(
+                      XsSegmentedTab(
                         value: 'TAKEAWAY',
-                        icon: Icon(Icons.shopping_bag_outlined),
-                        label: Text('Para llevar'),
+                        icon: Icons.shopping_bag_outlined,
+                        label: 'Para llevar',
                       ),
-                      ButtonSegment(
+                      XsSegmentedTab(
                         value: 'DELIVERY',
-                        icon: Icon(Icons.delivery_dining_outlined),
-                        label: Text('Entrega'),
+                        icon: Icons.delivery_dining_outlined,
+                        label: 'Entrega',
                       ),
                     ],
-                    selected: {_orderType},
-                    showSelectedIcon: false,
-                    onSelectionChanged: (selection) {
-                      _changeOrderType(selection.first);
+                    selected: _orderType,
+                    compact: true,
+                    onSelected: (selection) {
+                      _changeOrderType(selection);
                       setSheetState(() {});
                     },
                   ),
@@ -660,20 +661,20 @@ class _OrderComposerPageState extends State<OrderComposerPage> {
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
-                SegmentedButton<String>(
-                  segments: alternatives
+                XsSegmentedTabs<String>(
+                  tabs: alternatives
                       .map(
-                        (type) => ButtonSegment(
+                        (type) => XsSegmentedTab(
                           value: type,
-                          icon: Icon(_fulfillmentIcon(type)),
-                          label: Text(_fulfillmentLabel(type)),
+                          icon: _fulfillmentIcon(type),
+                          label: _fulfillmentLabel(type),
                         ),
                       )
                       .toList(),
-                  selected: {newFulfillmentType},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (selection) => setModalState(
-                    () => newFulfillmentType = selection.first,
+                  selected: newFulfillmentType,
+                  compact: true,
+                  onSelected: (selection) => setModalState(
+                    () => newFulfillmentType = selection,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -877,38 +878,43 @@ class _OrderTypeSelector extends StatelessWidget {
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 6, 12, 7),
-            child: SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(
-                value: 'DINE_IN',
-                icon: Icon(Icons.table_restaurant_outlined, size: 18),
-                label: Text('En local'),
-              ),
-              ButtonSegment(
-                value: 'TAKEAWAY',
-                icon: Icon(Icons.shopping_bag_outlined, size: 18),
-                label: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text('Para llevar', softWrap: false),
+            child: LayoutBuilder(
+              builder: (context, constraints) => Align(
+                alignment: Alignment.center,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: constraints.maxWidth < 680
+                        ? constraints.maxWidth
+                        : 680,
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: XsSegmentedTabs<String>(
+                      tabs: const [
+                      XsSegmentedTab(
+                        value: 'DINE_IN',
+                        icon: Icons.table_restaurant_outlined,
+                        label: 'En local',
+                      ),
+                      XsSegmentedTab(
+                        value: 'TAKEAWAY',
+                        icon: Icons.shopping_bag_outlined,
+                        label: 'Para llevar',
+                      ),
+                      XsSegmentedTab(
+                        value: 'DELIVERY',
+                        icon: Icons.delivery_dining_outlined,
+                        label: 'Entrega',
+                      ),
+                    ],
+                      selected: orderType,
+                      compact: true,
+                      onSelected: onChanged,
+                    ),
+                  ),
                 ),
               ),
-              ButtonSegment(
-                value: 'DELIVERY',
-                icon: Icon(Icons.delivery_dining_outlined, size: 18),
-                label: Text('Entrega'),
-              ),
-            ],
-            selected: {orderType},
-            showSelectedIcon: false,
-            style: const ButtonStyle(
-              minimumSize: WidgetStatePropertyAll(Size.fromHeight(48)),
-              padding: WidgetStatePropertyAll(
-                EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-              ),
-              visualDensity: VisualDensity.standard,
             ),
-            onSelectionChanged: (selection) => onChanged(selection.first),
-          ),
           ),
         ],
       ),

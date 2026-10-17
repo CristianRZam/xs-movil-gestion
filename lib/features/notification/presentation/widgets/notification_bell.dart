@@ -3,6 +3,7 @@ import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/notification/presentation/bloc/notification_cubit.dart';
 import 'package:app_movil_sistema/routes/routes.dart';
 import 'package:flutter/material.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class NotificationBell extends StatefulWidget {
@@ -65,7 +66,7 @@ class _NotificationBellState extends State<NotificationBell> {
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: Colors.redAccent,
+                          color: AppColors.danger,
                           border: Border.all(color: Colors.white, width: 1.5),
                           borderRadius: BorderRadius.circular(10),
                         ),

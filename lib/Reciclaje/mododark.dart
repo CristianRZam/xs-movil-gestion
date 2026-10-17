@@ -1,4 +1,5 @@
 import 'package:app_movil_sistema/core/theme/theme_notifier.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/features/login/presentation/widgets/login_form.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -15,7 +16,7 @@ class LoginScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'Simulador Yape',
-          style: TextStyle(color: Colors.deepPurple),
+          style: TextStyle(color: AppColors.purple),
         ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
@@ -24,11 +25,11 @@ class LoginScreen extends StatelessWidget {
             children: [
               Icon(
                 themeNotifier.isDark ? Icons.dark_mode : Icons.light_mode,
-                color: Colors.deepPurple,
+                color: AppColors.purple,
               ),
               Switch(
                 value: themeNotifier.isDark,
-                activeColor: Colors.deepPurple,
+                activeColor: AppColors.purple,
                 onChanged: (value) {
                   themeNotifier.setDarkMode(value);
                 },
@@ -49,14 +50,14 @@ class LoginScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.deepPurple,
+                  color: AppColors.purple,
                 ),
               ),
               SizedBox(height: 10),
               Text(
                 'Ingresa tus credenciales para continuar',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.black54),
+                style: TextStyle(fontSize: 16, color: AppColors.mutedText),
               ),
               SizedBox(height: 32),
               LoginForm(),

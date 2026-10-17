@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'dart:async';
 
 import 'package:app_movil_sistema/features/notification/domain/entities/app_notification.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/features/notification/domain/entities/notification_filter.dart';
 import 'package:app_movil_sistema/features/notification/presentation/bloc/notification_cubit.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
 import 'package:app_movil_sistema/routes/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -55,11 +57,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ],
           ),
           endDrawer: const XsDrawer(),
-          body: _NotificationBody(
-            state: state,
-            searchController: _searchController,
-            onSearchChanged: _onSearchChanged,
-            onOpenFilters: () => _openFilters(state.filter, state.visibleDays),
+          body: XsResponsiveBody(
+            child: _NotificationBody(
+              state: state,
+              searchController: _searchController,
+              onSearchChanged: _onSearchChanged,
+              onOpenFilters: () => _openFilters(state.filter, state.visibleDays),
+            ),
           ),
         );
       },
@@ -605,7 +609,7 @@ class _ErrorBanner extends StatelessWidget {
 Color _priorityColor(String priority, ColorScheme colors) {
   return switch (priority.toUpperCase()) {
     'CRITICAL' => colors.error,
-    'HIGH' => Colors.deepOrange,
+    'HIGH' => AppColors.warningDark,
     'LOW' => colors.secondary,
     _ => colors.primary,
   };

@@ -1,5 +1,6 @@
 import 'package:app_movil_sistema/features/cash_session/domain/entities/cash_session.dart';
 import 'package:flutter/material.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 
 void openCashSessionHistoryDialog(BuildContext context, List<CashSession> sessions) {
@@ -45,7 +46,7 @@ class _CashSessionHistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final closed = session.status == 'CLOSED';
-    final color = closed ? scheme.outline : Colors.green.shade700;
+    final color = closed ? scheme.outline : AppColors.successDark;
     final date = DateFormat('dd/MM/yyyy · HH:mm');
     return Container(
       decoration: BoxDecoration(
@@ -75,7 +76,7 @@ class _CashSessionHistoryCard extends StatelessWidget {
             _Detail(icon: Icons.person_outline_rounded, label: 'Cerró la caja', value: _user(session.closedByName)),
             _Detail(icon: Icons.calculate_outlined, label: 'Monto esperado', value: _money(session.expectedAmount)),
             _Detail(icon: Icons.point_of_sale_outlined, label: 'Monto contado', value: _money(session.closingAmount)),
-            _Detail(icon: Icons.compare_arrows_rounded, label: 'Diferencia', value: _money(session.difference), valueColor: (session.difference ?? 0) == 0 ? Colors.green.shade700 : scheme.error),
+            _Detail(icon: Icons.compare_arrows_rounded, label: 'Diferencia', value: _money(session.difference), valueColor: (session.difference ?? 0) == 0 ? AppColors.successDark : scheme.error),
             if (session.closingComment?.trim().isNotEmpty == true) _Detail(icon: Icons.comment_outlined, label: 'Comentario de cierre', value: session.closingComment!.trim()),
           ],
         ],

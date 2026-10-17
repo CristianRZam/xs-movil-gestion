@@ -1,10 +1,12 @@
 import 'package:app_movil_sistema/core/authorization/access_control.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/core/config/env_config.dart';
 import 'package:app_movil_sistema/core/network/api_client.dart';
 import 'package:app_movil_sistema/core/network/api_response.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-app-bar.dart';
 import 'package:app_movil_sistema/features/shared/widgets/xs-drawer.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
 import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
 import 'package:app_movil_sistema/features/inventory_count/presentation/inventory_count_autofill.dart';
 import 'package:app_movil_sistema/features/inventory_movement/presentation/widgets/inventory_count_movement_sheet.dart';
@@ -211,7 +213,7 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
     final closingComment = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        icon: const Icon(Icons.fact_check_rounded, color: Colors.green),
+        icon: const Icon(Icons.fact_check_rounded, color: AppColors.success),
         title: const Text('¿Validar y finalizar conteo?'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -905,17 +907,19 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
       ],
     ),
     endDrawer: const XsDrawer(),
-    body: Stack(
-      children: [
-        _body(),
-        if (_loading)
-          const Positioned.fill(
-            child: ColoredBox(
-              color: Color(0x66000000),
-              child: Center(child: CircularProgressIndicator()),
+    body: XsResponsiveBody(
+      child: Stack(
+        children: [
+          _body(),
+          if (_loading)
+            const Positioned.fill(
+              child: ColoredBox(
+                color: AppColors.overlay,
+                child: Center(child: CircularProgressIndicator()),
+              ),
             ),
-          ),
-      ],
+        ],
+      ),
     ),
   );
   Widget _body() {
@@ -934,7 +938,7 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.task_alt_rounded, color: Colors.green, size: 64),
+            Icon(Icons.task_alt_rounded, color: AppColors.success, size: 64),
             SizedBox(height: 12),
             Text(
               'Conteo finalizado',
@@ -1028,10 +1032,10 @@ class _InventoryCountScreenState extends State<InventoryCountScreen> {
     final diff = (item['difference'] as num?)?.toInt();
     final status = item['resultStatus'] as String?;
     final color = status == 'MATCHED'
-        ? Colors.green
+        ? AppColors.success
         : status == 'SHORTAGE'
-        ? Colors.red
-        : Colors.orange;
+        ? AppColors.danger
+        : AppColors.warning;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       child: Padding(

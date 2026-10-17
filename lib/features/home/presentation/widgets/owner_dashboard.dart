@@ -29,9 +29,12 @@ class OwnerDashboard extends StatelessWidget {
           subtitle: 'Datos registrados en el rango seleccionado',
         ),
         const SizedBox(height: 10),
-        GridView.count(
-          crossAxisCount: 2,
-          childAspectRatio: 1.06,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isTablet = constraints.maxWidth >= 680;
+            return GridView.count(
+          crossAxisCount: isTablet ? 4 : 2,
+          childAspectRatio: isTablet ? 1 : 1.06,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: 12,
@@ -62,6 +65,8 @@ class OwnerDashboard extends StatelessWidget {
               help: 'Ventas completadas del periodo',
             ),
           ],
+            );
+          },
         ),
       ],
     );
@@ -87,7 +92,7 @@ class _PeriodSalesCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.primary, Color(0xFF7D0A10)],
+          colors: [AppColors.primary, AppColors.primaryDeep],
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
@@ -263,7 +268,7 @@ class _MetricCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1B1B1B) : Colors.white,
+        color: isDark ? AppColors.darkSurface : AppColors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: AppColors.primary.withValues(alpha: isDark ? .22 : .12),

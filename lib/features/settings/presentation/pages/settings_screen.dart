@@ -3,6 +3,7 @@ import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/core/theme/theme_cubit.dart';
 import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:app_movil_sistema/routes/routes.dart';
@@ -52,7 +53,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
       body: SafeArea(
-        child: ListView(
+        child: XsResponsiveBody(
+          child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
             Text('Apariencia', style: Theme.of(context).textTheme.titleLarge),
@@ -96,6 +98,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: _syncPermissions,
             ),
           ],
+          ),
         ),
       ),
     );
@@ -117,9 +120,9 @@ class _PermissionSyncCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final surface = isDark ? const Color(0xFF251518) : Colors.white;
+    final surface = isDark ? AppColors.darkElevatedSurface : AppColors.white;
     final border = isDark
-        ? const Color(0xFF5A2B30)
+        ? AppColors.darkSelectorBorder
         : AppColors.primary.withValues(alpha: .16);
 
     return Container(
@@ -152,7 +155,7 @@ class _PermissionSyncCard extends StatelessWidget {
                   height: 48,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFE33740), AppColors.primary],
+                      colors: [AppColors.primaryLight, AppColors.primary],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -203,7 +206,7 @@ class _PermissionSyncCard extends StatelessWidget {
                     : Icon(
                         Icons.chevron_right_rounded,
                         color: isDark
-                            ? const Color(0xFFFFB3B8)
+                            ? AppColors.dangerLight
                             : AppColors.primary,
                       ),
               ],

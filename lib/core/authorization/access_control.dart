@@ -78,6 +78,9 @@ class AccessControl extends ChangeNotifier {
   bool get isAuthenticated =>
       _expiresAt != null && DateTime.now().isBefore(_expiresAt!);
 
+  /// Vencimiento efectivo de la sesión actual, tomado del claim `exp` del JWT.
+  DateTime? get expiresAt => _expiresAt;
+
   bool hasPermission(String permission) =>
       isAuthenticated && _permissions.contains(permission);
 

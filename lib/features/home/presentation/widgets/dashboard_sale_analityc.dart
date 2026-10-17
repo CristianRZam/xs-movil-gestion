@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:app_movil_sistema/features/dashboard/domain/entities/dashboard_summary.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:app_movil_sistema/core/theme/payment_method_style.dart';
@@ -10,12 +11,12 @@ class DashboardSaleAnalytic extends StatelessWidget {
   const DashboardSaleAnalytic({super.key, required this.summary});
 
   static const colors = <Color>[
-    Color(0xFF3478F6),
-    Color(0xFF16A36A),
-    Color(0xFFF59E0B),
-    Color(0xFF8B5CF6),
-    Color(0xFFEF476F),
-    Color(0xFF14B8A6),
+    AppColors.info,
+    AppColors.success,
+    AppColors.warning,
+    AppColors.purple,
+    AppColors.chartPink,
+    AppColors.teal,
   ];
 
   @override
@@ -152,7 +153,7 @@ class _WeeklyChart extends StatelessWidget {
             drawVerticalLine: false,
             horizontalInterval: maxY / 4,
             getDrawingHorizontalLine: (_) =>
-                const FlLine(color: Color(0x172D3748)),
+                const FlLine(color: AppColors.chartGrid),
           ),
           borderData: FlBorderData(show: false),
           titlesData: FlTitlesData(
@@ -206,7 +207,7 @@ class _WeeklyChart extends StatelessWidget {
                     top: Radius.circular(7),
                   ),
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF47A3FF), Color(0xFF3468F6)],
+                    colors: [AppColors.chartGradientStart, AppColors.chartGradientEnd],
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                   ),

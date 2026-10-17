@@ -5,6 +5,7 @@ import 'package:app_movil_sistema/features/profile/domain/entities/user_profile.
 import 'package:app_movil_sistema/features/profile/domain/usecases/profile_usecases.dart';
 import 'package:app_movil_sistema/features/profile/presentation/bloc/profile_cubit.dart';
 import 'package:app_movil_sistema/features/shared/widgets/flash_message.dart';
+import 'package:app_movil_sistema/features/shared/widgets/xs_responsive_body.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:app_movil_sistema/routes/routes.dart';
@@ -121,7 +122,9 @@ class _ProfileViewState extends State<_ProfileView> {
         ],
       ),
       body: SafeArea(
-        child: state.isLoading && state.profile == null
+        child: XsResponsiveBody(
+          maxWidth: 720,
+          child: state.isLoading && state.profile == null
             ? const Center(child: CircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: () => context.read<ProfileCubit>().load(),
@@ -165,6 +168,7 @@ class _ProfileViewState extends State<_ProfileView> {
                   ],
                 ),
               ),
+        ),
       ),
     ),
   );

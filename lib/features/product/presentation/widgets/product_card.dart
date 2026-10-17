@@ -93,7 +93,7 @@ class ProductCard extends StatelessWidget {
                       _ChipInfo(
                         icon: Icons.category_outlined,
                         text: product.nameCategory,
-                        color: Colors.indigo,
+                        color: AppColors.category,
                       ),
 
                       _ChipInfo(
@@ -101,7 +101,9 @@ class ProductCard extends StatelessWidget {
                             ? Icons.check_circle
                             : Icons.cancel,
                         text: product.active ? 'Activo' : 'Inactivo',
-                        color: product.active ? Colors.green : Colors.red,
+                        color: product.active
+                            ? AppColors.success
+                            : AppColors.danger,
                       ),
                     ],
                   ),
@@ -135,7 +137,7 @@ class ProductCard extends StatelessWidget {
                           icon: Icons.sell_outlined,
                           title: "Precio",
                           value: "S/. ${product.basePrice.toStringAsFixed(2)}",
-                          color: Colors.green,
+                          color: AppColors.success,
                           isDark: isDark,
                         ),
                       ),
@@ -145,7 +147,7 @@ class ProductCard extends StatelessWidget {
                           icon: Icons.inventory_2_outlined,
                           title: "Stock",
                           value: product.totalStock.toString(),
-                          color: Colors.blue,
+                          color: AppColors.info,
                           isDark: isDark,
                         ),
                       ),
@@ -269,17 +271,17 @@ class ProductCard extends StatelessWidget {
                     enabled: false,
                     height: 1,
                     padding: EdgeInsets.zero,
-                    child: Divider(thickness: 0.5, color: Color(0xFFF2F2F2)),
+                    child: Divider(thickness: 0.5, color: AppColors.divider),
                   ),
 
                 if (getIt<AccessControl>().allows(AppCapability.deleteProducts))
                   const PopupMenuItem(
                     value: 'delete',
                     child: ListTile(
-                      leading: Icon(Icons.delete_outline, color: Colors.red),
+                      leading: Icon(Icons.delete_outline, color: AppColors.danger),
                       title: Text(
                         'Eliminar',
-                        style: TextStyle(color: Colors.red),
+                        style: TextStyle(color: AppColors.danger),
                       ),
                       contentPadding: EdgeInsets.zero,
                     ),

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 enum FlashMessageType { error, success, warning, info }
@@ -109,25 +110,25 @@ class FlashMessage {
     switch (type) {
       case FlashMessageType.success:
         return _FlashConfig(
-          color: const Color(0xFF22C55E),
+          color: AppColors.success,
           icon: FontAwesomeIcons.circleCheck,
         );
 
       case FlashMessageType.warning:
         return _FlashConfig(
-          color: const Color(0xFFF59E0B),
+          color: AppColors.warning,
           icon: FontAwesomeIcons.triangleExclamation,
         );
 
       case FlashMessageType.info:
         return _FlashConfig(
-          color: const Color(0xFF3B82F6),
+          color: AppColors.info,
           icon: FontAwesomeIcons.circleInfo,
         );
 
       case FlashMessageType.error:
         return _FlashConfig(
-          color: const Color(0xFFEF4444),
+          color: AppColors.danger,
           icon: FontAwesomeIcons.circleExclamation,
         );
     }
@@ -220,8 +221,8 @@ class _FlashMessageWidgetState extends State<_FlashMessageWidget>
   @override
   Widget build(BuildContext context) {
     final backgroundColor = widget.isDark
-        ? const Color(0xAE1A2024)
-        : const Color(0xB3FFFFFF);
+        ? AppColors.toastDarkSurface
+        : AppColors.toastLightSurface;
 
     final textColor = widget.isDark ? Colors.white : Colors.black87;
 
@@ -230,7 +231,13 @@ class _FlashMessageWidgetState extends State<_FlashMessageWidget>
       bottom: widget.bottom,
       left: 16,
       right: 16,
-      child: Material(
+      child: Align(
+        alignment: widget.bottom != null
+            ? Alignment.bottomCenter
+            : Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 340),
+          child: Material(
         color: Colors.transparent,
         child: FadeTransition(
           opacity: _fade,
@@ -259,26 +266,26 @@ class _FlashMessageWidgetState extends State<_FlashMessageWidget>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(14),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              width: 42,
-                              height: 42,
+                              width: 36,
+                              height: 36,
                               decoration: BoxDecoration(
                                 color: widget.accentColor.withValues(alpha: .16),
-                                borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                               ),
                               child: Center(
                                 child: FaIcon(
                                   widget.icon,
-                                  size: 18,
+                                  size: 16,
                                   color: widget.accentColor,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 14),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,7 +294,7 @@ class _FlashMessageWidgetState extends State<_FlashMessageWidget>
                                   Text(
                                     widget.title,
                                     style: TextStyle(
-                                      fontSize: 15,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w700,
                                       color: textColor,
                                     ),
@@ -296,8 +303,8 @@ class _FlashMessageWidgetState extends State<_FlashMessageWidget>
                                   Text(
                                     widget.message,
                                     style: TextStyle(
-                                      fontSize: 14,
-                                      height: 1.4,
+                                      fontSize: 13,
+                                      height: 1.3,
                                       color: textColor.withValues(alpha: .80),
                                     ),
                                   ),
@@ -312,7 +319,7 @@ class _FlashMessageWidgetState extends State<_FlashMessageWidget>
                                 padding: const EdgeInsets.all(4),
                                 child: Icon(
                                   Icons.close,
-                                  size: 18,
+                                  size: 17,
                                   color: textColor.withValues(alpha: .65),
                                 ),
                               ),
@@ -336,6 +343,8 @@ class _FlashMessageWidgetState extends State<_FlashMessageWidget>
                 ),
               ),
             ),
+          ),
+        ),
           ),
         ),
       ),

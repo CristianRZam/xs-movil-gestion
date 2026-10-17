@@ -18,8 +18,8 @@ class LoginScreen extends StatelessWidget {
         child: BlocBuilder<LoginBloc, LoginState>(
           builder: (context, state) {
             final isDark = Theme.of(context).brightness == Brightness.dark;
-            final surface = isDark ? const Color(0xFF171717) : Colors.white;
-            final mutedText = isDark ? Colors.white60 : const Color(0xFF6F5B5A);
+            final surface = isDark ? AppColors.darkSurface : AppColors.white;
+            final mutedText = isDark ? Colors.white60 : AppColors.mutedText;
             final lowerSurface = Color.alphaBlend(
               AppColors.primary.withValues(alpha: isDark ? .08 : .018),
               surface,
@@ -42,7 +42,7 @@ class LoginScreen extends StatelessWidget {
                                 gradient: LinearGradient(
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
-                                  colors: [AppColors.primary, Color(0xFF72080E)],
+                                  colors: [AppColors.primary, AppColors.primaryDark],
                                 ),
                               ),
                             ),
@@ -151,7 +151,13 @@ class LoginScreen extends StatelessWidget {
                               ),
                               SingleChildScrollView(
                                 padding: const EdgeInsets.fromLTRB(28, 32, 28, 18),
-                            child: Column(
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    // En tablet/escritorio el formulario conserva
+                                    // una medida de lectura, mientras que en mÃ³vil
+                                    // usa todo el ancho disponible.
+                                    constraints: const BoxConstraints(maxWidth: 460),
+                                    child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Text(
@@ -164,7 +170,7 @@ class LoginScreen extends StatelessWidget {
                                         fontWeight: FontWeight.w700,
                                         color: isDark
                                             ? Colors.white
-                                            : const Color(0xFF281718),
+                                            : AppColors.textLight,
                                       ),
                                 ),
                                 const SizedBox(height: 5),
@@ -182,7 +188,7 @@ class LoginScreen extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     color: isDark
                                         ? Colors.white.withValues(alpha: .045)
-                                        : const Color(0xFFFFF8F8),
+                                        : AppColors.primarySoft,
                                     borderRadius: BorderRadius.circular(22),
                                     border: Border.all(
                                       color: AppColors.primary.withValues(
@@ -202,7 +208,9 @@ class LoginScreen extends StatelessWidget {
                                       ?.copyWith(color: mutedText),
                                 ),
                               ],
-                            ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ],
                           ),

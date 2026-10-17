@@ -1,4 +1,5 @@
 import 'package:app_movil_sistema/core/config/env_config.dart';
+import 'package:app_movil_sistema/core/theme/app_colors.dart';
 import 'package:app_movil_sistema/core/service_locator.dart';
 import 'package:app_movil_sistema/features/inventory_movement/domain/entities/inventory_movement_detail.dart';
 import 'package:app_movil_sistema/features/inventory_movement/domain/usecases/get_inventory_movements_usecase.dart';
@@ -277,27 +278,27 @@ _MovementMetadata _movementMetadata(String type) => switch (type) {
   'ENTRY' => const _MovementMetadata(
     'Entrada',
     Icons.add_box_rounded,
-    Colors.green,
+    AppColors.success,
   ),
   'SALE' => const _MovementMetadata(
     'Venta',
     Icons.shopping_bag_rounded,
-    Colors.blue,
+    AppColors.info,
   ),
   'WASTE' => const _MovementMetadata(
     'Merma',
     Icons.delete_outline_rounded,
-    Colors.red,
+    AppColors.danger,
   ),
   'SALE_RETURN' => const _MovementMetadata(
     'Devolución',
     Icons.assignment_return_rounded,
-    Colors.deepPurple,
+    AppColors.purple,
   ),
   'ADJUSTMENT' => const _MovementMetadata(
     'Ajuste',
     Icons.tune_rounded,
-    Colors.orange,
+    AppColors.warning,
   ),
   _ => const _MovementMetadata(
     'Movimiento',
